@@ -212,12 +212,6 @@ class LocalAiInterviewScreen extends StatefulWidget {
         ),
        assert(!resolveContextualKnowledgeEntry || contextualExplanationOnly);
 
-  /// Optional gate injection for B2 entrypoint-order tests. Production must not
-  /// supply this until a medically reviewed detector and rollout policy exist.
-  /// A missing gate is recorded as NOT_APPLICABLE, never as CLEAR.
-  @visibleForTesting
-  final RedFlagGate? redFlagGate;
-
   /// Injectable to verify initialization and error states without a native model.
   final LocalAiService? service;
 
@@ -6191,10 +6185,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _restoreVisibleConversationToModel({
     required int conversationId,
-    _UserContextSnapshot? safetyContext,
   }) async {
     if (_status?.ready != true) return;
-    final targetConversationId = conversationId;
     final transcript = LocalAiTranscriptRestorePolicy.fromMessages(
       _messages
           .where((message) => message.includeInModelContext)
@@ -6210,17 +6202,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .where((message) => message.isUser)
         .map((message) => message.text)
         .toList(growable: false);
-    final userContextSnapshot = safetyContext ?? _boundedUserContext();
-    final historyRequiresMedicalSafety =
-        requireMedicalSafety ||
-        AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
-          query: userContextSnapshot.classificationText,
-          selectedMode: _lastEffectiveMode ?? _assistantMode,
-          structuredInterviewActive:
-              _tcmInterviewController?.canAnswer == true ,
-        );
     await _service.restoreConversation(
-      conversationId: targetConversationId,
+      conversationId: conversationId,
       transcript: transcript,
       userMessages: userMessages,
     );
@@ -6276,7 +6259,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (restoreVisibleConversation) {
         await _restoreVisibleConversationToModel(
           conversationId: conversationId,
-          safetyContext: redFlagContext,
         );
       }
       if (!mounted || conversationGeneration != _historyRestoreGeneration) {
@@ -9749,8 +9731,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   conversationId: conversationId,
                   mode: effectiveMode,
                   traceContext: traceContext,
-                  redFlagContext:
-                      requiresMedicalSafety ? redFlagContext.text : null,
                 );
       final reply = turnResponse.text;
       nativeInferenceCompleted =
@@ -10084,7 +10064,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
     final userContextSnapshot = _boundedUserContext();
-        try {
+    try {
       final traceId = traceContext.traceId;
       final schemaController = TcmInterviewConversationController(
         defaultGender: SettingsRepository.instance.defaultGender,
