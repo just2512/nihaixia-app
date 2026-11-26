@@ -985,12 +985,6 @@ License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: New Fork-owned Guansha encyclopedia layout regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
 
 Files:
- docs/find-n2-e4b-local-handover.md
-Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
-License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Local OPPO Find N2 and Gemma 4 E4B acceptance handover checklist; covers only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights.
-
-Files:
  docs/pro-edition-license-protocol.md
  lib/licensing/license_model.dart
  lib/licensing/license_verifier.dart
