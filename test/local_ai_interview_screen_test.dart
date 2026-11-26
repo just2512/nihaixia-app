@@ -6287,7 +6287,9 @@ void main() {
 
     // Tool output is intentionally not duplicated into model-authored chat
     // text. Verify the App-owned source link opens the durable Ledger result.
-    await tester.tap(find.text('本轮检索资料'));
+    // Several earlier knowledge turns expose the same source-section label;
+    // the final assistant reply is the one carrying the tool-result source.
+    await tester.tap(find.text('本轮检索资料').last);
     await tester.pumpAndSettle();
     expect(find.text('App 工具执行结果'), findsOneWidget);
     await tester.tap(find.text('App 工具执行结果'));
