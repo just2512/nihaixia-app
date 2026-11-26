@@ -1781,6 +1781,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           executorOverride: widget.testHeadlessToolExecutor,
         );
         final execution = coordinated.executionResult;
+        final executionTraceStatus = switch (execution?.status) {
+          ReasoningExecutionStatus.succeeded => AiTraceStatus.succeeded,
+          ReasoningExecutionStatus.failed => AiTraceStatus.failed,
+          ReasoningExecutionStatus.notStarted => AiTraceStatus.notStarted,
+          ReasoningExecutionStatus.unknown || null => AiTraceStatus.unknown,
+        };
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.businessExecution,
+          status: executionTraceStatus,
+          conversationId: conversationId,
+          mode: AssistantMode.tools.name,
+          toolId: preview.toolId,
+          errorCode: coordinated.diagnostics.isEmpty
+              ? null
+              : coordinated.diagnostics.join('|'),
+        );
         if (execution == null ||
             execution.status != ReasoningExecutionStatus.succeeded) {
           const fallback =
