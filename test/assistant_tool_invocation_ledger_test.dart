@@ -137,6 +137,14 @@ void main() {
     expect(terminal['actualArguments'], arguments);
     expect(terminal['resultValues'], {'换算结果': '150g'});
     expect(terminal['sourceIds'], ['local-engine:dosage:v1']);
+    expect(terminal['title'], '剂量换算');
+    final readback = await ledger.loadTerminalResult(
+      conversationId: conversationId,
+      invocationId: invocationId,
+    );
+    expect(readback?.status, AssistantToolExecutionStatus.succeeded);
+    expect(readback?.values, {'换算结果': '150g'});
+    expect(readback?.sourceIds, ['local-engine:dosage:v1']);
     expect(await ledger.listUnresolvedClaims(conversationId: conversationId), isEmpty);
     expect(await claim(), AssistantToolInvocationClaimStatus.alreadyTerminal);
   });
@@ -156,6 +164,13 @@ void main() {
     final terminal = jsonDecode(rows.last['metadata'] as String) as Map;
     expect(terminal['status'], 'unknown');
     expect(terminal['failureCode'], contains('RESULT_VALIDATION_FAILED'));
+    final readback = await ledger.loadTerminalResult(
+      conversationId: conversationId,
+      invocationId: invocationId,
+    );
+    expect(readback?.status, AssistantToolExecutionStatus.unknown);
+    expect(readback?.values, isEmpty);
+    expect(readback?.sourceIds, isEmpty);
     expect(await claim(), AssistantToolInvocationClaimStatus.alreadyTerminal);
   });
 
@@ -191,6 +206,13 @@ void main() {
     expect(terminal['status'], 'unknown');
     expect(terminal['interrupted'], isTrue);
     expect(terminal['failureCode'], 'PROCESS_INTERRUPTED_WITHOUT_TERMINAL_RESULT');
+    final readback = await restoredLedger.loadTerminalResult(
+      conversationId: conversationId,
+      invocationId: invocationId,
+    );
+    expect(readback?.status, AssistantToolExecutionStatus.unknown);
+    expect(readback?.values, isEmpty);
+    expect(readback?.sourceIds, isEmpty);
   });
 
   test('rejects a result without a durable claim', () async {
