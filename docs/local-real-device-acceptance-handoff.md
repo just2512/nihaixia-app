@@ -1,7 +1,7 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.1  
-> **编制日期：** 2026-11-26  
+> **文档版本：** 1.2  
+> **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
 > **当前状态：** **LOCAL ONLY / NOT RUN / WAITING FOR MERGED MASTER CI**  
 > **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
@@ -283,18 +283,21 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 - 合法 Token 正向授权、旧 Token 兼容、Token 替换和完整推理场景标记 BLOCKED / MISSING；
 - 不得把测试 issuer 加入生产 Release，不得伪造 Token，不得用本地开关绕过 Gate。
 
-### 6.5 云端 v1.3 集成证据（不是实机通过证明）
+### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
 
-- **最新构建基线：** `master @ bb301852e664328ccdd0900be1383fa76dec8fdb`；`pubspec.yaml` 当前为 `2.0.0+8048`，applicationId 为 `com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最新 master HEAD、APK 元数据和设备当前安装版本。
-- v1.3 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并。后续 PR #485（云端收尾台账/交接刷新）、#486（Release Key Ring 文档 v1.3 引用修正）、#489（旧 Feature ID UI 标签统一）也均已合并；最新主线包含以上变更。
-- **PR #485 master 回归：** run `45517116757` 的 Flutter regression job `138879302515` SUCCESS、Android arm64/JVM job `138882598119` SUCCESS；Fork license run `45517116752` job `138879302308` SUCCESS；Analyze job `138879302365` SUCCESS。
-- **PR #486 master 回归：** run `45519577445` 的 Flutter regression job `138887738888` SUCCESS、Android arm64/JVM job `138890345466` SUCCESS；Analyze run `45519577452` job `138887738286` SUCCESS；Fork license run `45519577456` job `138887737389` SUCCESS。
-- **PR #489 master 回归：** run `45522935965` 的 Flutter regression job `138899138432` SUCCESS、Android arm64/JVM job `138902708306` SUCCESS；Analyze run `45522936035` job `138899065627` SUCCESS；Fork license run `45522936830` job `138899068753` SUCCESS。
-- 上述各轮的 Branch validation job 均为 `SKIPPED`，不计 PASS。CI Debug APK/arm64 artifact 只证明 CI 构建/ABI/Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。
-- Release 源码合同已复核：缺失/格式错误的 Key Ring 在 Dart 侧形成空信任环、不能验证发行者；Gradle Release 门禁要求非空且结构合法的 `YANJI_LICENSE_KEY_RING`，拒绝测试 issuer ID/公钥，并独立要求本地原签名材料。Release workflow 使用 CI-only 临时签名仅供产物扫描。
-- **正式发行仍 BLOCKED：** 当前仓库没有经来源核验的正式发行者公钥；GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线保管/恢复演练、真实客户签发和密钥轮换均未取得可核验证据。不得使用测试公钥或临时公钥替代。
-- Fork inventory 当前统计 changed 975 / added 811 / modified 164 / deleted 15；自动 license boundary 只证明 SPDX/DEP5/inventory 结构和分类检查通过，不证明 Fork 自有代码权属。所有 `OWNERSHIP_EVIDENCE_REQUIRED` 仍需真实权利人材料补证。
-- **设备状态仍为 `LOCAL ONLY / MISSING / UNKNOWN`。** Keystore / StrongBox / TEE、AtomicFile 实际故障恢复、原签名覆盖升级和数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除均须在 OPPO Find N2 本地执行并附证据。设备验收放在云端工作之后，不作为云端代码/CI 的阻塞项。
+- **当前构建基线：** `master @ 5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`（PR #576 merge commit）；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最新 master HEAD、APK 元数据、签名证书及设备当前安装版本。
+- **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
+- **Core 云端实现记录：**
+  - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
+  - PR #495 已合并（`9c7a4c6761a467bb13b0b5381992df2e96cfc3ba`），冻结 Core-0 五层 DTO 字段合同和源码/测试映射；Fork 与 Flutter 检查 SUCCESS（`138948246934`、`138948369724`）。
+  - PR #496 已合并（`b62bc101865612c02503bedce8d05cf11390d56d`），Native transcript 只恢复完整成功轮次并限制为最多 12 轮/10,000 UTF-16 code units；精确 HEAD 的 Fork、Flutter、Android arm64/JVM 检查 SUCCESS（`138946470635`、`138946470476`、`138949605374`）。该字符上限不等于 LiteRT-LM token 预算。
+  - PR #498 已合并（`82b2474202a33d802722e79560f6ae17670aab9a`），新增候选证据批次与经典候选收集边界；精确 HEAD 的 Fork、Flutter、Android arm64/JVM 检查 SUCCESS（`138955502743`、`138955626207`、`138958765875`）。
+- **PR #576 产品范围纠偏：** PR #576 最终 HEAD `73ece9d25a94c64dcbf57214f2e803881b5c4407` 的 Flutter regression run `45848420924` SUCCESS，其中 Android arm64 CI verification APK + Native JVM tests SUCCESS；Fork license boundary run `45848420961` SUCCESS。Branch validation 为 SKIPPED，不计 PASS。该 PR merge commit 为当前基线 `5dcf91f...`。
+- **本轮最终文档 PR：** PR #582 只更新架构/执行台账/本交接文档，不改运行时代码；其最终 HEAD 的 Flutter regression 与 Android arm64/JVM CI 必须各自取得 SUCCESS 后才可合并。未完成或缺少的检查不得计 PASS；合并后本地仍需重新读取最新 master SHA。
+- 上述 CI Debug APK/arm64 artifact 只证明 CI 构建、ABI、Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。Branch validation 为 SKIPPED 时不计 PASS。
+- **Fork inventory：** 当前清单记录新增/修改路径共 1,011 个（新增 847、修改 164），删除路径 15 个；分类为 Apache 2.0 + Fork 双层许可 158、Fork 商业授权候选 489、知识库排除 363、第三方排除 1。以 `docs/fork-license-file-inventory.md` 和 JSON 的当前 master 版本为准；自动 license boundary 只证明 inventory/DEP5/SPDX 结构一致，不证明 Fork 自有代码权属。
+- **正式发行仍 BLOCKED：** 正式发行者公钥来源、GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线托管/恢复演练、真实客户签发与密钥轮换均缺少可核验证据。不得使用测试公钥或临时公钥替代。
+- **设备状态仍为 `LOCAL ONLY / MISSING / UNKNOWN`。** Keystore / StrongBox / TEE、AtomicFile 故障恢复、原签名覆盖升级及数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、知识条目一键解读、键盘避让、端到端 TRACE 与 AI 数据清除均须在 OPPO Find N2 本地执行并附证据。设备验收放在云端工作之后，不作为云端代码/CI 的阻塞项。
 
 ## 7. 证据包、结果记录与回传
 
@@ -366,7 +369,7 @@ test-results.md 每一行按以下格式填写：
  
 ### 14.1 云端合并与构建前置条件
  
-1. PR #576 已合并到 \`master\`，且合并后最终 HEAD 对应的 Flutter regression/static analysis、Android arm64 APK/Manifest/ABI、Native JVM tests 与必要的许可证工作流均为终态成功。
+1. PR #576 已合并到 `master`；其精确 PR HEAD 的 Flutter regression、Android arm64 APK/Manifest/ABI、Native JVM tests 与 Fork license boundary 均 SUCCESS。当前主线基线为 `5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`。PR #582 的最终 HEAD 还必须完成 Flutter 与 Android CI，不能沿用 PR #576 的旧 HEAD 结果。
 2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
 3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
 4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
@@ -434,3 +437,146 @@ apkanalyzer manifest version-code $debugApk
  
 
 **交接结论：** 当前仅完成远程仓库与规范基线核对，未连接或操作用户的 OPPO Find N2。所有本地设备结果在真实执行并提供证据前均保持 MISSING / LOCAL ONLY。
+
+
+## 15. 2026-11-27 合并 PR #560 的知识解读与键盘避让实机验收
+
+> 本节将原 PR #560 的独立交接内容纳入本文件。**本文件仍是唯一设备验收交接入口**；不再保留第二份知识解读交接单。源码、APK、模型和设备基线统一使用本文件 §1–§5 的现行值；PR #560 原文中的旧 master SHA 不再作为构建基线。
+
+### 15.1 本节验收范围
+
+| ID | 验收对象 | 必须确认的结果 |
+|---|---|---|
+| P1-IME | 外屏/内屏情境 AI 面板键盘避让 | composer 与 App 发送按钮始终可见；文字不丢；收起后布局恢复；折叠/展开不破坏会话 |
+| P0-AUTO | 七类知识详情一键解读 | 点击后自动提交一次短意图；不要求用户编辑长提示；不把完整资料放进用户消息 |
+| P0-CONTEXT | 后台知识上下文与跨轮追问 | 每轮绑定当前详情条目；source/anchor/version 不串线；上下文失效时明确失败，不使用旧缓存 |
+| P0-QUALITY | E4B 知识理解质量 | 不复述详情页；分析关系与内在逻辑；区分原文记载、归纳、MISSING/UNKNOWN；不补造内容 |
+
+本节只补充上述 P0/P1 细项。GPU/CPU 通用稳定性 20 轮、多媒体、Activity/进程恢复、AI 数据清理、授权和 TRACE 仍按本文件 §3–§8 执行；这些专项不因本节通过而自动关闭。经典阅读页选中文段自由提问，以及易经、八字、紫微、子午流注、节气、运气、剂量换算等确定性 `toolResult/fieldValue` 结果解释不属于本节七类知识条目 adapter 验收。
+
+### 15.2 P1：键盘避让实机验收
+
+**外屏 bottom-sheet（IME-OUT）**
+
+1. 合拢 Find N2，打开任一已迁移的知识详情，点击“问 AI 解读”。
+2. 等待情境 AI bottom-sheet 出现；初始打开不得因自动解读抢焦点或主动弹出键盘。
+3. 点击 composer，弹出系统键盘，输入 `外屏键盘可见性测试 123`。
+4. 检查 composer、光标和输入文字完整位于 IME 顶边之上；App 自己的发送按钮完整可见且可点击。不得把系统键盘 Enter 键当作 App 发送按钮。
+5. 检查底部安全区、手势导航区和面板边界没有重叠或裁切。
+6. 使用 App 发送按钮发送，确认无丢字、重复发送；记录发送后键盘实际状态，不擅自规定未定义行为。
+7. 使用系统返回键收起键盘，确认面板恢复、无残留空白/错误位移；再次聚焦并重复输入/收起一次。
+
+**内屏 side-panel（IME-IN）**
+
+1. 展开 Find N2，进入知识详情并点击“问 AI 解读”，确认助手以内屏 side-panel 显示。
+2. 点击 composer，弹出系统键盘，输入 `内屏键盘可见性测试 456`。
+3. 检查 composer、文字、光标和 App 发送按钮完整位于键盘上方；面板没有因 Dialog inset 与内部布局重复避让而过度缩小。
+4. 使用 App 发送按钮发送，再用系统返回键收起键盘；确认 side-panel 高度、宽度、位置恢复。
+5. 关闭并重新打开面板，再测试一次，排除 route 残留旧 inset。
+
+**折叠切换（IME-FOLD）**
+
+- 内屏打开助手并弹出键盘时合拢设备，检查切到外屏后的会话、输入文本和输入框状态。
+- 外屏打开助手并弹出键盘时展开设备，检查切到内屏后的 side-panel/route 位置和输入状态。
+- 对设备实际支持的半折叠姿态重复检查并记录。
+- 若 ColorOS 在折叠切换时主动关闭键盘，可记录为系统行为，不单独判代码失败；但输入内容、会话和重新聚焦能力仍须验证。
+
+**PASS 条件：** 无崩溃、黑屏、错位、裁切、丢字、重复发送或发送按钮遮挡；键盘收起后布局恢复；会话和未提交文本按路由生命周期保持。真实窗口尺寸、姿态与截图按 §4.2 / §7 记录。
+
+### 15.3 P0：七类知识详情一键解读（AUTO）
+
+必须逐个执行，不用一个入口代表全部入口：
+
+| 场景 ID | 入口 | 操作 |
+|---|---|---|
+| AUTO-FORMULA | 方剂 | 打开具体方剂详情，点击 AI 解读 |
+| AUTO-HERB | 本草 | 打开具体本草详情，点击 AI 解读 |
+| AUTO-ACUPOINT | 穴位 | 打开具体穴位详情，点击 AI 解读 |
+| AUTO-ACUPUNCTURE | 针灸处方 | 打开具体处方条目，点击 AI 解读 |
+| AUTO-CASE | 医案 | 打开具体医案详情，点击 AI 解读 |
+| AUTO-MERIDIAN | 六经 | 打开具体六经详情，点击 AI 解读 |
+| AUTO-NEIJING | 内经 | 打开具体条文详情，点击 AI 解读 |
+
+每个入口检查：
+
+1. 点击后无需编辑长提示或再次点击发送；模型就绪且情境会话初始化完成后自动启动一次分析。
+2. 用户消息/对话记录只包含短意图，不出现完整 JSON、sourceId、anchorId、版本号、本地路径或内部约束文本。
+3. 不自动弹出键盘或抢输入焦点。
+4. 输出对应当前打开条目，不串到上一个页面或上一次会话。
+5. 不重复启动；用消息时间线和脱敏 TRACE 的 request/turn 元数据核对。
+
+另测模型尚未加载时的等待场景（AUTO-WAIT-READY）：从知识详情点击解读后，应等待模型可用，不提前发送、不丢失 pending 意图；模型加载且会话初始化完成后自动提交一次。多次状态刷新、页面重建不得重复提交。初始化失败或 contextRef 无效时显示明确失败/UNKNOWN，不得使用旧缓存条目继续回答。
+
+### 15.4 P0：当前条目上下文和连续追问（CONTEXT-FOLLOWUP）
+
+选择本地真实存在、字段较完整的方剂条目作为主场景，优先桂枝汤；若当前数据集中不存在，则选一个实际可打开且组成字段完整的条目，记录真实名称，不造测试数据。
+
+1. 在详情页点击 AI 解读，等待第一轮回复并记录当前详情标题。
+2. 追问：`你刚才分析的整体结构，分别依据当前条目中的哪些信息？请区分条目明确记载和你的归纳，不要重列完整组成。`
+3. 再追问：`当前条目没有直接说明的配伍作用有哪些？请明确标记无法确认的部分，不要用常见说法补齐。`
+4. 确认两轮追问仍围绕原条目，前文指代有效，不要求重新粘贴资料或再次编辑长提示。
+5. 返回详情页，打开另一条目并启动新解读；确认上下文切换到新条目，没有跨条目污染。
+6. 若 App 提供本地来源/引用入口，点击并确认回到当前条目；无法打开或定位到错误条目记 FAIL。
+
+**PASS 条件：** 首次点击只启动一次；连续追问保持当前条目；切换条目后同步切换；内部 source/evidence ID 不作为普通回答文本暴露；锚点、版本或来源解析失败时明确失败，不使用缓存旧条目回答。
+
+### 15.5 P0：E4B 知识理解质量（QUALITY）
+
+GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 backend 与 Native 实际 backend；GPU 选择后若实际回退 CPU，该轮不得计入 GPU 结果。每种 backend 各执行以下三个代表场景，均从详情页一键解读入口启动，不手工粘贴完整资料。
+
+**A. 方剂组方关系（FORMULA-QUALITY）**
+
+- 使用桂枝汤或本地资料中另一个组成字段完整的方剂。
+- 初始分析说明整体结构、条目实际标注的药物角色及配伍关系，不重新完整罗列药物/剂量清单。
+- 追问：`请把你提出的关系逐项对应到当前条目的依据；哪些是明确记载，哪些是根据条目内容归纳？`
+- 追问：`哪些问题当前条目无法确认？请保留 UNKNOWN，不要补充条目未提供的禁忌、剂量或临床证据。`
+
+**B. 本草信息关系（HERB-QUALITY）**
+
+- 选择本地存在、性味/归经/功用字段较完整的本草条目。
+- 初始分析解释这些字段之间能建立的关系，而不是逐项释义后结束。
+- 追问：`你刚才的归纳分别由哪些条目字段支持？原文没有直接建立的关系请明确标出。`
+- 追问：`当前条目没有提供哪些信息？不要根据模型记忆补齐。`
+
+**C. 医案证据链（CASE-QUALITY）**
+
+- 选择 App 内已有医案详情，只使用合成、非敏感学习资料，不输入真实个人病例。
+- 初始分析梳理该记录包含的症状、病机、治法、方药之间的对应关系。
+- 追问：`把记录明载的内容和你根据记录作出的推断分开说明；每个推断指出依据。`
+- 追问：`这份记录不能支持哪些结论？请明确列出未知，不要自行补齐。`
+
+若真实条目缺少上述字段，记录实际缺项并检查模型是否正确说明不足，不得为了通过验收而造数据或替换为虚构资料。
+
+**逐条输出断言：**
+
+| 断言 | PASS 条件 | FAIL 条件 |
+|---|---|---|
+| 不复述 | 不重抄详情页完整资料，只引用解释关系所必需的少量内容 | 主要内容仍是逐字段改写或完整列表复述 |
+| 有分析 | 至少说明当前条目两个或多个信息之间的关系/结构，且有当前资料依据 | 只有概述、释义或换词，没有关系分析 |
+| 原文与归纳分开 | 标出条目明确记载与基于条目的归纳，并说明归纳依据 | 把模型推断伪装成原文事实 |
+| 未知处理 | 对未提供信息明确说明 MISSING/UNKNOWN 或“当前资料无法确认” | 用常识或模型记忆擅自填空 |
+| 不编造 | 不新增条目未提供的组成、剂量、禁忌、出处、证据或规则 | 出现无法由当前条目支持的具体事实 |
+| 连续追问 | 两次追问保持当前条目和前文指代 | 丢失条目、串到旧条目或要求重新粘贴资料 |
+| 输出可用 | 回复非空、结构连贯、回答实际问题 | 空回复、重复循环、乱码、无关输出或协议拒绝 |
+
+一次回答出现编造内容或把归纳伪装成原文，整条场景记 FAIL，并保存最小复现与 trace_id。只在全部适用断言通过时记 PASS。
+
+### 15.6 场景记录与隐私边界
+
+将以下场景纳入 §7 的本轮 `test-results.md`，每项填写 backend（适用时）、结果、trace_id/证据文件和失败说明：
+
+| 场景 ID | 验收内容 | 初始状态 |
+|---|---|---|
+| IME-OUT / IME-IN / IME-FOLD | 外屏、内屏、折叠切换键盘避让 | NOT RUN |
+| AUTO-FORMULA / AUTO-HERB / AUTO-ACUPOINT | 方剂、本草、穴位自动解读 | NOT RUN |
+| AUTO-ACUPUNCTURE / AUTO-CASE / AUTO-MERIDIAN / AUTO-NEIJING | 针灸处方、医案、六经、内经自动解读 | NOT RUN |
+| AUTO-WAIT-READY | 模型未就绪时等待并单次提交 | NOT RUN |
+| CONTEXT-FOLLOWUP | 当前条目绑定与连续追问 | NOT RUN |
+| FORMULA-QUALITY-GPU / HERB-QUALITY-GPU / CASE-QUALITY-GPU | GPU 实际 backend 下三类知识解读 | NOT RUN |
+| FORMULA-QUALITY-CPU / HERB-QUALITY-CPU / CASE-QUALITY-CPU | CPU 实际 backend 下三类知识解读 | NOT RUN |
+
+每个 FAIL 至少记录最小复现、预期/实际、实际 backend、模型状态、trace_id、时间范围、截图/录屏文件名、脱敏错误码和复测结果。状态只能使用 PASS / FAIL / BLOCKED / UNKNOWN / NOT RUN，不使用百分制或主观评分。
+
+截图和录屏只包含 App 合成知识资料与 UI，不得包含真实患者资料、个人病历、身份资料或私密信息。不得把原始数据库、模型文件、签名密钥、`key.properties`、prompt/response 正文或附件复制进仓库、PR、Issue 或 CI artifact；TRACE 只保留项目允许的脱敏元数据。完整交接回报按 §7.1–§7.2 与本文件 §14.4 执行。
+
+**合并说明：** 原 PR #560 的独立文件 `docs/find-n2-ai-knowledge-interpretation-local-handoff.md` 不作为第二交接入口；其 P0/P1 设备场景已并入本节，实际执行只更新本文件定义的统一证据目录和记录表。
