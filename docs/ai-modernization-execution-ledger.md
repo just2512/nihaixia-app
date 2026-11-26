@@ -75,7 +75,7 @@
 
 **A 验收：** 不允许状态错乱、并发重入导致会话污染、空回复被当作成功、恢复后静默丢失上下文、取消后错误复用旧 Conversation。Native 执行状态未知时不自动重放。真机每轮可追溯；未实测保持 `UNKNOWN`。
 
-### B. 全模式红旗安全门禁（历史章节，已废止）
+### 历史记录：旧版 B 全模式红旗门禁方案（已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
@@ -771,7 +771,7 @@ PR #107 修复失败轮次阶段误归因：
 
 ---
 
-## 18. 2026-11-12 PR #109 红旗门禁调用顺序契约集成（历史章节，已废止）
+## 历史记录：2026-11-12 PR #109 旧红旗门禁调用顺序契约（已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
@@ -2004,7 +2004,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR #172 最终 head `03159bc645c6e06ef5062ec5438b1417111bb067`，分支验证 run `43671166718` SUCCESS，PR workflow run `43671170314` SUCCESS，含 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256、Native unit tests、JUnit XML 和证据工件上传。Squash merge 为当前 master `1370855b3f6a94f4a9cf0bcb235478f753348443`；合并后 Flutter tests run `43671870660` 与 Quality Gate run `43671870662` 均终态 SUCCESS。Flutter regression job `132683481307`、Android arm64 APK/Manifest/ABI/SHA-256/Native tests job `132684675722`、Quality Gate job `132683481181` 均 SUCCESS。
 - 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
 
-### 43.2 B：红旗安全门禁实际状态（历史章节，已废止）
+### 历史记录：旧版红旗安全门禁实际状态（已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
