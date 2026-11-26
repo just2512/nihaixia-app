@@ -3,7 +3,7 @@
 > **文档版本：** 1.2  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
-> **当前状态：** **LOCAL ONLY / NOT RUN / WAITING FOR MERGED MASTER CI**  
+> **当前状态：** **LOCAL ONLY / NOT RUN / WAITING FOR PR #582 CI + MERGE**  
 > **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
 
 ---
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **PR #576 合并且最终 HEAD 的 Flutter 与 Android CI 全部成功后的最新 `master`** | 本地执行前必须 `git fetch origin` 并记录 `git rev-parse origin/master`；不得使用 PR 分支旧 HEAD 或本文件历史章节中的 SHA |
+| 构建基线 | **当前 master `5dcf91f...`（PR #576 已合并；PR #576 精确 HEAD 的 Flutter/Android CI 已成功）** | PR #582 的最终 HEAD 仍须通过 Flutter/Android CI 并合并；本地执行前重新 `git fetch origin`，记录实际 `origin/master` SHA；不得使用 PR 分支旧 HEAD |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
