@@ -43,6 +43,8 @@ class ReasoningActionProposalAdapter {
     required AssistantKnowledgeContextResult knowledge,
     required Set<String> requestCapabilityAllowlist,
     List<ReasoningExecutionResult> executionResults = const [],
+    ReasoningAttachmentType? attachmentType,
+    bool attachmentPromptGenerated = false,
   }) {
     if (requestCapabilityAllowlist.isEmpty) {
       throw ArgumentError('REASONING_TOOL_REQUEST_CAPABILITY_ALLOWLIST_EMPTY');
@@ -60,6 +62,8 @@ class ReasoningActionProposalAdapter {
       knowledge: knowledge,
       allowedCapabilityIds: requestCapabilityAllowlist.toList()..sort(),
       executionResults: executionResults,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
   }
 
@@ -78,6 +82,7 @@ class ReasoningActionProposalAdapter {
       rankedEvidenceIds: request.rankedEvidenceIds.toSet(),
       knownEvidenceIds: request.knownEvidenceIds.toSet(),
       allowedCapabilityIds: request.allowedCapabilityIds.toSet(),
+      expectedAttachmentType: request.attachmentType?.name,
     );
     final response = decoded.response;
     if (!decoded.isUsable || response == null) {
