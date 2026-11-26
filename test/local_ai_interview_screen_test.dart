@@ -466,6 +466,7 @@ class _TextSendService extends LocalAiService {
   final sentConversationIds = <int>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
+  int legacySendCalls = 0;
   final restoredTranscripts = <String>[];
   final structuredReasoningContexts = <String>[];
   final finalizedReasoningAnswers = <String>[];
@@ -489,20 +490,30 @@ class _TextSendService extends LocalAiService {
     final envelope = jsonDecode(
       reasoningContext.substring(separator + 1),
     ) as Map<String, dynamic>;
+    final mode = envelope['mode'] as String;
     final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
         .cast<Map<String, dynamic>>();
+    // The fake model may cite any evidence actually supplied to this request.
+    // Returning the full set keeps source-resolution coverage deterministic.
     final references = rankedEvidence
         .map((item) => item['evidenceId'] as String)
-        .take(1)
         .toList(growable: false);
     final hasEvidence = references.isNotEmpty;
+    final canAnswerWithoutEvidence = const {
+      'automatic',
+      'consultation',
+      'metaphysics',
+    }.contains(mode);
+    final isAnswer = hasEvidence || canAnswerWithoutEvidence;
     final reply = jsonEncode({
       'schemaVersion': 1,
       'requestId': requestId,
-      'responseKind': hasEvidence ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
-      'status': hasEvidence ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
+      'responseKind': isAnswer ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
+      'status': isAnswer ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
       'segments': [
-        hasEvidence ? '基于本轮资料的结构化解释。' : '本轮没有足够资料支持确定回答。',
+        isAnswer
+            ? '已收到你的描述：$text；基于本轮可用输入生成结构化回复。'
+            : '本轮没有足够资料支持确定回答。',
       ],
       'referencedEvidenceIds': references,
       'unknowns': <String>[],
@@ -511,6 +522,7 @@ class _TextSendService extends LocalAiService {
     });
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
+    if (traceId != null) sentTraceIds.add(traceId);
     sentContexts.add(context);
     structuredReasoningContexts.add(reasoningContext);
     _pendingReasoningReplies[requestId] = reply;
@@ -701,6 +713,7 @@ class _TextSendService extends LocalAiService {
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
+    legacySendCalls += 1;
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
     return '已收到你的描述：$text';
@@ -836,6 +849,7 @@ class _StructuredToolProposalService extends _TextSendService {
     final reply = jsonEncode(payload);
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
+    if (traceId != null) sentTraceIds.add(traceId);
     sentContexts.add(context);
     structuredReasoningContexts.add(reasoningContext);
     _pendingReasoningReplies[requestId] = reply;
@@ -867,16 +881,15 @@ class _FailingIntentSelectionService extends _TextSendService {
 
 class _FailingTextSendService extends _TextSendService {
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
+    sentTexts.add(text);
     throw PlatformException(
       code: 'NATIVE_SEND_FAILED',
       message: 'native send failed in test',
@@ -1045,26 +1058,83 @@ class _PostSendStatusFailureService extends _TextSendService {
     return _readyStatus;
   }
 
-  @override
-  Future<String> sendMessage(
-    String text, {
+  Future<LocalAiReasoningPendingReply> _sendStructured({
+    required String text,
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
-    sentTexts.add(text);
-    _statusUnavailable = true;
     if (failSend) {
+      sentTexts.add(text);
+      _statusUnavailable = true;
       throw PlatformException(
         code: 'INFERENCE_FAILED',
         message: '模拟本地推理失败',
       );
     }
-    return '本轮回复：$text';
+    final pending = traceId == null
+        ? await super.sendReasoningMessage(
+            text,
+            conversationId: conversationId,
+            requestId: requestId,
+            context: context,
+            reasoningContext: reasoningContext,
+          )
+        : await super.sendReasoningMessageWithTrace(
+            text,
+            conversationId: conversationId,
+            requestId: requestId,
+            context: context,
+            reasoningContext: reasoningContext,
+            traceId: traceId,
+          );
+    _statusUnavailable = true;
+    return pending;
   }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructured(
+    text: text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+  );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructured(
+    text: text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
 
   void recoverAsReady() {
     _statusUnavailable = false;
@@ -1089,27 +1159,42 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   }
 
   @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
-    sentTexts.add(text);
     if (text == triggerText) {
-      _notReady = true;
       if (failOnTrigger) {
+        sentTexts.add(text);
+        _notReady = true;
         throw PlatformException(
           code: 'INFERENCE_FAILED_AFTER_TEARDOWN',
           message: '模拟模型卸载前推理失败',
         );
       }
-      return '模型卸载前生成的回复';
+      final pending = await super._sendReasoningReply(
+        text,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        traceId: traceId,
+      );
+      _notReady = true;
+      return pending;
     }
-    return '历史回复：$text';
+    return super._sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+    );
   }
 }
 
@@ -1240,68 +1325,53 @@ class _DelayedHistoryConversationStore extends _MemoryConversationStore {
   }
 }
 
-class _FailOnceTextSendService extends LocalAiService {
+class _FailOnceTextSendService extends _TextSendService {
   var sendAttempts = 0;
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
 
   @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
+      sentTexts.add(text);
       throw PlatformException(
         code: 'NATIVE_ERROR',
         message: '首次本地推理失败',
       );
     }
-    return '重试成功：$text';
+    final pending = await super._sendReasoningReply(
+      '重试成功：$text',
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+    );
+    // Keep the recorded input faithful to the user's original turn.
+    sentTexts[sentTexts.length - 1] = text;
+    return pending;
   }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) => sendMessage(text, conversationId: conversationId);
 }
 
 class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
   final sentTraceIds = <String>[];
 
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
     required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) {
-    sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
-  }
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
+    required String requestId,
     required String context,
+    required String reasoningContext,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -1310,7 +1380,19 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     int? sessionStateConversationId,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
+    return super.sendReasoningMessageWithTrace(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+      requireMedicalSafety: requireMedicalSafety,
+      redFlagContext: redFlagContext,
+      redFlagContextTruncated: redFlagContextTruncated,
+      sessionStateContext: sessionStateContext,
+      sessionStateConversationId: sessionStateConversationId,
+    );
   }
 }
 
@@ -2235,6 +2317,13 @@ void main() {
     expect(service.sentContexts.single, contains('不得向用户输出 sourceId、evidenceId、路径或内部编号'));
     expect(service.sentContexts.single, contains('结合本轮本地知识库实际命中的条目解释规则结果'));
     expect(service.sentContexts.single, contains('必须区分 App 规则结果、检索资料和 AI 解释'));
+    expect(service.legacySendCalls, 0,
+        reason: '问诊文本必须走结构化推理与 Native 双阶段提交');
+    expect(service.structuredReasoningContexts, hasLength(1));
+    final consultationRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
+    ) as Map<String, dynamic>;
+    expect(consultationRequest['mode'], 'consultation');
     expect(tester.takeException(), isNull);
   });
 
@@ -5114,6 +5203,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
+    expect(service.legacySendCalls, 0);
+    final metaphysicsRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
+    ) as Map<String, dynamic>;
+    expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.contextAssembly,
@@ -5158,7 +5252,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
+    expect(service.legacySendCalls, 0);
     expect(service.sentContexts.single, contains('玄学大师'));
+    final metaphysicsRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
+    ) as Map<String, dynamic>;
+    expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.nativeInference,
@@ -7383,6 +7482,80 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('自动模式普通寒暄也走结构化推理且不注入 NO_RESULTS 资料块', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, ['你好']);
+    expect(service.legacySendCalls, 0,
+        reason: '无检索命中不应退回无协议的普通 sendMessage');
+    expect(service.structuredReasoningContexts, hasLength(1));
+    expect(service.finalizedReasoningAnswers, hasLength(1));
+    final request = jsonDecode(
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
+    ) as Map<String, dynamic>;
+    expect(request['mode'], 'automatic');
+    expect(request['rankedEvidence'], isEmpty);
+    expect(request['actionCapabilityAllowlist'], isEmpty);
+    expect(service.sentContexts.single, contains('当前角色：通用助手'));
+    expect(service.sentContexts.single, isNot(contains('NO_RESULTS')));
+    expect(service.sentContexts.single, isNot(contains('本轮知识检索状态')));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('自动模式 Native finalize 确认未知时不持久化成功轮次也不重放', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService()
+      ..failReasoningFinalize = true
+      ..failReasoningReject = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.structuredReasoningContexts, hasLength(1));
+    expect(service.sentTexts, ['你好']);
+    expect(service.finalizedReasoningAnswers, isEmpty);
+    expect(service.rejectedReasoningRequestIds, isEmpty);
+    expect(
+      store._messages.values.single.where((row) => row['role'] == 'assistant'),
+      isEmpty,
+      reason: 'Native finalize 与 reject 回执都未知时，不得将该轮写成成功历史',
+    );
+    expect(find.textContaining('Native 提交确认状态未知'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('自动模式将已命中的方剂实体与可回查资料共同路由为学习助手', (tester) async {
     final store = _MemoryConversationStore();
