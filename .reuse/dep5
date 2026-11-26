@@ -427,7 +427,7 @@ Files:
  test/engine/zangfu_evidence_builder_test.dart
  test/entitlement_service_test.dart
  test/festival_lookup_editorial_layout_test.dart
- test/fixtures/ai_retrieval_golden_metadata.json
+ test/fixtures/ai_retrieval_golden_metadata.json.gz.base64
  test/fold_aware_navigation_contract_test.dart
  test/fold_aware_routes_test.dart
  test/fork_update_isolation_policy_test.dart
