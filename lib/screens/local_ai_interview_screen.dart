@@ -308,6 +308,9 @@ class _AssistantTurnResponse {
     this.protocolValidated = true,
     this.protocolFailureCode,
     this.reasoningRequestId,
+    this.toolId,
+    this.toolStatus,
+    this.toolArguments = const {},
   });
 
   final String text;
@@ -317,6 +320,9 @@ class _AssistantTurnResponse {
   final bool protocolValidated;
   final String? protocolFailureCode;
   final String? reasoningRequestId;
+  final String? toolId;
+  final String? toolStatus;
+  final Map<String, String> toolArguments;
 }
 
 /// Bounded, user-authored context sent only to the RedFlag safety boundary.
@@ -1905,11 +1911,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               'App 未返回经过持久化读回验证的成功结果；本次状态保持 UNKNOWN/失败，不会自动重放。';
           final appText = execution == null ? fallback : appResultText(execution);
           await finalizeCurrent(appText);
+          final executionStatus = switch (execution?.status) {
+            ReasoningExecutionStatus.failed => 'FAILED',
+            ReasoningExecutionStatus.unknown || null => 'UNKNOWN',
+            ReasoningExecutionStatus.notStarted => 'NOT_STARTED',
+            ReasoningExecutionStatus.succeeded => 'SUCCEEDED',
+          };
           return _AssistantTurnResponse(
             text: appText,
             sourceIds: const [],
             knowledgeStatus: 'TOOL_EXECUTION_NOT_SUCCEEDED',
             reasoningRequestId: activeRequestId,
+            toolId: preview.toolId,
+            toolStatus: executionStatus,
+            toolArguments: execution?.actualArguments ?? preview.arguments,
           );
         }
 
@@ -2018,6 +2033,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             knowledgeStatus: 'APP_TOOL_RESULT_ONLY',
             protocolValidated: true,
             reasoningRequestId: activeRequestId,
+            toolId: preview.toolId,
+            toolStatus: 'SUCCEEDED',
+            toolArguments: execution.actualArguments,
           );
         }
         await finalizeCurrent(
@@ -2029,6 +2047,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: followup.sourceIds,
           knowledgeStatus: resultKnowledge.statusLabel,
           reasoningRequestId: activeRequestId,
+          toolId: preview.toolId,
+          toolStatus: 'SUCCEEDED',
+          toolArguments: execution.actualArguments,
         );
       } catch (error) {
         if (nativeFinalizeConfirmed && lastFinalizedAnswer != null) {
@@ -10230,6 +10251,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           mode: effectiveMode,
           traceId: traceId,
           attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
+          toolId: turnResponse.toolId,
+          toolStatus: turnResponse.toolStatus,
+          toolArguments: turnResponse.toolArguments,
           sourceIds: turnResponse.sourceIds,
           knowledgeStatus: turnResponse.knowledgeStatus,
           reasoningRequestId: turnResponse.reasoningRequestId,
