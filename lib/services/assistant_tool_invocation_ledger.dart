@@ -61,6 +61,7 @@ class AssistantToolInvocationLedger {
     required Map<String, String> arguments,
   }) async {
     _validateInput(
+      conversationId: conversationId,
       invocationId: invocationId,
       requestId: requestId,
       toolId: toolId,
@@ -360,6 +361,7 @@ class AssistantToolInvocationLedger {
   }
 
   void _validateInput({
+    required int conversationId,
     required String invocationId,
     required String requestId,
     required String toolId,
@@ -369,7 +371,15 @@ class AssistantToolInvocationLedger {
     if (conversationId <= 0) {
       throw ArgumentError.value(conversationId, 'conversationId');
     }
-    if (!RegExp(r'^[0-9a-f]{32}
+    if (!RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(requestId)) {
+      throw ArgumentError.value(
+        requestId,
+        'requestId',
+        'Expected a 32-character hexadecimal request ID',
+      );
+    }
+    for (final entry in {
+      'invocationId': invocationId,
       'requestId': requestId,
       'toolId': toolId,
       'capabilityId': capabilityId,
@@ -384,11 +394,11 @@ class AssistantToolInvocationLedger {
         arguments.entries.any((entry) =>
             entry.key.trim().isEmpty ||
             entry.key != entry.key.trim() ||
+            entry.key.length > 128 ||
             entry.value.length > 2048)) {
       throw ArgumentError.value(arguments, 'arguments');
     }
   }
-
   String _claimKey(String invocationId) => '$invocationId:claim';
   String _terminalKey(String invocationId) => '$invocationId:terminal';
 }
