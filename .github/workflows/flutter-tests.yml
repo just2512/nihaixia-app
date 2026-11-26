@@ -197,8 +197,10 @@ jobs:
           set -euo pipefail
           python3 tool/audit_color_tokens.py --inventory
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
-            python3 tool/audit_color_tokens.py --changed-only --base-ref FETCH_HEAD
+            # Fetch complete base history so the changed-line audit can compute
+            # a merge base against the checked-out PR merge commit.
+            git fetch --no-tags origin "$GITHUB_BASE_REF"
+            python3 tool/audit_color_tokens.py --changed-only --base-ref "origin/$GITHUB_BASE_REF"
           fi
 
       - name: Set up Java 17
