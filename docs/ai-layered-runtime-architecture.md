@@ -364,23 +364,23 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.1 当前 master 源码映射与已确认断点
 
-以下是本轮对 master 源码的静态映射快照。它说明当前职责分别落在哪里以及哪里仍然耦合；它不是设备运行证明。修改前必须再次以当时 master 核对行号和调用关系。
+以下是历史基线阶段的静态映射快照；其中关于 CandidateEvidence、跨模式 Request/Response 和 Tools 生产执行的旧状态已被后续主线提交更新。**当前主线状态以本节末尾 §5.4 为准**。本表保留历史背景，不作为当前实现状态的放行依据；它也不是设备运行证明。
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
-| 知识召回 | `ClassicEvidencePipeline.retrieveClassicIndexCandidates`、`MedicalCaseEvidencePipeline`（#507）、`GujiEvidencePipeline`（#512）分别输出候选；`MultiSourceEvidencePipeline.combine` / `SourceAwareLegacyEvidenceRanker.rank`（#516）；`AssistantKnowledgeContextBuilder.buildAsync`（#518）负责生产装配；PR #522 已增加 `buildWithEvidenceAsync` 请求级证据身份投影。 | PARTIAL：classic → 显式指定 Guji → medical 的旧顺序、来源上限与 6,500 字符上下文保持；#522 为本轮全部候选提供 `knownEvidenceIds`，仅为完整进入上下文的 KEEP 项提供 `rankedEvidence` 与 evidenceId → sourceId 映射；结构化 formula/herb/acupuncture 等尚未统一为 CandidateEvidence。 |
+| 知识召回 | `ClassicEvidencePipeline`、`MedicalCaseEvidencePipeline`、`GujiEvidencePipeline` 与 `LocalStructuredEvidencePipeline`；后者在不改旧检索/文本生成顺序的前提下，把 formula/herb/acupuncture/acupoint/Neijing 结构化结果映射为 CandidateEvidence；`AssistantKnowledgeContextBuilder.buildWithEvidenceAsync/buildWithSourcesAsync` 输出请求级证据身份与来源映射。 | PARTIAL：PR #568 已将结构化本地知识纳入 CandidateEvidence，并保留旧 builder 文本和来源身份；候选与实际呈现内容仍须分开判断，golden fixture 固定候选与 KEEP/DROP；仍无真正 tokenizer token budget 或独立语义 reranker。 |
 | 证据排序 | `SourceAwareLegacyEvidenceRanker.rank` 对多源候选输出 KEEP/DROP 与原因；PR #522 的 `AssistantKnowledgeContextBuilder.buildWithEvidenceAsync` 将全部候选 ID 与完整呈现的 KEEP ID 分开返回。 | PARTIAL：不使用相关性分数、不改变旧排序和检索黄金行为；6,500 字符是现有呈现上限，不是 token 预算；尚未形成包含策略版本、逐条决策和预算诊断的完整 RankedEvidenceSet。 |
 | 会话记忆 | `MainActivity`、`LocalAiConversationHistory`、`LocalAiConversationSessionPolicy`、`SessionStateSnapshotBuilder.build`、`AssistantToolInvocationLedger`；PR #519 已将只读 snapshot 经独立 MethodChannel 字段接入普通文本 Native 输入，并由 Native 校验 active SQLite conversation ID。 | PARTIAL：provenance 保留；snapshot 与 RAG 分离且不进入 recovery transcript；新 Ledger 的隐藏 `role=tool` claim/terminal 元数据不参与 `SessionStateSnapshotBuilder` 的用户/助手记忆与 evidence-reference 提取；跨进程 Native Conversation 恢复仍 UNKNOWN；16,000 UTF-16 字符上限不是模型 token/input budget；无自动压缩。 |
-| 语言推理 | ReasoningRequest / ReasoningRequestPromptFormatter（#524）、ReasoningResponseCodec（#520）；学习路径由 LocalAiInterviewScreen → ReasoningKnowledgeAnswerAdapter → LocalAiService.sendReasoningMessage → Native MainActivity.sendLocalReasoningMessage 接入，Dart 校验后经 finalizeReasoningTurn / rejectReasoningTurn 完成双阶段提交。 | PARTIAL：仅显式 learning 与 automatic entity-hit learning 使用结构化协议；Native 在返回原始 JSON 前按已完成历史重建 KV，原始结构化输出不写入成功 transcript；App 校验 requestId/schema/ranked evidence/sourceId 映射，来源 ID 保留为 App 元数据；学习路径 capability allowlist 为空，ACTION_PROPOSAL 被拒绝。其他模式仍走原自由文本路径，跨模式协议接入和 Core-5 E2E 未完成。 |
-| 业务执行 | `AssistantConversationOrchestrator`、`AssistantToolExecutionPlanBuilder`、`ReasoningActionProposalGate`、`ReasoningActionProposalAdapter`、`AssistantToolInvocationLedger`、`HeadlessToolDispatcher.executePlan`、`HeadlessToolResultHandler` / `HeadlessToolPlanResultHandler`；`AssistantToolResult` 是当前业务结果载体。 | PARTIAL：18 个 Headless executor 已注册；模型动作提案目前仅允许四个 plan-eligible capability。PR #552 Gate 与 #558 Request/Adapter 已形成请求绑定、typed args 和显式确认的独立契约；当前 Ledger 切片提供 `assistant_messages` 内的唯一 claim、终态持久化与重新验证的安全结果读回，恢复未决 claim 降级 UNKNOWN。**仍未接入 tools mode Native 生产调用、App 确认 UI 和真实 Dispatcher 调用/下一轮回流**；UNKNOWN 保留且停止后续步骤。 |
+| 语言推理 | `ReasoningRequest` / `ReasoningRequestPromptFormatter`、`LocalAiService.sendReasoningMessage`、Native `MainActivity.sendLocalReasoningMessage`、`ReasoningResponseCodec` 与 `ReasoningKnowledgeAnswerAdapter`；PR #573 已把 Automatic、Consultation、Learning、Metaphysics 的普通文本路径接入统一 Request/Response；Tools 使用独立 ACTION_PROPOSAL/执行结果回流协议。 | PARTIAL：普通文本对话已跨模式结构化并保留 Native finalize/reject 双阶段提交；图片/音频输入输出、音频转写、症状草稿抽取、八字 slot 抽取、意图分类等任务型入口仍使用专用 DTO/Native 入口，尚未统一纳入同一 Request/Response 审计面；真实模型与设备 TRACE 仍待本地验收。 |
+| 业务执行 | `ReasoningActionProposalGate` / `ReasoningActionProposalAdapter`、`AssistantToolExecutionCoordinator`、`AssistantToolInvocationLedger`、`HeadlessToolDispatcher.executePlan`、`ReasoningExecutionResultAdapter` 与 Tools mode 的生产调用方。 | PARTIAL：PR #561/#566 已把四项 plan-eligible capability 接入结构化 proposal → App 确认 → durable one-shot claim → Headless Dispatcher → Ledger 安全读回 → 下一轮只读 `executionResults`；proposal turn 不作为成功模型答案写入。其余注册工具不因已注册即获得模型调用授权，仍需逐项 capability/schema/副作用/幂等审计；UNKNOWN 不重放。 |
 
 **Core-1 当前状态与剩余目标：** #493 已将 Native completed-turn history 的 userText 改为干净用户原话；#496 限制为最多 12 个完整成功轮次/10,000 UTF-16 code units；#499 按 SQLite conversation ID 隔离 Native Conversation；#506 暴露当前 KV Cache token 实测值；#505 已合并只读 `SessionStateSnapshotBuilder`；#509 已合并 `ModelInfo.maxContextTokens()` 模型文件声明上限观测。PR #519 已合并于 `61e63c7309787acf0867d9503532b405f5a0e5e9`：将 USER_ORIGINAL/USER_CONFIRMED/MODEL_INFERRED/APP_RESULT/SOURCE_REFERENCE 以独立结构化段落接入普通文本 Native 发送，设置 16,000 UTF-16 code units 字符上限，Native 按当前 SQLite conversation ID fail-closed 校验；快照与 RAG 分离，且不写入 Native recovery transcript。精确 HEAD Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS；PR 事件 Branch validation 为 SKIPPED，push 事件的同 HEAD Branch validation SUCCESS。Core-1 云端输入边界已落地，但总体仍 PARTIAL：KV Cache 实测值、模型声明 maxContextTokens 和 formatter 字符上限均不是 App token/input budget；没有自动压缩；跨进程 Native 恢复仍 UNKNOWN。
 
-**Core-2 当前状态与剩余目标：** PR #516 多源 CandidateEvidenceBatch 与来源感知 KEEP/DROP 已合并；PR #518 将 classic → 显式指定 Guji → medical 候选接入 `AssistantKnowledgeContextBuilder.buildAsync`，保留 classic 4、每本 Guji 2、medical 2 的上限及 6,500 字符呈现上限。PR #522 已合并于 `a43989636101d267cd2ab96fe6a4eee1a89ba522`：新增 `buildWithEvidenceAsync` 请求级证据身份投影，`knownEvidenceIds` 包含本轮全部候选（KEEP/DROP），`rankedEvidence` 仅包含完整进入上下文的 KEEP 项，并提供 evidenceId → sourceId 映射；仅覆盖 classic/Guji/medical CandidateEvidence。仍未接入 Native ReasoningRequest 主发送链，也没有相关性分数、向量 reranker 或 token/字符排序预算。
+**Core-2 当前状态与剩余目标：** PR #516/#518/#522 建立多源候选与 KEEP/DROP；PR #568（merge `d7fe128537cbdea2707538e7b31dd910b3d3610a`）进一步把方剂、本草、针灸处方、穴位和《内经》结构化本地条目纳入 `LocalStructuredEvidencePipeline`，保留旧 builder 正文与顺序，并加入请求级 candidate identity、golden KEEP/DROP 快照。PR #573（merge `a7f2672be1f40ba2c4408ac3381046126b9c4167`）已将本轮 `rankedEvidence` 通过 `ReasoningKnowledgeAnswerAdapter.createRequest` 进入普通文本推理请求。Core-2 仍为 PARTIAL：来源感知排序依旧是确定性旧顺序/来源上限，不代表来源真实性或医学正确性；6,500 字符和 24,000 UTF-16 supplement 上限都不是 tokenizer token budget；尚无经黄金查询证明收益的独立语义 reranker。
 
-**Core-3 当前状态与剩余目标：** PR #540 已合并（master e2cdc1c1541eea369a5135d91c1bf9eb0891669a），将显式 learning 和 automatic entity-hit learning 接入 Request → Native raw structured response → strict decoder → request-local evidence/source mapping → App UI 来源入口 → Native finalize/reject 双阶段路径。Native 在返回 raw JSON 前重建干净 KV，只有经过校验的自然语言答案才能写入成功历史；request metadata、RAG body、SessionStateSnapshot 和原始 userText 分段传递；sourceId/evidenceId 不写进普通答案；学习路径 capability allowlist 为空，动作提案一律 fail-closed。其他模式仍走旧自由文本路径；Core-3 跨模式迁移、工具动作提案授权和 Core-5 E2E 尚未完成。24,000 UTF-16 code units 仅是 supplement 字符上限，不是模型 token/input budget。
+**Core-3 当前状态与剩余目标：** PR #540 的 learning-only 接线已由 PR #573（merge `a7f2672be1f40ba2c4408ac3381046126b9c4167`）扩展为 Automatic、Consultation、Learning、Metaphysics 普通文本对话的结构化 Request/Response；Tools mode 通过单独 ACTION_PROPOSAL 和执行结果路径工作。输入保留原始 userText、SessionStateSnapshot 与本轮实际 rankedEvidence；Response 进行 requestId/schema/evidence/source 映射校验；拒绝/终态未知不写入成功回答、不自动重放。Core-3 仍为 PARTIAL：图片/音频附件、音频转写、症状草稿、八字 slot、意图分类等任务型 DTO/Native 调用仍存在独立入口，需分别确认其模型调用前安全门禁、字段所有权、失败语义和 TRACE 覆盖；不应机械把不同任务的数据强行塞入普通文本 schema。24,000 UTF-16 code units 不是 tokenizer token/input budget。
 
-**Core-4 当前状态与剩余目标：** 当前 Router 共 24 个 IDs：18 Headless executor、5 Page-only、1 inline deterministic workflow；多步骤计划白名单仅为 dosage / solar_terms / yuxiaji_omen / sanshan_lingqian 四项。现有 intent classifier 仍只选 App 候选精确 ID，参数由 App 从用户原文确定性提取并预检；Dispatcher 全计划校验、顺序执行、非 SUCCEEDED 停止、异常 UNKNOWN 不重放。PR #552 Gate 已实现 requestId/capability allowlist/typed args 约束和显式确认后生成单步计划；PR #558 增加不可变 `ReasoningRequest.allowedCapabilityIds`、prompt allowlist 与 `ReasoningActionProposalAdapter`，动作提案只返回 App-owned preview，不显示模型 narrative。当前 One-shot 底座分支又增加 SQLite v8 唯一 claim/终态记录、进程恢复 UNKNOWN 和安全终态读回；hidden `role=tool` 数据已从 SessionStateSnapshot 记忆来源提取中排除。**生产 tools mode 仍走旧自由文本路径**，因此 Native 结构化调用、App 确认 UI、真实 Dispatcher 调用与下一轮 ExecutionResult 回流仍 MISSING。能力级版本化 schema、敏感级别/副作用/幂等/取消策略仍需补齐，详见 docs/assistant-tool-capability-audit.md §12。
+**Core-4 当前状态与剩余目标：** 当前 Router 注册集合包含 Headless、Page-only 与 inline workflow；Gate 对模型 ACTION_PROPOSAL 仅开放 dosage / solar_terms / yuxiaji_omen / sanshan_lingqian 四项。PR #561/#566 已把生产 Tools mode 接入结构化 proposal、request-scoped allowlist、App-owned 确认 UI、持久化 one-shot claim、既有 Headless Dispatcher、Ledger 终态安全读回以及只读下一轮 `executionResults`。PR #573 继续维护非工具普通答案与工具提案协议隔离。Core-4 仍为 PARTIAL：四项能力的单步生命周期已接线，不代表其余 Headless/Page/inline 工具均已纳入统一模型提案治理；需要继续核对各能力 schema、参数来源、敏感级别、副作用、幂等、取消、超时及失败终态，见 `docs/assistant-tool-capability-audit.md`。
 
 代码状态必须通过当前 master 的 CODE/TEST/CI/TRACE 审计分别填写 IMPLEMENTED / PARTIAL / MISSING / UNKNOWN。不能凭本设计文件给任何运行时能力标 IMPLEMENTED。
 
@@ -492,16 +492,18 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 **最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、E4B 负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态；书架只是未来可选知识源。先完成核心分层和多轮/证据边界，再决定是否扩展书架、Embedding 或 Reranker。
 
 
-### 5.3 Core-3 learning-only 生产接线与 Core-4 当前切片
+### 5.3 Core-3 / Core-4 历史阶段记录（当前状态见 §5.4）
 
-- Core-3 已落地部分：PR #540 在 master e2cdc1c1541eea369a5135d91c1bf9eb0891669a 合并。显式 learning 和 automatic entity-hit learning 使用 Request/Response v1；其他模式未迁移。
+> 本节保留当时 learning-only 与 Gate/Request/One-shot 分片的实施记录。后续 PR #561/#566/#568/#573 已推进生产接线；不得把本节中的“仍未接入”描述当作当前 master 状态。
+
+- Core-3 当时已落地部分：PR #540 在 master e2cdc1c1541eea369a5135d91c1bf9eb0891669a 合并。显式 learning 和 automatic entity-hit learning 使用 Request/Response v1；其他模式当时未迁移。
 - Native 双阶段提交：sendReasoningMessage 生成原始 JSON，但不将它作为完成轮次写入 LocalAiConversationHistory；返回 Dart 前 Native 从此前成功 transcript 重建 Conversation，清除模型 KV 中的原始 JSON。Dart strict decoder 与 evidence/source 映射通过后调用 finalizeReasoningTurn，失败调用 rejectReasoningTurn。终态确认未知时不重放模型推理。
 - 证据边界：ranked evidence IDs 是本轮唯一可引用的证据集合；sourceId / evidenceId / 本地存储定位只作为 App 内部元数据，不进入普通回答文本。学习路径允许 capability 集合为空，动作提案一律 fail-closed。
 - Core-4 执行结果投影：`ReasoningExecutionResultAdapter` 将经验证的 `AssistantToolResult` 映射为下一轮可消费的结构化执行结果。SUCCEEDED 需要真实参数、结构化值和来源；FAILED/NO_RESULT/CANCELLED 保留各自终态；UNKNOWN 保持 UNKNOWN，不得重放。
 - Core-4 ACTION_PROPOSAL Gate：独立工作分支 `work/core4-action-proposal-gate-contract-20261126` 增加 App-owned `ReasoningActionProposalGate`。它绑定当前 requestId、请求级 capability allowlist、四个既有 plan-eligible Headless capability 以及参数 schema；准备阶段只生成不可变确认预览，显式用户确认后才可创建单步 `ToolExecutionPlan`。Gate 不调用 Dispatcher，也不构成第二套访问授权门禁。
 - Core-4 Request/Adapter：独立分支 `work/core4-tool-proposal-runtime-contract-20261126` 将不可变 `allowedCapabilityIds` 加入 `ReasoningRequest`，仅 `mode=tools` 可以非空；prompt 输出本轮 `actionCapabilityAllowlist`，空集合明确禁止 ACTION_PROPOSAL。`ReasoningActionProposalAdapter` 只接受 Gate 已登记能力，Response codec 使用同一 request allowlist，拒绝携带证据引用的动作提案，不向确认 UI 暴露模型 action narrative，只返回 App-owned preview，并在确认后按原 requestId/allowlist 再校验。
 - Core-4 One-shot：后续独立切片在现有 `assistant_messages` 加 nullable `invocation_key` 和部分唯一索引，以隐藏 `role=tool` 事件记录 CLAIMED/TERMINAL；进程恢复时未完成 claim 转为 UNKNOWN，不自动重放。不得新增第二套会话表。该代码切片仍待重基线与精确 HEAD CI。
-- **Core-4 当前仍为 PARTIAL：** Gate、Request、Adapter 与 Invocation Ledger 仍是独立契约/持久化切片，尚未接入 Native 工具模式生产 Request/Response、App 确认 UI、HeadlessToolDispatcher 或下一轮真实 ExecutionResult 回流。模型参数不能越过 App schema、原始用户文本解析和用户确认直接送入执行器。
+- **该历史切片的阶段结论（非当前状态）：** 当时 Gate、Request、Adapter 与 Invocation Ledger 仍是独立契约/持久化切片；之后 PR #561/#566 已完成四项能力的 Tools mode 生产闭环。模型参数仍不能越过 App schema、请求级 allowlist、用户确认和 Ledger claim 直接进入执行器。
 - 后续硬门槛：工具模式接入结构化 Request/Response；App 确认 UI 独立展示并绑定原 requestId/allowlist；持久化 claim 成功后才调用现有 Dispatcher；真实 `AssistantToolResult` 经适配加入下一轮 Request 供模型解释，同时 App 保留原始执行结果/来源。Page-only、未登记能力、缺参、非法参数、拒绝、取消和 UNKNOWN 均不得伪装成功；UNKNOWN 不自动重放。
 
 
@@ -509,7 +511,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### Core-0：五层职责契约与当前源码映射（2026-11-26 基线）
 
-**审计基线：** `master@5889383b13742ea68ca4156fce5f7e657b3dde62`（已包含 #558 Request/Adapter 与 #559 One-shot Ledger）。本节是代码映射和数据所有权冻结，不代表各层运行时工作已全部完成。未合并 PR 的代码只能列为候选实现，不能计入 master 已落地状态。
+**原始审计基线：** `master@5889383b13742ea68ca4156fce5f7e657b3dde62`（当时已包含 #558 Request/Adapter 与 #559 One-shot Ledger）。本节是 Core-0 的历史契约/源码映射冻结，不代表该 SHA 是当前主线。当前生产接线与缺口以 §5.4 为准；未合并 PR 的代码只能列为候选实现，不能计入 master 已落地状态。
 
 #### 1. 五层契约、真实入口和输出
 
@@ -557,3 +559,28 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 #### 5. Core-0 放行结论
 
 **Core-0 文档映射：完成本轮冻结。** 五层主要代码入口、DTO、字段传输、数据所有权、失败语义、测试锚点和文件责任已形成明确映射。此结论只关闭“契约/源码映射”文档工作，不把 Core-1 至 Core-5 标记为完成；后续生产接线必须按本节对应的真实入口和边界实施。
+
+### 5.4 当前主线实现核对（2026-11-26，master@a7f2672be1f40ba2c4408ac3381046126b9c4167）
+
+本节覆盖后续已合并 PR 对 §5.1–§5.3 历史状态的更新。PR 尚未合并的代码与旧 SHA CI 不计入 master 已落地状态。
+
+| 层 | 当前主线事实 | 当前结论 | 未闭合项 |
+|---|---|---|---|
+| Core-0 契约与源码映射 | 五层 DTO、数据所有权、Native 字段边界、失败状态及测试锚点已冻结；本文件 §5.4 校正了后续生产接线状态。 | **完成（文档映射）** | 契约冻结不等于运行时层全部完成。 |
+| Core-1 会话记忆 | master 已有 SessionStateSnapshotBuilder、Native owner 校验、隐藏 tool-role Ledger 排除，以及工具执行 One-shot Ledger。独立 PR #575 `work/core1-persisted-reasoning-turn-ledger-core3-20261126` 增加持久化 Native reasoning-turn request/terminal/recovery 记录，当前 HEAD `9fe364df135e42be122259043c408485b78779b7` 尚未合并。 | **PARTIAL** | #575 精确 HEAD Flutter regression 已通过；Android arm64 验证仍在运行。跨进程真实 E4B/KV 恢复、模型 token budget/自动压缩仍需独立验证；未合并能力不计入 master。 |
+| Core-2 召回与排序 | PR #568 已把 Classic/Guji/Medical 及 formula/herb/acupuncture/acupoint/Neijing 结构化证据统一映射到 CandidateEvidence；Candidate identity、KEEP/DROP、来源映射进入 golden fixture；PR #573 把本轮 rankedEvidence 接入普通文本 ReasoningRequest。 | **PARTIAL** | 现行排序保持既有确定性旧顺序/来源上限；没有 tokenizer 级总输入预算，也未以黄金查询证明独立 reranker 的净收益。 |
+| Core-3 语言推理 | PR #573 已把 Automatic、Consultation、Learning、Metaphysics 普通文本对话接入统一 Request/Response；Tools mode 有独立 proposal/result 协议，不与普通答案混用。 | **PARTIAL** | 图片/音频、转写、症状草稿、八字 slot、意图分类等任务型入口仍有专用 DTO/Native 路径；需补齐这些模型调用入口与旁路的安全/TRACE 审计。 |
+| Core-4 业务执行 | PR #561/#566 已把四个允许能力接入 ACTION_PROPOSAL → App-owned Gate → 显式确认 → durable one-shot claim → Headless dispatch → Ledger 终态读回 → 只读 executionResults 下一轮解释。PR #573 保持工具协议与普通文本答案隔离。 | **PARTIAL** | 当前只对四项 capability 开放此模型路径；其他注册工具不能因已注册而放行。需完成 capability schema、参数来源、副作用、敏感级别、幂等、取消/超时和失败语义审计。 |
+| Core-5 端到端验收 | PR #577 建立 20 轮知识追问、同会话记忆隔离、单次工具确认/执行/结果回流的 widget E2E；PR 分支当前仍依赖 #575，测试正修正为通过 App evidence source 读取真实工具结果。 | **未放行** | 最新 PR HEAD CI 尚未完成；之后须从已合并主线重基线，执行精确 HEAD Flutter regression、Analyze/changed-test pairing、Android arm64/JVM、Fork License。Find N2 真实模型/进程 TRACE 最后由本地执行。 |
+
+**已合并生产提交：**
+- PR #561 `9ec0f2886b6bcecd3d447e859c3adf3e4aac09cf`：确认后的单次执行协调与持久化 Ledger。
+- PR #566 `7ccb6f0ab6931df503524cdcc2b0a9620b4d7601`：Tools mode 生产请求、确认 UI、Dispatcher 和结果回流接线。
+- PR #568 `d7fe128537cbdea2707538e7b31dd910b3d3610a`：结构化本地知识候选证据化。
+- PR #573 `a7f2672be1f40ba2c4408ac3381046126b9c4167`：普通文本多模式统一 Request/Response。
+
+**任务边界：** 图片/音频等任务型入口不应为追求 DTO 统一而丢失任务语义；但所有触发模型推理的入口及旁路仍必须经过同一安全门禁/模型资源门禁，并明确各自的请求身份、输入来源、记忆隔离、失败终态和 TRACE。Native 多轮请求 Ledger（#575）与 Core-5 综合 E2E（#577）尚未合并，不计为当前 master 已完成。
+
+**工作流 I：** 用户 Markdown 书架继续 DEFERRED，不启动；本轮不得以书架、Embedding 或 Reranker 扩展替代五层核心收尾。
+
+**设备策略：** Find N2 实机安装升级、E4B GPU/CPU、多轮质量、Activity/进程恢复、内外屏交互及真实 TRACE 均留到全部云端代码、文档和 CI 收尾后由本地执行。设备验收不阻塞以上云端工作。
