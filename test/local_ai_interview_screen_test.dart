@@ -6284,7 +6284,18 @@ void main() {
       contains('基于 App 已验证结果的结构化解释。'),
     );
     expect(find.textContaining('基于 App 已验证结果的结构化解释。'), findsOneWidget);
+
+    // Tool output is intentionally not duplicated into model-authored chat
+    // text. Verify the App-owned source link opens the durable Ledger result.
+    await tester.tap(find.text('本轮检索资料'));
+    await tester.pumpAndSettle();
+    expect(find.text('App 工具执行结果'), findsOneWidget);
+    await tester.tap(find.text('App 工具执行结果'));
+    await tester.pumpAndSettle();
+    expect(find.text('工具执行记录：玉匣灵兆'), findsOneWidget);
     expect(find.textContaining('第七签'), findsOneWidget);
+    await tester.tap(find.text('关闭'));
+    await tester.pumpAndSettle();
 
     final envelopes = service.structuredReasoningContexts
         .map((context) => jsonDecode(
