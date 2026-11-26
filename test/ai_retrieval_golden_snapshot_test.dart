@@ -179,7 +179,6 @@ void main() {
       'queryProvenance':
           queryProvenance.map((item) => item.toJson()).toList(growable: false),
       'classicQueries': queries,
-      'core2': snapshot['core2'],
       'context': {
         'status': context.statusLabel,
         'text': context.text,
