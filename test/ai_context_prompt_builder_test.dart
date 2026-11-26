@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ziwei_core/ziwei_core.dart';
-import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
@@ -85,7 +85,9 @@ void main() {
     expect(modelContext, contains('条目明确记载'));
     expect(modelContext, contains('基于条目内容的归纳'));
     expect(modelContext, contains('MISSING 或 UNKNOWN'));
-    expect(modelContext, contains(jsonEncode(entry.content)));
+    expect(modelContext, contains(formula.name));
+    expect(modelContext, contains('components'));
+    expect(modelContext, isNot(contains('"id"')));
     expect(modelContext, isNot(contains(entry.ref.sourceId)));
     expect(modelContext, isNot(contains(entry.ref.anchorVersion)));
   });
