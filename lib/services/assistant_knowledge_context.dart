@@ -53,6 +53,49 @@ class AssistantKnowledgeEvidenceReference {
   final String sourceId;
 }
 
+/// App-owned metadata projection of one retrieved candidate, before ranking.
+/// The excerpt and local backlink are deliberately excluded: content stays in
+/// the bounded retrieval materializer and links stay in the App source map.
+class AssistantKnowledgeCandidateSnapshot {
+  AssistantKnowledgeCandidateSnapshot({
+    required this.sourceId,
+    required this.origin,
+    required this.materialKind,
+    required this.title,
+    required this.query,
+    required List<String> queryReasons,
+    required this.retrievalMethod,
+    required this.matchBasis,
+    required this.completeness,
+    required this.sourceKey,
+    required this.sourceLabel,
+    required this.hasLocalBacklink,
+    this.assetId,
+    this.bookId,
+    this.chapterIndex,
+    this.chunkId,
+    this.chapterPath,
+  }) : queryReasons = List.unmodifiable(queryReasons);
+
+  final String sourceId;
+  final CandidateEvidenceOrigin origin;
+  final String materialKind;
+  final String title;
+  final String query;
+  final List<String> queryReasons;
+  final String retrievalMethod;
+  final String matchBasis;
+  final CandidateEvidenceCompleteness completeness;
+  final String sourceKey;
+  final String sourceLabel;
+  final bool hasLocalBacklink;
+  final String? assetId;
+  final String? bookId;
+  final int? chapterIndex;
+  final String? chunkId;
+  final String? chapterPath;
+}
+
 /// Retrieval materialization plus the evidence IDs that were fully included
 /// in the bounded model context. Candidate IDs include KEEP and DROP decisions.
 class AssistantKnowledgeContextBuildResult {
@@ -61,8 +104,10 @@ class AssistantKnowledgeContextBuildResult {
     required List<String> knownEvidenceIds,
     required List<AssistantKnowledgeEvidenceReference> rankedEvidence,
     this.rankedEvidenceSet,
+    List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot = const [],
   })  : knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
-        rankedEvidence = List.unmodifiable(rankedEvidence);
+        rankedEvidence = List.unmodifiable(rankedEvidence),
+        candidateSnapshot = List.unmodifiable(candidateSnapshot);
 
   final String text;
   final List<String> knownEvidenceIds;
@@ -71,6 +116,10 @@ class AssistantKnowledgeContextBuildResult {
   /// Full source-ranking decisions, strategy and final context-budget accounting.
   /// This is App audit data; model-visible references remain [rankedEvidence].
   final RankedEvidenceSet? rankedEvidenceSet;
+
+  /// Metadata-only sequence of all candidates received by Core-2 ranking.
+  /// This is App audit data and never becomes model context or session memory.
+  final List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot;
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
@@ -108,6 +157,7 @@ class AssistantKnowledgeContextResult {
     this.knownEvidenceIds = const [],
     this.rankedEvidence = const [],
     this.rankedEvidenceSet,
+    this.candidateSnapshot = const [],
   });
 
   /// Complete retrieval materialization, retained for App-side audit/tests only.
@@ -127,6 +177,10 @@ class AssistantKnowledgeContextResult {
   /// Original KEEP/DROP decisions plus the final character-bound presentation
   /// outcome. It never changes source identity or verification state.
   final RankedEvidenceSet? rankedEvidenceSet;
+
+  /// Metadata-only pre-ranking candidates, retained for Core-2 auditing.
+  /// Candidate excerpts and local backlinks remain outside this projection.
+  final List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot;
 
   List<String> get rankedEvidenceIds =>
       List.unmodifiable(rankedEvidence.map((item) => item.evidenceId));
@@ -337,6 +391,7 @@ class AssistantKnowledgeContextBuilder {
         knownEvidenceIds: built.knownEvidenceIds,
         rankedEvidence: built.rankedEvidence,
         rankedEvidenceSet: built.rankedEvidenceSet,
+        candidateSnapshot: built.candidateSnapshot,
       );
     }
     final sourceIds = <String>{};
@@ -513,6 +568,7 @@ class AssistantKnowledgeContextBuilder {
       knownEvidenceIds: built.knownEvidenceIds,
       rankedEvidence: List.unmodifiable(resolvedRankedEvidence),
       rankedEvidenceSet: built.rankedEvidenceSet,
+      candidateSnapshot: built.candidateSnapshot,
     );
   }
 
@@ -935,6 +991,40 @@ class AssistantKnowledgeContextBuilder {
         'CONTEXT_BUDGET_USED_UTF16_CODE_UNITS',
       ],
     );
+    final queryById = {
+      for (final query in combinedBatch.derivedQueries) query.queryId: query,
+    };
+    final candidateSnapshot = <AssistantKnowledgeCandidateSnapshot>[];
+    for (final candidate in combinedBatch.candidates) {
+      final provenance = queryById[candidate.queryId];
+      if (provenance == null) {
+        throw StateError(
+          'Candidate ${candidate.evidenceId} has no combined query provenance',
+        );
+      }
+      candidateSnapshot.add(
+        AssistantKnowledgeCandidateSnapshot(
+          sourceId: candidate.sourceId,
+          origin: candidate.origin,
+          materialKind: candidate.materialKind,
+          title: candidate.title,
+          query: provenance.query,
+          queryReasons: provenance.reasons,
+          retrievalMethod: candidate.retrievalMethod,
+          matchBasis: candidate.matchBasis,
+          completeness: candidate.completeness,
+          sourceKey: candidate.sourceKey,
+          sourceLabel: candidate.sourceLabel,
+          hasLocalBacklink: candidate.hasLocalBacklink,
+          assetId: candidate.assetId,
+          bookId: candidate.bookId,
+          chapterIndex: candidate.chapterIndex,
+          chunkId: candidate.chunkId,
+          chapterPath: candidate.chapterPath,
+        ),
+      );
+    }
+
     return AssistantKnowledgeContextBuildResult(
       text: boundedResult,
       knownEvidenceIds: combinedBatch.candidates
@@ -942,6 +1032,7 @@ class AssistantKnowledgeContextBuilder {
           .toList(growable: false),
       rankedEvidence: rankedEvidence,
       rankedEvidenceSet: presentationRankedEvidenceSet,
+      candidateSnapshot: candidateSnapshot,
     );
   }
 
