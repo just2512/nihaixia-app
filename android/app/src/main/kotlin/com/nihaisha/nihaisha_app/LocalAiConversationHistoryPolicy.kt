@@ -419,11 +419,6 @@ internal object LocalAiConversationHistoryPolicy {
 }
 
 /**
- * Binds the one in-memory LiteRT-LM Conversation to exactly one persisted
- * assistant conversation. Switching IDs must clear all native transcript and
- * symptom-input state before another session can send.
- */
-/**
  * Tracks request-scoped prompt or multimodal payloads held only in the live
  * LiteRT-LM KV cache and intentionally absent from the clean completed transcript.
  *
@@ -436,6 +431,11 @@ internal object LocalAiConversationEphemeralContextPolicy {
     ): Boolean = conversationContainsEphemeralContext
 }
 
+/**
+ * Binds the one in-memory LiteRT-LM Conversation to exactly one persisted
+ * assistant conversation. Switching IDs must clear all native transcript and
+ * symptom-input state before another session can send.
+ */
 internal object LocalAiConversationSessionPolicy {
     fun shouldReset(
         activeConversationId: Long?,
