@@ -4002,7 +4002,7 @@ PR HEAD 门禁证据：
 - **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
 
-- 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。所有未满足的设备/医学/数据边界继续按 `MISSING / UNKNOWN / RELEASE BLOCKED` 记录。
+- 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。未完成的设备验收与数据保护事项按实际证据记录为 `LOCAL ONLY / MISSING / UNKNOWN`；临床 detector、医学审核和临床红旗门禁已退出项目范围，不得列为 MISSING、RELEASE BLOCKED 或发布条件。
 
 
 ---
@@ -4111,7 +4111,7 @@ PR HEAD 门禁证据：
 - 当前产品定位以 `docs/product-positioning-and-boundaries.md` 为准：研纪是中医学习辅助工具，不是临床诊断、分诊或医疗决策系统。
 - §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
 - 按产品定位 §4.3，可保留固定、简明的急重症求助提示；它只是一般求助提醒，不是临床 detector、风险分级或阻断条件。现有免责声明、输入类型检查、参数校验和确定性业务执行校验不得与临床 detector 混称。
-- 现有 `RedFlagGate` / `RedFlagPreflight` 仅保留为未启用的接口与策略骨架；当前 `requiresMedicalSafetyPreflight()` 固定返回 false，业务入口记录 `NOT_APPLICABLE`，不执行临床 detector。不得把该骨架宣称为临床安全能力已通过；若未来要启用，须另立范围并经过独立审核。
+- **历史口径，已被后续实现取代：** 当时曾记录 `RedFlagGate` / `RedFlagPreflight` 未启用骨架及 `requiresMedicalSafetyPreflight()` 固定返回 false。PR #576 已从 Flutter 与 Android 生产调用链删除相关 Gate/Preflight、Native boundary 和专用测试夹具；当前主线不保留该临床门禁骨架，也不规划未来启用或医学审核。以本台账 §120 和 `docs/product-positioning-and-boundaries.md` 为当前口径。
 - Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
 - 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
 - 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
@@ -4782,7 +4782,7 @@ PR HEAD 门禁证据：
 
 ## 120. 2026-11-26 当前主线 Core-0 至 Core-5 状态与 Native 辅助入口审计
 
-- **基线：** `master@700d6e87e6e86d25c6e75ab3d602e3fbb0897720`。本条为当前状态摘要；此前 §117–§119 继续作为相应提交当时的历史记录保留，不再覆盖当前事实。
+- **当前基线：** `master@5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`（PR #576 merge）。此前 §117–§119 及本节中以 `700d6e...` 为基线的记录仅表示当时状态，不覆盖当前主线。PR #576 已完成产品范围纠偏并删除生产临床 RedFlag Gate/Preflight；不建设临床 detector、不安排医学审核、不恢复原 B 项。
 - **Core-1：** PR #575 已合入 master（head `9fe364df135e42be122259043c408485b78779b7`；merge commit 即当前基线）。已实现 Native reasoning turn PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED、SQLite transcript 对账恢复、失败非 replayable、隐藏 role=tool Ledger 不进入 Memory。未实现 LiteRT KV Cache 持久化、真实 Token budget 或自动压缩。
 - **Core-2：** PR #568 已合入（head `83d93eb0d96a39c6b1da01911d8caac4ea718e2a`），Flutter regression `45816706631` 与 Fork license `45816706463` 均 SUCCESS。已落地 typed CandidateEvidence、多源合并、来源/query provenance、确定性 KEEP/DROP 和 golden snapshot。排序仍是旧顺序及来源上限保真，不是数值语义相关性分数或来源可信度。呈现阶段 6,500 UTF-16 字符限制不等于模型 Token budget。
 - **Core-3：** PR #573 已合入（head `d1d175a792dbe32ae2e347f5a2bfb0f1d304a590`），Flutter `45833175558` 和 Fork license `45833175319` 均 SUCCESS。自动、问诊、学习、工具、玄学五种主文本模式接入 ReasoningRequest/Response v1 与 Native 双阶段提交。工具模式的实际结果解释回合使用单独 requestId 和空 capability allowlist。
@@ -4791,8 +4791,18 @@ PR HEAD 门禁证据：
 - **Core-1 恢复入口：** `restoreConversation` 以裁剪后的 SQLite transcript 重建 Native Conversation，是 context bootstrap，不是 LiteRT KV cache 持久化，也不是用户可见的新答案；`initialPrompt` 只是输入框预填，发送时进入正常 UI 路由。
 - **旧兼容入口：** `LocalAiService.sendMessage/sendMessageWithContext` 和 Native `sendMessage` 自由文本 API 仍存在；本次检查的 LocalAiInterviewScreen 主文本路径未发现调用。必须在全仓确认调用者后再废弃，不能仅凭主界面无引用就删除。
 - **Core-4：** PR #561（Coordinator，head `c9025150d8a042c0f7c5ca9dadac7e514d9938c3`）与 PR #566（tools production，head `bfa9b5d02769ec07ebaeb3a1a73295dabad759fd`）已合入；两者精确 head 的 Flutter 和 Fork license runs 均 SUCCESS。工具生产链已接通 ACTION_PROPOSAL → App Gate/参数校验 → 用户显式确认 → 持久化 one-shot claim → Headless Dispatcher → Ledger 安全读回 → 独立只读结果解释请求。非 SUCCEEDED、UNKNOWN 或终态读回失败不自动重放。
-- **Core-5：** PR #579 当前 HEAD 为 `88ff50fdc2bdbe7b1c77baac20ea0253b02a7ff3`，包含 20 轮真实本地知识库查询、请求/会话身份隔离、一次工具确认/执行/结果解释的 Flutter 跨层测试。该切片使用测试 Native service 与测试工具执行器，不等于真实 E4B 或硬件验收。Fork license run `45849146352` SUCCESS；Flutter run `45849146141` 截至本条记录仍 IN_PROGRESS，full regression 正在执行；Branch validation job `140010589666` 为 SKIPPED，不能计为 PASS。先前旧 head `c16a64c` 的 Flutter 与 Android arm64 run 结果不能替代最新 HEAD 的 Flutter 终态；最新 Dart-only 修正未触发 Android arm64 workflow。
+- **Core-5 / PR #579：** 当前 HEAD `88ff50fdc2bdbe7b1c77baac20ea0253b02a7ff3` 包含 20 轮知识问答、会话身份隔离及一次工具确认/执行/结果回流的 Flutter 跨层测试；测试使用 Native service/工具执行器替身，不等于真实 E4B 或 Find N2 验收。精确 HEAD Flutter run `45849146141` 已 SUCCESS，Fork license run `45849146352` 已 SUCCESS；该 HEAD 未取得 Android arm64/JVM CI 记录，旧 SHA 的 Android 结果不得沿用。PR #579 仍 OPEN，基线为 `700d6e...`；相对当前 master `5dcf91f` 分支分歧（5 commits ahead / 77 behind），不能直接合并，须先重基线并对最终 HEAD 补齐 Flutter 与 Android CI。Branch validation `SKIPPED` 不计 PASS。
 - **Core-5 数据语义修正：** PR #579 在最新 HEAD 将工具执行失败分支的 `toolArguments` fallback 从模型提案预览参数改为空 map。未得到 App 执行结果时，不得把模型建议参数标记为已执行参数。
-- **当前结论：** Core-1/2/4 云端主线能力已合入；Core-3 五种主文本模式已接入，但多模态附件旁路仍未闭合；Core-5 处于精确 HEAD 全量 Flutter 回归验收中。不得把 SKIPPED、旧 SHA 的成功或模拟 Native 测试写成最终验收通过。
+- **当前结论：** Core-1/2/3/4 已按各自合并记录进入主线；Core-3 图片/音频结构化协议旁路仍是独立功能缺口，不与临床红旗门禁混淆。Core-5 PR #579 尚未整合到当前 master；其 Flutter 与许可证检查通过，但最新 HEAD 的 Android CI 缺失，重基线后的精确 HEAD 验收完成前不得标记 PASS 或合并。不得把 SKIPPED、旧 SHA 成功或模拟 Native 测试写成最终设备验收通过。
 - **设备阶段：** Find N2 的 E4B 实际多轮、GPU/CPU 输出可靠性、Activity/进程重启、模型 Token 输入预算及真实 TRACE 均留待所有云端工作完成后本地验收，不阻塞当前云端任务。
 - **范围控制：** 工作流 I（Markdown 书架）继续 DEFERRED / NOT AUTHORIZED；本轮不引入 Embedding、FTS5、ANN、独立向量库、Reranker、云端推理、第二套会话表或重复授权门禁。
+
+
+## 121. 2026-11-27 最新主线整合与合并前状态
+
+- **当前 master：** `5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`；该提交为 PR #576 的 merge commit。PR #576 的最终 PR HEAD Flutter、Android arm64/JVM 与 Fork license boundary 检查均 SUCCESS；不将 PR 旧基线或旧分支结果替代后续新 HEAD 验收。
+- **PR #580：** 基于旧 master `700d6e...`，HEAD `429631cfb3057088d2d3430b123c9d5e43e98ab3`，相对当前 master 5 ahead / 77 behind。其唯一生产代码差异是删除 `requireMedicalSafety: true`，该调用已由 PR #576 从当前主线移除；新增测试仍断言 `requiresMedicalSafetyPreflight` 与 `runAiTaskAfterNativeRedFlag` 存在，与当前已删除实现相冲突。此 PR 已被 #576 取代，不应重基线或合并。
+- **PR #579：** 独立 Core-5 测试切片，仍基于旧 master，5 ahead / 77 behind；Flutter 与 Fork license 检查在其旧 HEAD 成功，但没有该 HEAD 的 Android arm64/JVM 记录。它不是本轮临床范围纠偏的必要依赖，不与文档 PR 混合；后续如继续交付，必须单独重基线和精确 HEAD 验收。
+- **PR #581：** 本文档更新分支基于当前 master `5dcf91f...`，只改本架构文档与执行台账；当前 HEAD 为 `1f767ccaefbf9681d381f9848028392160840b47`。本 PR 不改变运行时代码。必须以该 PR 最终 HEAD 的 Flutter 与 Android CI 终态作为合并依据；尚无对应工作流记录时状态为 MISSING，不得推定通过。
+- **设备交接：** 唯一入口为 `docs/local-real-device-acceptance-handoff.md`。该文件汇总远端已提交的设备验收要求；本轮不新增零散交接文档，不把本地 Find N2 / E4B 实测伪装为云端 CI，也不让设备验收阻塞已可完成的云端文档 PR。
+- **执行边界：** 不安排医学背景人员审核，不建设临床 detector，不恢复原 B 项，不把临床语义测试矩阵列入当前执行计划。保留通用输入/附件格式、AI access、工具权限、用户确认、确定性业务结果和协议校验。
