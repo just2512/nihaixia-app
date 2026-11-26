@@ -4667,3 +4667,50 @@ PR HEAD 门禁证据：
 - **当前状态：PARTIAL / CONTRACT TESTED。** 本切片只覆盖 App-owned proposal policy 和用户确认前置条件；尚未接入生产 ReasoningResponse 调用方、确认 UI、一次性 invocation 消费及 Dispatcher 执行后的真实 ExecutionResult 回流。
 - **下一切片：** 在当前 requestId/capability 作用域下接入 App 确认 UI 与持久化 one-shot invocation ledger，再调用既有 Dispatcher；实际 AssistantToolResult 经 ReasoningExecutionResultAdapter 回流到下一轮 ReasoningRequest。UNKNOWN 不重放；learning-only 空 allowlist 继续禁止动作。Core-5 仍需完整 E2E。
 - **设备策略：** Find N2 的 E4B 真机运行、进程恢复、GPU/CPU 与多轮 TRACE 留到云端工作结束后本地验收，不阻塞本切片。
+
+---
+
+## 114. 2026-11-26 P0 知识条目解读与 P1 情境输入框 IME 修复收尾
+
+> 本节基于当前 master `bcb506a1f11d04cb1c3fbfed5695162894fca3dd`。P0 知识条目解读/自动上下文与 P1 键盘布局分开实现、分开合并、分开验收；本节不覆盖 §109–§113 历史记录。
+
+### 114.1 集成状态
+
+- **P0 / PR #548：MERGED。** 合并提交 `35e0cd8d65bb9f1c8d13a3f9489c7c1ffa74b088`；PR HEAD `b9cd5691b7b7e2fbf0143aa1400dcbb6b6cbc6c3`。实现知识详情解读语义重构与当前条目后台上下文传递。
+- **P1 / PR #551：MERGED。** 合并提交 `2c5b29b55a6034dd8fd2b03db14f42d4684103fa`；PR HEAD `0082e3d38a7dc9e81eeb52e0a0e18d01f6ca86d3`。只修改情境弹层、折叠路由 IME 布局及相关测试，不改 AI 推理或 Native 会话协议。
+- 当前 master 已继续前进至 `bcb506a1f11d04cb1c3fbfed5695162894fca3dd`，包含后续 Core-4 Gate 合并；本节只作追加记录，不覆盖后续能力工作。
+
+### 114.2 P0-A：知识解读能力重构
+
+- `AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent()` 生成短的模块感知用户意图；`buildKnowledgeEntryModelContext()` 单独生成模型上下文。
+- 解读从字段复述转为关系、结构和逻辑分析。方剂重点分析整体组方结构、药物角色关系与条目所载配伍逻辑；本草、穴位、针灸处方、医案、六经、内经条文分别使用对应的分析重点。
+- 模型回答约束明确区分“条目明确记载”“基于条目内容的归纳”“当前资料无法确认”；归纳需说明依据，资料不足标记 MISSING/UNKNOWN，不为凑篇幅重复页面资料或补造事实。
+- 医学事实边界保持不变：不得新增条目未提供的药物、剂量、主治、禁忌、出处、临床证据或规则；不得把经验性记录扩展为已验证疗效或个人用药建议。
+
+### 114.3 P0-B：知识上下文自动传递
+
+- 七类知识详情入口均已迁移：`formula`、`herb`、`acupoint`、`acupuncture-prescriptions`、`medical-cases`、`meridian`、`neijing-entries`。
+- 点击解读后等待模型就绪及情境会话初始化，再自动提交短意图；不把完整 JSON、sourceId、版本、backlink 或内部约束写入 composer，不要求用户编辑提示词，也不自动弹出键盘。
+- 每轮 contextual learning（含同一情境会话中的追问）按 typed `contextRef` 重新解析当前 App 条目并检查锚点/版本；失效时 fail-closed，不以旧缓存继续回答。
+- 完整 `module/title/content` 经 `ReasoningKnowledgeAnswerAdapter.createContextualEntryContext()` 作为独立 model-only context/request-local evidence 进入 Core-3。App sourceId/backlink 留在 App 侧 source map，用于引用回填；不进入用户消息或模型自然语言正文。
+
+### 114.4 P1：Android 情境输入框键盘避让
+
+- 窄屏 bottom-sheet 在 presentation 外层读取实时 `MediaQuery.viewInsets.bottom`，由单层 180ms `AnimatedPadding` 抬升/缩小；内层助手 Scaffold 保持 `resizeToAvoidBottomInset=false`，避免重复扣减。
+- Find N2 内屏 side-panel 使用 Dialog 自己的 IME inset，并把实时 viewInsets 传回助手子树；fold-aware route 保留窗口几何/displayFeatures，同时动态同步当前 route 的 viewInsets。
+- Widget 测试覆盖 402dp 外屏 bottom-sheet、775dp 内屏 side-panel：模拟 300dp IME，检查 composer/send 位于键盘上方、输入内容保留、键盘收起后恢复；折叠路由测试检查 viewInsets 从 0 更新至 280dp。
+
+### 114.5 精确 CI 证据
+
+- **P0 PR HEAD：** Flutter regression run `45763028535` SUCCESS；Fork license run `45763028590` SUCCESS。PR 的 Branch validation 为 SKIPPED，不计 PASS。
+- **P0 merge commit：** Flutter Quality Gate `45764251373` SUCCESS；Flutter tests/full regression 与 Android arm64/JVM verification `45764251453` SUCCESS；Fork license `45764251374` SUCCESS。
+- **P1 PR HEAD：** Flutter regression/Android arm64/JVM verification run `45764342296` SUCCESS；Fork license `45764342328` SUCCESS。PR 的 Branch validation 为 SKIPPED，不计 PASS。
+- **P1 merge commit：** Flutter Quality Gate（静态分析、Dart 测试、Native 单测和 Find N2 arm64 Debug APK）`45765542034` SUCCESS；Flutter full regression/Android arm64 verification `45765542092` SUCCESS；Fork license `45765542027` SUCCESS。
+- 上述成功项是云端源码、测试、Native 单测和 CI APK/ABI 证据；不是 Find N2 实际安装运行证据。另一次重复触发的 P1 Flutter workflow `45766664754` 为 CANCELLED，不计 PASS；前述独立成功 run 保留为有效证据。
+
+### 114.6 未完成验收与范围边界
+
+- **Find N2 实机键盘：UNKNOWN / LOCAL ONLY。** 外屏 ColorOS 输入法、内屏侧栏、折叠/展开/旋转、输入/发送、键盘收起恢复尚未在真实设备执行。
+- **Find N2 E4B 解读质量与连续追问：UNKNOWN / LOCAL ONLY。** 尚未在设备上确认实际 GPU/CPU 推理不复述详情、能提供受资料支持的关系分析、自动发送仅发生一次、追问继续绑定同一条目及失效时 fail-closed。
+- 本节所称“七类入口”是当前项目中明确的知识详情条目解读入口。易经、八字、紫微、子午流注、节气、运气、剂量换算等“问 AI 解读计算结果/字段”属于 `toolResult/fieldValue` 确定性业务结果解释，不是知识条目入口；当前仍有部分走旧 `initialPrompt` 预填路径。它们不得被错误接入知识条目 adapter，也不得由模型重新计算。若要将同一交互原则扩展到这些业务结果解释入口，应另立结果上下文任务，继续使用各自 typed snapshot/resolver 与执行结果边界。
+- **最终状态：** P0 两项知识条目修复和 P1 键盘布局代码已合并；云端自动化验收对应项 SUCCESS，Branch validation SKIPPED；Android 实机和 E4B 质量验收仍 UNKNOWN。不得将本任务整体标记为实机 PASS。
