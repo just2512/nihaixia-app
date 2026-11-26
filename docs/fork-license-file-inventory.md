@@ -1015,7 +1015,7 @@
 
 ## 2026-11-26 更新说明
 
-- 删除已退役的临床红旗门禁实现与专用测试；这 7 个文件从有效授权路径与 DEP5 映射中移除，并记录为删除路径。此变更不改变任何许可证授权类别或范围。
+- 删除已退役的临床红旗门禁实现与专用测试，并从有效 Fork divergence 文件清单及 DEP5 SPDX 映射中移除。上述路径既不在共同上游比较基线中，也不在当前 HEAD 中，因此不属于本清单口径下的新增、修改或删除文件。此变更不改变任何许可证授权类别或范围。
 
 ## 删除路径
 
@@ -1035,16 +1035,9 @@
 - tool/sync_gitee.sh
 - 企划书_汉唐中医_v2.0.md
 
-- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundary.kt
-- android/app/src/test/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundaryTest.kt
-- lib/services/red_flag_gate.dart
-- lib/services/red_flag_preflight.dart
-- test/red_flag_gate_test.dart
-- test/red_flag_preflight_test.dart
-- test/support/test_only_red_flag_gate.dart
 ## 计数与验收说明
 
-- 新增/修改路径共 1008 个（新增 844，修改 164）；删除路径 22 个。
+- 新增/修改路径共 1008 个（新增 844，修改 164）；删除路径 15 个。
 - 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 486；知识库排除 363；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
