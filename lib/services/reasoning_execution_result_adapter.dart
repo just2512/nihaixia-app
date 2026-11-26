@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import '../models/assistant_tool_result.dart';
+import '../models/diagnosis_result_codec.dart';
 import '../models/reasoning_request.dart';
+import '../models/tcm_interview_task_state.dart';
 import 'headless_tool_dispatcher.dart';
 
 /// Projects an App-validated deterministic tool result into the immutable
@@ -65,6 +69,48 @@ class ReasoningExecutionResultAdapter {
       actualArguments: result.arguments,
       failureCode: mapped.failureCode,
       safetyMessage: mapped.safetyMessage,
+    );
+  }
+
+  /// Projects only a persisted completed TCM interview result.
+  ///
+  /// The task state is the App-owned completion proof: an in-progress,
+  /// restored-without-result or text-only "normal baseline" task cannot be
+  /// represented as a successful deterministic execution.
+  static ReasoningExecutionResult fromCompletedTcmInterviewTaskState({
+    required String invocationId,
+    required TcmInterviewTaskState taskState,
+  }) {
+    final taskId = taskState.taskId.trim();
+    final diagnosis = taskState.completedDiagnosis;
+    if (taskId.isEmpty ||
+        taskState.status != 'completed' ||
+        diagnosis == null) {
+      throw ArgumentError(
+        'REASONING_DIAGNOSIS_EXECUTION_NOT_COMPLETED',
+      );
+    }
+
+    final diagnosisJson = jsonEncode(DiagnosisResultCodec.toJson(diagnosis));
+    final confirmedAnswersJson = jsonEncode(diagnosis.answers);
+    if (diagnosisJson.isEmpty || confirmedAnswersJson.isEmpty) {
+      throw ArgumentError('REASONING_DIAGNOSIS_EXECUTION_RESULT_EMPTY');
+    }
+
+    return ReasoningExecutionResult(
+      invocationId: invocationId,
+      capabilityId: 'structured_diagnosis',
+      status: ReasoningExecutionStatus.succeeded,
+      actualArguments: {
+        'confirmedAnswers': confirmedAnswersJson,
+      },
+      resultValues: {
+        'diagnosisResultJson': diagnosisJson,
+      },
+      sourceIds: const ['local-engine:diagnostic-engine'],
+      safetyMessage:
+          '这是 App DiagnosticEngine 已完成并持久化的结构化规则结果；'
+          '只解释实际返回字段，不重新计算、补造或更改规则结论。',
     );
   }
 
