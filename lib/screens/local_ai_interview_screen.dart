@@ -1978,8 +1978,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // while still enforcing the same request/response and Native commit contract.
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
-          final roleContext = '当前角色：通用助手。\\n'
-              '${AssistantMode.automatic.promptHint}\\n'
+          final roleContext = '当前角色：通用助手。\n'
+              '${AssistantMode.automatic.promptHint}\n'
               '正常回答用户的一般问题；不要把普通寒暄或一般聊天强行归入中医学习。'
               '只有识别到明确的个人症状、知识学习或工具执行意图时，才切换对应领域。';
           return sendStructuredAnswer(
@@ -1990,9 +1990,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           );
         }
         final context = StringBuffer(
-          '当前角色：通用助手。\\n${AssistantMode.automatic.promptHint}\\n'
+          '当前角色：通用助手。\n${AssistantMode.automatic.promptHint}\n'
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
-          '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\\n',
+          '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
         );
         if (knowledge.modelContextText.isNotEmpty) {
           context
@@ -2020,14 +2020,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final knowledgeContext = modelKnowledgeContext.isEmpty
             ? '本轮没有提供可用的本地知识资料；不得编造原文、出处或诊断依据。'
             : '以下为本轮可用的本地知识资料摘录。只解释资料明确覆盖的内容；'
-                '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\\n'
+                '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\n'
                 '$modelKnowledgeContext';
         final roleContext =
-            '当前角色：问诊助手。\\n${AssistantMode.consultation.promptHint}\\n'
+            '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
             '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
             '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
             '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
-            '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\\n'
+            '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
             '$knowledgeContext';
         return sendStructuredAnswer(
           knowledge,
@@ -2078,7 +2078,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
             .map((tool) => tool.title)
             .join('、');
-        final context = '当前角色：玄学大师。\\n${AssistantMode.metaphysics.promptHint}\\n'
+        final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
             '八字、紫微等排盘结果必须由 App 工具生成；结果返回后，应基于完整回传字段作总结、关联解释和分层归纳。'
             '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。';
