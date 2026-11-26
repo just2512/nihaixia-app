@@ -3385,7 +3385,7 @@ void main() {
   });
   testWidgets('知识详情一键解读自动提交短问题，完整资料只进入模型上下文', (tester) async {
     const userRequest = '请解读当前条目的整体逻辑，避免重复页面已展示的信息。';
-    const pageContext = '【当前详情页知识上下文】\\n已校验的 App 页面资料：PRIVATE_PAGE_MATERIAL';
+    const pageContext = '【当前详情页知识上下文】\n已校验的 App 页面资料：PRIVATE_PAGE_MATERIAL';
     const contextRef = {
       'kind': 'toolResult',
       'moduleId': 'ziwei',
