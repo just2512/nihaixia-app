@@ -1459,13 +1459,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final requestId = _newReasoningRequestId(traceId);
       final capabilityAllowlist =
           ReasoningActionProposalGate.supportedCapabilityIds;
+      final attachmentPromptGenerated = attachmentType != null && text.trim().isEmpty;
       final request = ReasoningActionProposalAdapter.createRequest(
         requestId: requestId,
         sessionId: conversationId,
-        userText: text.trim(),
+        userText: requestUserText,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
         requestCapabilityAllowlist: capabilityAllowlist,
+        attachmentType: attachmentType,
+        attachmentPromptGenerated: attachmentPromptGenerated,
       );
 
       final knowledgeText = knowledge.modelContextText;
