@@ -1359,12 +1359,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantMode.tools => '工具助手',
         AssistantMode.metaphysics => '玄学助手',
       };
-      var nativeInvocationStarted = false;
-      var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
-      var nativeFinalizeStarted = false;
-      var nativeFinalizeConfirmed = false;
-      var nativeTurnRejected = false;
       try {
         await _traceRecorder.record(
           traceContext,
@@ -1380,7 +1375,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: modeNeutral ? 'mode_neutral_reasoning_request' : 'learning_reasoning_request',
           mode: answerMode.name,
         );
-        nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
         final pending = traceId == null
             ? await _service.sendReasoningMessage(
@@ -1408,7 +1402,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 redFlagContext: redFlagContext,
                 redFlagContextTruncated: redFlagContextTruncated,
               );
-        nativeReplyReceived = true;
         final decoded = modeNeutral
             ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
                 raw: pending.reply,
@@ -1426,7 +1419,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             requestId: requestId,
           );
           nativeRequestMayBePending = false;
-          nativeTurnRejected = true;
           return _AssistantTurnResponse(
             text: '本轮$modeLabel回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
                 '未写入成功历史。可以补充信息后重新发送。',
@@ -1435,20 +1427,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
           );
         }
-        nativeFinalizeStarted = true;
         await _service.finalizeReasoningTurn(
           conversationId: conversationId,
           requestId: requestId,
           validatedAnswer: decoded.answerText,
         );
-        nativeFinalizeConfirmed = true;
         nativeRequestMayBePending = false;
         return _AssistantTurnResponse(
           text: decoded.answerText,
           sourceIds: decoded.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
-      } catch (error) {
+      } catch (error, stackTrace) {
         if (nativeRequestMayBePending) {
           try {
             await _service.rejectReasoningTurn(
@@ -1456,34 +1446,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               requestId: requestId,
             );
             nativeRequestMayBePending = false;
-            nativeTurnRejected = true;
           } catch (_) {
-            // Finalize/reject acknowledgement is ambiguous. Preserve UNKNOWN
-            // and never replay inference or convert it into a successful turn.
+            // A failed or ambiguous completion acknowledgement is UNKNOWN.
+            // Never replay inference or turn this into a successful answer.
           }
         }
-        final nativeStatus =
-            nativeFinalizeConfirmed || nativeTurnRejected
-                ? AiTraceStatus.succeeded
-                : nativeFinalizeStarted || nativeInvocationStarted
-                    ? AiTraceStatus.unknown
-                    : AiTraceStatus.notStarted;
-        final failureText = nativeTurnRejected
-            ? '本轮结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
-            : nativeFinalizeStarted
-                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
-                : nativeReplyReceived
-                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
-                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
-        return _AssistantTurnResponse(
-          text: failureText,
-          knowledgeStatus: 'PROTOCOL_REJECTED',
-          nativeInferenceStatus: nativeStatus,
-          protocolValidated: false,
-          protocolFailureCode: error is PlatformException
-              ? error.code
-              : error.runtimeType.toString(),
-        );
+        Error.throwWithStackTrace(error, stackTrace);
       }
     }
 
@@ -10248,10 +10216,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _confirmedDraft = null;
         }
         _sending = false;
+        final nativeCommitUnknown =
+            error.code == 'REASONING_FINALIZE_ACK_UNKNOWN' ||
+            error.code == 'REASONING_REJECT_ACK_UNKNOWN';
         final message = error.message ?? '本地推理失败';
-        _error = refreshedStatus == null
-            ? '$message；无法确认本地模型状态，请重新检查后继续。'
-            : message;
+        _error = nativeCommitUnknown
+            ? 'Native 提交确认状态未知：本轮未自动重放，也未写入成功历史。'
+                '请先确认会话状态后再继续。'
+            : refreshedStatus == null
+                ? '$message；无法确认本地模型状态，请重新检查后继续。'
+                : message;
       });
       await _traceRecorder.record(
         traceContext,
