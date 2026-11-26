@@ -127,6 +127,7 @@ class AssistantReasoningTurnLedger {
     String? answerText,
     List<String> sourceIds = const [],
     String? failureCode,
+    bool interrupted = false,
   }) async {
     _validateIdentity(conversationId, requestId);
     if (status == AssistantReasoningTurnStatus.pending) {
@@ -149,6 +150,7 @@ class AssistantReasoningTurnLedger {
         answerText: answerText,
         sourceIds: sourceIds,
         failureCode: failureCode,
+        interrupted: interrupted,
       )
           ? AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded
           : AssistantReasoningTurnTerminalWriteStatus.conflictingTerminal;
@@ -165,7 +167,7 @@ class AssistantReasoningTurnLedger {
       if (answerText != null) 'answerText': answerText,
       if (sourceIds.isNotEmpty) 'sourceIds': sourceIds,
       if (failureCode != null) 'failureCode': failureCode,
-      'interrupted': status == AssistantReasoningTurnStatus.unknown,
+      'interrupted': interrupted,
       'createdAt': DateTime.now().toUtc().toIso8601String(),
     };
     try {
@@ -186,6 +188,7 @@ class AssistantReasoningTurnLedger {
         answerText: answerText,
         sourceIds: sourceIds,
         failureCode: failureCode,
+        interrupted: interrupted,
       )
           ? AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded
           : AssistantReasoningTurnTerminalWriteStatus.conflictingTerminal;
@@ -218,6 +221,7 @@ class AssistantReasoningTurnLedger {
         requestId: entry.key,
         status: AssistantReasoningTurnStatus.unknown,
         failureCode: 'PROCESS_INTERRUPTED_WITHOUT_TERMINAL_ACK',
+        interrupted: true,
       );
       if (result == AssistantReasoningTurnTerminalWriteStatus.recorded ||
           result == AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
@@ -289,9 +293,13 @@ class AssistantReasoningTurnLedger {
           : value['status'] is String
               ? (value['status'] as String).toLowerCase()
               : '';
-      final status = AssistantReasoningTurnStatus.values
-          .where((candidate) => candidate.name == rawStatus)
-          .firstOrNull;
+      AssistantReasoningTurnStatus? status;
+      for (final candidate in AssistantReasoningTurnStatus.values) {
+        if (candidate.name == rawStatus) {
+          status = candidate;
+          break;
+        }
+      }
       if (status == null) return null;
       final sourcesRaw = value['sourceIds'];
       final sourceIds = sourcesRaw is List &&
@@ -325,11 +333,13 @@ class AssistantReasoningTurnLedger {
     String? answerText,
     required List<String> sourceIds,
     String? failureCode,
+    required bool interrupted,
   }) =>
       current.status == status &&
       current.answerText == answerText &&
       _sameList(current.sourceIds, sourceIds) &&
-      current.failureCode == failureCode;
+      current.failureCode == failureCode &&
+      current.interrupted == interrupted;
 
   void _validateTerminalPayload({
     required AssistantReasoningTurnStatus status,
