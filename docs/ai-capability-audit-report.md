@@ -48,31 +48,11 @@ PR #77 已合并：真实 SQLite FFI 测试成功写入两条消息；使用 SQL
 - Native transcript、Flutter UI、SQLite transcript 的逐轮一致性仍缺少设备 TRACE。
 - Find N2 GPU/CPU 各至少 20 轮、图片/语音、进程中断恢复均未取得本轮真实 TRACE。
 
-## 3. B：红旗门禁
+## 3. B：问诊学习与结果解释（当前范围）
 
-### 已核验
+研纪是中医学习辅助工具，不建设临床红旗 detector、医学风险分级、临床分诊或医学审批流程。旧版报告中的 RedFlagPreflight、REVIEW_REQUIRED、医学词表/阈值/处置文案审核及 B = PARTIAL / RELEASE BLOCKED 均为历史审计记录，已于 2026-11-26 被产品定位取代，不是当前缺口或发布门槛。
 
-- `lib/services/red_flag_preflight.dart` 已定义 input source、subject、time、polarity、detector ID/version、rule-set version、coverage 与 reviewed 状态。
-- provenance 缺失、未知语义范围或未审核规则集不能返回 CLEAR。
-- PR #71 已合并；CI run `43143105547` 的 Flutter regression 与 Android arm64 CI 成功。
-
-### 发布阻断
-
-- 该文件只负责评估结构化 `RedFlagAssessment`，本身不从自然语言识别红旗。
-- 当前没有证据证明 `LocalAiInterviewScreen` 每轮发送、历史恢复、附件转写、工具结果回流、Native 直接调用等所有路径都在模型和普通业务路由之前执行 preflight。
-- 医学词表、阈值和处置文案没有医学背景审核记录。
-
-因此 B 仍为 PARTIAL / RELEASE BLOCKED。不能通过写一组人工构造 assessment 的单测来宣称真实自然语言门禁已完成，也不能自行补充未经医学审核的规则。
-
-### 生产入口逐项定位（本轮补充）
-
-- `LocalAiInterviewScreen._send()` 先处理活动中的结构化问诊选项，再调用 `AssistantConversationOrchestrator.resolve`；当返回 `decision.tool` 时直接进入 `_requestTool`，发生在普通模型发送之前。
-- 普通文本随后进入 `_sendTextWithKnowledgeContext`，其中 automatic 无知识命中时调用 `LocalAiService.sendMessage`，其余模式调用 `sendMessageWithContext`；两者最终均通过 Native MethodChannel 的 `sendMessage`。
-- 图片/录音分别调用 `LocalAiService.sendImage` / `sendAudio`，最终进入 Native `sendImage` / `sendAudio`。
-- “整理本次症状”调用 `LocalAiService.extractSymptoms`，最终进入 Native `extractSymptoms`。
-- 当前 `local_ai_interview_screen.dart` 未接入 `RedFlagPreflight`。因此门禁不能只放在 `sendMessage`；必须先于活动问诊答案处理、工具路由、文本模型调用、图片/录音模型调用和症状整理调用。历史恢复还需保留原始轮次的门禁 provenance，不能把历史文本当作新输入重复生成。
-- Native MethodChannel 当前模型相关入口为 `sendMessage`、`sendImage`、`sendAudio`、`extractSymptoms`；另有 `restoreConversation` 恢复历史上下文。Native 层仍可被绕过 Flutter UI 的调用触达，因此生产契约还需确定是否在 Native 层做第二道边界校验。
-- 图片/录音的红旗语义不能假设等同于用户文字；如果没有可审计的转写/视觉 detector 和输入来源证明，状态必须是 UNKNOWN/REVIEW_REQUIRED，不能静默 CLEAR。
+当前有效要求是：问诊学习沿用 App 确定性规则；AI 负责理解、归纳、澄清和解释；用户自述、知识来源、模型解释与 App 执行结果必须分开；普通模型调用仍受 AiModelAccessGate 授权。简明求助提示只建议用户联系当地急救服务或前往急诊，不做症状分级，不阻断调用。
 
 
 ## 4. C：检索黄金基线与发现

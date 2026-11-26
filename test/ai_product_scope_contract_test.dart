@@ -64,6 +64,9 @@ void main() {
       contains('if (requiresAiAccess) aiModelAccessGate.requireAccess()'),
     );
     expect(gate, contains('AiModelAccessGate'));
-    expect(screen, contains('请立即拨打120或前往急诊'));
+    expect(screen, contains('紧迫危险中'));
+    expect(screen, isNot(contains('胸痛、明显呼吸困难')));
+    expect(mainActivity, contains('联系当地急救服务'));
+    expect(mainActivity, isNot(contains('胸痛、明显呼吸困难')));
   });
 }

@@ -10032,7 +10032,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           Expanded(
             child: Text(
               '辨病辨证由 App 现有规则执行；诊断依据来自本地知识库。AI 结合已校验结果解释病机、治法、方剂配伍和针灸思路。'
-              '如出现胸痛、明显呼吸困难、意识不清、抽搐或大量出血等急重症表现，请立即拨打120或前往急诊。',
+              '如你或他人正处于紧迫危险中，请及时联系当地急救服务或前往急诊。此提示只用于提醒寻求现实帮助，不构成诊断或风险分级。',
               style: TextStyle(
                 color: scheme.onSurfaceVariant,
                 fontSize: AppType.caption,
