@@ -61,6 +61,36 @@ void main() {
     expect(await ledger.listUnresolvedClaims(conversationId: conversationId), hasLength(1));
   });
 
+  test('same invocation ID cannot be rebound to a different request or arguments', () async {
+    expect(await claim(), AssistantToolInvocationClaimStatus.claimed);
+    expect(
+      await ledger.tryClaim(
+        conversationId: conversationId,
+        invocationId: invocationId,
+        requestId: 'different-request',
+        toolId: 'dosage',
+        capabilityId: 'dosage',
+        arguments: arguments,
+      ),
+      AssistantToolInvocationClaimStatus.conflictingClaim,
+    );
+    expect(
+      await ledger.tryClaim(
+        conversationId: conversationId,
+        invocationId: invocationId,
+        requestId: requestId,
+        toolId: 'dosage',
+        capabilityId: 'dosage',
+        arguments: const {'value': '4'},
+      ),
+      AssistantToolInvocationClaimStatus.conflictingClaim,
+    );
+    expect(
+      await store.getAssistantMessages(conversationId: conversationId),
+      hasLength(1),
+    );
+  });
+
   test('invocation identity is scoped to one conversation', () async {
     final otherConversation = await store.createAssistantConversation(mode: 'tools');
     expect(await claim(), AssistantToolInvocationClaimStatus.claimed);
@@ -171,6 +201,53 @@ void main() {
         result: successfulResult(),
       ),
       AssistantToolInvocationTerminalWriteStatus.missingClaim,
+    );
+  });
+
+  test('FAILED, NO_RESULT, CANCELLED, and UNKNOWN remain distinct terminal states', () async {
+    final statuses = [
+      AssistantToolExecutionStatus.failed,
+      AssistantToolExecutionStatus.noResult,
+      AssistantToolExecutionStatus.cancelled,
+      AssistantToolExecutionStatus.unknown,
+    ];
+    for (var index = 0; index < statuses.length; index++) {
+      final id = 'invocation-$index';
+      expect(
+        await ledger.tryClaim(
+          conversationId: conversationId,
+          invocationId: id,
+          requestId: 'request-$index',
+          toolId: 'dosage',
+          capabilityId: 'dosage',
+          arguments: arguments,
+        ),
+        AssistantToolInvocationClaimStatus.claimed,
+      );
+      expect(
+        await ledger.recordResult(
+          conversationId: conversationId,
+          invocationId: id,
+          result: AssistantToolResult(
+            toolId: 'dosage',
+            title: '剂量换算',
+            values: const {},
+            arguments: arguments,
+            status: statuses[index],
+          ),
+        ),
+        AssistantToolInvocationTerminalWriteStatus.recorded,
+      );
+    }
+    final rows = await store.getAssistantMessages(conversationId: conversationId);
+    final terminalRows = rows.where((row) {
+      final decoded = jsonDecode(row['metadata'] as String) as Map;
+      return decoded['kind'] == 'TERMINAL';
+    }).toList();
+    expect(
+      terminalRows.map((row) =>
+          (jsonDecode(row['metadata'] as String) as Map)['status']).toList(),
+      ['failed', 'noResult', 'cancelled', 'unknown'],
     );
   });
 
