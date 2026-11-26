@@ -4622,3 +4622,18 @@ PR HEAD 门禁证据：
 - **下一切片：** 在当前 requestId/capability 作用域下接入 App 确认 UI 与一次性 invocation 状态，再调用既有 Dispatcher；把实际 AssistantToolResult 经 `ReasoningExecutionResultAdapter` 回流到后续 ReasoningRequest。失败与 UNKNOWN 必须保持原状态，UNKNOWN 不重放；learning-only 空 allowlist 继续禁止动作。Core-5 仍需覆盖提案、拒绝、执行成功/失败/UNKNOWN、结果解释与来源回填的端到端测试。
 - **设备策略：** Find N2 的 E4B 真机运行、进程恢复、GPU/CPU 与多轮 TRACE 留到云端工作完成后本地验收，不阻塞本切片。
 
+
+
+---
+
+## 110. 2026-11-26 Core-4 Request-scoped capability 与 ACTION_PROPOSAL Adapter
+
+- **基线：** 以 Core-4 Gate 分支 `work/core4-action-proposal-gate-contract-20261126` 的 HEAD `b4113c9f00acb5b1aee8691f83aa7f435c64d97c` 为父级建立独立分支 `work/core4-tool-proposal-runtime-contract-20261126`；当前代码提交包含 `4f9e5657`（Request allowlist）、`6200efec`（prompt contract）、`f1218511`（request builder extension）、`92080eba`（proposal adapter）、`26624fc8`（proposal narrative/evidence boundary）及定向测试 `bfc5b215`。
+- **Request 契约：** `ReasoningRequest.allowedCapabilityIds` 是不可变列表，重复 ID、空白 ID 拒绝；仅 `mode == tools` 可以非空。learning、consultation、automatic 等其他模式携带非空 allowlist 在构造时 fail-closed。该集合由 App 请求构造，不由模型文本推断。
+- **模型输入：** `ReasoningRequestPromptFormatter` 输出 `actionCapabilityAllowlist`；空集合时明确禁止 ACTION_PROPOSAL，非空集合只代表当前请求可提出的能力范围，不代表用户授权、付款/权限授予或执行结果。原始用户文本和来源正文传输边界不变。
+- **Adapter：** `ReasoningActionProposalAdapter.createRequest` 只接受 Gate 已登记的四个 plan-eligible capability；Response codec 使用同一请求 allowlist。ACTION_PROPOSAL 经 Gate 检查 requestId、能力和 typed arguments；不允许携带被丢弃的 evidence 引用，不向确认 UI 暴露模型生成的 action narrative，只提供 App-owned immutable preview。显式确认后再次用当前 ReasoningRequest 的 requestId/allowlist 校验。
+- **执行边界：** 此分支仍是 Request/Adapter contract，不包含 Native 工具模式生产调用、确认 UI、持久化 one-shot invocation ledger、Dispatcher 调用或真实 ExecutionResult 回流；不更改唯一 Native `ai_access` / `AiModelAccessGate`。Core-4 仍为 PARTIAL，不能以预览生成/单元测试通过宣称工具可执行。
+- **测试：** 新增 `test/reasoning_action_proposal_adapter_test.dart`，覆盖 capability 集合不可变、空/不支持能力拒绝、非 tools 模式阻断、proposal 预览无执行计划、显式用户确认、requestId/allowlist 重验、proposal evidence 引用隔离及 narrative 不暴露；更新 `reasoning_request_prompt_formatter_test.dart` 覆盖 allowlist 序列化与模式限制。
+- **CI：** 本 section 记录提交时尚未对最终 HEAD 运行完整 CI；必须等待该分支精确 HEAD 的 Flutter full regression、Branch validation、Android arm64/JVM verification 和 Fork license，SKIPPED 不计 PASS。CI 未通过前不合并。
+- **下一切片：** 先把工具模式迁移到结构化 Request/Response（learning-only 保持空 allowlist）；App 提供不可伪造的确认 UI；通过持久化一次性 invocation 状态防双击/重复请求；授权后才调用现有 `HeadlessToolDispatcher`；实际 `AssistantToolResult` 经 `ReasoningExecutionResultAdapter` 加入下一轮 `ReasoningRequest.executionResults`，由模型解释而不覆盖原结果。失败/取消/无结果/UNKNOWN 按冻结状态保留，UNKNOWN 不重放。
+- **设备策略：** 以上协议/Adapter 可先在云端单测和 CI 完成；E4B 真机 Native 往返、GPU/CPU、进程恢复、连续多轮 TRACE 仍放到所有云端工作收尾后本地验收。
