@@ -82,6 +82,7 @@ void main() {
       candidateOrdinalByEvidenceId[decision.evidenceId] = index;
       candidateDecisionRows.add({
         'ordinal': index,
+        'evidenceId': candidate.evidenceId,
         'sourceId': candidate.sourceId,
         'origin': candidate.origin.name,
         'materialKind': candidate.materialKind,
@@ -240,7 +241,11 @@ void main() {
         (rawCore2['candidateDecisionRows']! as List).cast<Map>();
     const candidateFields = [
       'ordinal',
+      'evidenceId',
       'sourceId',
+      'sourceKey',
+      'sourceLabel',
+      'hasLocalBacklink',
       'materialKind',
       'title',
       'query',
@@ -348,7 +353,10 @@ void main() {
         (core2['presentedCandidateOrdinals']! as List).cast<int>();
     expect(candidateRows, isNotEmpty);
     expect(core2['knownCandidateCount'], candidateRows.length);
+    expect(candidateRows.map((row) => row['evidenceId']).toSet().length,
+        candidateRows.length);
     expect(candidateRows.every((row) =>
+        (row['evidenceId'] as String).isNotEmpty &&
         (row['sourceId'] as String).isNotEmpty &&
         (row['query'] as String).isNotEmpty &&
         (row['reasonCode'] as String).isNotEmpty), isTrue);
