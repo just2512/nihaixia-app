@@ -47,9 +47,10 @@ class ReasoningRequestPromptFormatter {
       },
       'responseContract': {
         'schemaVersion': request.responseSchemaVersion,
-        'requiredFields': const [
+        'requiredFields': [
           'schemaVersion', 'requestId', 'responseKind', 'status', 'segments',
           'referencedEvidenceIds', 'unknowns', 'conflicts', 'omittedEvidenceIds',
+          if (request.attachmentType != null) 'attachmentResult',
         ],
         'responseKinds': const [
           'ANSWER', 'CLARIFICATION', 'ACTION_PROPOSAL', 'REFUSAL', 'INSUFFICIENT_EVIDENCE',
