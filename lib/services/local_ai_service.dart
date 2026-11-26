@@ -1458,7 +1458,7 @@ class LocalAiSymptomDraft {
   final List<String> aggravatingFactors;
   final List<String> relievingFactors;
   final List<String> associatedSymptoms;
-  final List<String> redFlags;
+  final List<String> userReportedUrgentSigns;
   final List<String> unknowns;
   final List<LocalAiSymptomQuestionCandidate> questionCandidates;
   final String sourceText;
@@ -1473,7 +1473,7 @@ class LocalAiSymptomDraft {
     this.aggravatingFactors = const [],
     this.relievingFactors = const [],
     this.associatedSymptoms = const [],
-    this.redFlags = const [],
+    this.userReportedUrgentSigns = const [],
     this.unknowns = const [],
     this.questionCandidates = const [],
     this.sourceText = '',
@@ -1605,7 +1605,11 @@ class LocalAiSymptomDraft {
       aggravatingFactors: stringList('aggravating_factors'),
       relievingFactors: stringList('relieving_factors'),
       associatedSymptoms: stringList('associated_symptoms'),
-      redFlags: stringList('red_flags'),
+      // Legacy model output compatibility only; this field stores user-quoted
+      // reports and is never used for risk classification or request gating.
+      userReportedUrgentSigns: map.containsKey('user_reported_urgent_signs')
+          ? stringList('user_reported_urgent_signs')
+          : stringList('red_flags'),
       unknowns: stringList('unknowns'),
       questionCandidates: List.unmodifiable(candidates),
       sourceText: sourceText.trim(),
@@ -1631,7 +1635,7 @@ class LocalAiSymptomDraft {
     addList('加重因素', aggravatingFactors);
     addList('缓解因素', relievingFactors);
     addList('伴随表现', associatedSymptoms);
-    addList('需留意的自述表现', redFlags);
+    addList('急重症相关的用户自述', userReportedUrgentSigns);
     addList('仍需核实', unknowns);
     return lines;
   }
