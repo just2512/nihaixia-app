@@ -93,9 +93,10 @@ void main() {
       expect(json.keys, isNot(contains('attachment_path')));
     });
 
-    test('trace schema exposes required stages and NOT_APPLICABLE status', () {
+    test('trace schema retains legacy gate stage tokens for historical compatibility', () {
       expect(AiTraceStatus.notApplicable.wireValue, 'NOT_APPLICABLE');
       expect(AiTraceStage.input.wireValue, 'INPUT');
+      expect(AiTraceStage.preflight.wireValue, 'PREFLIGHT');
       expect(AiTraceStage.redFlag.wireValue, 'RED_FLAG');
       expect(AiTraceStage.route.wireValue, 'ROUTE');
       expect(AiTraceStage.entityResolution.wireValue, 'ENTITY_RESOLUTION');

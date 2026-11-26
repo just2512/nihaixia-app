@@ -20,6 +20,8 @@ enum AiTraceStatus {
 
 enum AiTraceStage {
   input,
+  // Legacy values retained for historical TRACE compatibility only.
+  // Current production flows must not emit these stages.
   preflight,
   redFlag,
   dispatch,
