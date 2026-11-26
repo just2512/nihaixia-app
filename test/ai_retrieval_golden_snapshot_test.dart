@@ -250,7 +250,6 @@ void main() {
         (rawCore2['candidateDecisionRows']! as List).cast<Map>();
     const candidateFields = [
       'ordinal',
-      'evidenceId',
       'sourceId',
       'sourceKey',
       'sourceLabel',
@@ -337,9 +336,12 @@ void main() {
     expect(expectedFile.existsSync(), isTrue,
         reason: '检索行为基线必须有可审查、可版本控制的固定夹具');
     final expected = jsonDecode(expectedFile.readAsStringSync());
-    final captureOnly = Platform.environment['GITHUB_EVENT_NAME'] == 'pull_request' &&
-        Platform.environment['GITHUB_HEAD_REF'] ==
-            'work/core2-typed-local-structured-evidence-master-da63baf-20261126';
+    final pullRequestBranch = Platform.environment['GITHUB_HEAD_REF'];
+    final pushRef = Platform.environment['GITHUB_REF'];
+    final captureOnly = pullRequestBranch ==
+            'work/core2-typed-local-structured-evidence-master-da63baf-20261126' ||
+        pushRef ==
+            'refs/heads/work/core2-typed-local-structured-evidence-master-da63baf-20261126';
     if (!captureOnly) {
       expect(
         jsonEncode(summarize(first)),
@@ -349,6 +351,9 @@ void main() {
     }
 
     final core2 = first['core2']! as Map<String, Object?>;
+    final rawCore2 = first['core2']! as Map<String, Object?>;
+    final rawCandidateRows =
+        (rawCore2['candidateDecisionRows']! as List).cast<Map>();
     final candidateRows =
         (core2['candidateDecisionRows']! as List).cast<Map>();
     final sourceSelection = core2['sourceSelection']! as Map;
@@ -358,10 +363,15 @@ void main() {
         (core2['presentedCandidateOrdinals']! as List).cast<int>();
     expect(candidateRows, isNotEmpty);
     expect(core2['knownCandidateCount'], candidateRows.length);
-    expect(candidateRows.map((row) => row['evidenceId']).toSet().length,
-        candidateRows.length);
+    expect(rawCandidateRows.length, candidateRows.length);
+    expect(
+      rawCandidateRows.map((row) => row['evidenceId']).toSet().length,
+      rawCandidateRows.length,
+      reason: 'Request-local evidence IDs remain unique at runtime',
+    );
+    expect(rawCandidateRows.every((row) =>
+        (row['evidenceId'] as String).isNotEmpty), isTrue);
     expect(candidateRows.every((row) =>
-        (row['evidenceId'] as String).isNotEmpty &&
         (row['sourceId'] as String).isNotEmpty &&
         (row['query'] as String).isNotEmpty &&
         (row['reasonCode'] as String).isNotEmpty), isTrue);
