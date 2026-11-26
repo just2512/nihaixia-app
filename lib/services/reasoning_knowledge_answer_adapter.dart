@@ -100,6 +100,8 @@ class ReasoningKnowledgeAnswerAdapter {
     required AssistantKnowledgeContextResult knowledge,
     List<String> allowedCapabilityIds = const [],
     List<ReasoningExecutionResult> executionResults = const [],
+    ReasoningAttachmentType? attachmentType,
+    bool attachmentPromptGenerated = false,
   }) {
     return ReasoningRequest(
       requestId: requestId,
@@ -118,6 +120,8 @@ class ReasoningKnowledgeAnswerAdapter {
       knownEvidenceIds: knowledge.knownEvidenceIds,
       executionResults: executionResults,
       allowedCapabilityIds: allowedCapabilityIds,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
   }
 
@@ -164,6 +168,7 @@ class ReasoningKnowledgeAnswerAdapter {
       knownEvidenceIds: request.knownEvidenceIds.toSet(),
       // Learning knowledge answers never receive action capabilities.
       allowedCapabilityIds: const <String>{},
+      expectedAttachmentType: request.attachmentType?.name,
     );
     final response = decoded.response;
     if (!decoded.isUsable || response == null) {
@@ -203,6 +208,10 @@ class ReasoningKnowledgeAnswerAdapter {
     }
 
     final sections = <String>[
+      if (response.attachmentResult?.attachmentType == 'image')
+        '照片可直接观察到的内容：${response.attachmentResult!.observations.join('；')}',
+      if (response.attachmentResult?.attachmentType == 'audio')
+        '语音转写草稿（尚待用户核对，未作为用户确认事实）：\\n${response.attachmentResult!.transcriptDraft}',
       ...response.segments.map((item) => item.trim()).where((item) => item.isNotEmpty),
       if (response.unknowns.isNotEmpty)
         '待确认：${response.unknowns.join('；')}',
