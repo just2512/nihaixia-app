@@ -7,6 +7,7 @@ import '../models/ai_evidence.dart';
 import '../models/evidence_ranking_decision.dart';
 import 'classic_evidence_pipeline.dart';
 import 'multi_source_evidence_pipeline.dart';
+import 'local_structured_evidence_pipeline.dart';
 import 'source_aware_legacy_evidence_ranker.dart';
 import 'guji_evidence_pipeline.dart';
 import 'medical_case_evidence_pipeline.dart';
@@ -609,11 +610,27 @@ class AssistantKnowledgeContextBuilder {
       );
     }
     final base = build(normalized);
+    final requestId = ClassicEvidencePipeline.nextRequestId();
+    final localExtraction = LocalStructuredEvidencePipeline.extract(
+      requestId: '${requestId}:local-structured',
+      originalQuery: normalized,
+      legacyContextText: base,
+    );
     if (!shouldRetrieveForQuery(normalized)) {
-      return AssistantKnowledgeContextBuildResult(
-        text: base,
-        knownEvidenceIds: const [],
-        rankedEvidence: const [],
+      final combinedBatch = MultiSourceEvidencePipeline.combine(
+        requestId: '${requestId}:all-sources',
+        originalQuery: normalized,
+        sourceBatches: [localExtraction.batch],
+      );
+      final rankedEvidenceSet = SourceAwareLegacyEvidenceRanker.rank(
+        combinedBatch.candidates,
+        requestId: combinedBatch.requestId,
+      );
+      return _buildLegacyStructuredOnlyResult(
+        base,
+        localExtraction,
+        combinedBatch,
+        rankedEvidenceSet,
       );
     }
     final buffer = StringBuffer();
@@ -644,7 +661,7 @@ class AssistantKnowledgeContextBuilder {
 
     final queryProvenance = deriveClassicQueries(normalized);
     final evidenceBatch = await ClassicEvidencePipeline.retrieveClassicIndexCandidates(
-      requestId: ClassicEvidencePipeline.nextRequestId(),
+      requestId: requestId,
       originalQuery: normalized,
       derivedQueries: [
         for (var index = 0; index < queryProvenance.length; index++)
@@ -674,7 +691,10 @@ class AssistantKnowledgeContextBuilder {
     // Build source batches in the established user-visible legacy order:
     // classic index, each explicitly requested Guji book, then medical cases.
     // Aggregation only namespaces IDs and preserves this caller-supplied order.
-    final sourceBatches = <CandidateEvidenceBatch>[evidenceBatch];
+    final sourceBatches = <CandidateEvidenceBatch>[
+      localExtraction.batch,
+      evidenceBatch,
+    ];
     final failedGujiBookIds = <String>{};
     for (final book in requestedGujiBooks) {
       final batchRequestId = '${evidenceBatch.requestId}:${book.id}';
@@ -733,7 +753,7 @@ class AssistantKnowledgeContextBuilder {
     }
 
     final combinedBatch = MultiSourceEvidencePipeline.combine(
-      requestId: '${evidenceBatch.requestId}:all-sources',
+      requestId: '${requestId}:all-sources',
       originalQuery: normalized,
       sourceBatches: sourceBatches,
     );
@@ -747,6 +767,13 @@ class AssistantKnowledgeContextBuilder {
     };
     final evidenceStartOffsets = <String, int>{};
     final evidenceEndOffsets = <String, int>{};
+    for (final block in localExtraction.blocks) {
+      final evidenceId = '${combinedBatch.requestId}:'
+          '${localExtraction.batch.requestId}:'
+          '${block.candidate.evidenceId}';
+      evidenceStartOffsets[evidenceId] = block.startOffset;
+      evidenceEndOffsets[evidenceId] = block.endOffset;
+    }
 
     // Keep the historical classic-index first-four cap and query/hit order.
     // No relevance score or source-verification promotion is introduced.
@@ -903,6 +930,102 @@ class AssistantKnowledgeContextBuilder {
           ),
     ];
 
+    final hasPresentationOmissions =
+        budgetOmittedEvidenceIds.isNotEmpty ||
+            budgetTruncatedEvidenceIds.isNotEmpty;
+    final presentationRankedEvidenceSet = RankedEvidenceSet(
+      requestId: rankedEvidenceSet.requestId,
+      strategyId: rankedEvidenceSet.strategyId,
+      strategyVersion: rankedEvidenceSet.strategyVersion,
+      decisions: rankedEvidenceSet.decisions,
+      orderedEvidenceIds: rankedEvidenceSet.orderedEvidenceIds,
+      budget: EvidenceBudgetSnapshot(
+        unit: EvidenceBudgetUnit.characters,
+        limit: maxContextCharacters,
+        used: boundedResult.length,
+        applied: true,
+        omittedEvidenceIds: budgetOmittedEvidenceIds,
+        truncatedEvidenceIds: budgetTruncatedEvidenceIds,
+      ),
+      status: rankedEvidenceSet.orderedEvidenceIds.isEmpty
+          ? RankedEvidenceSetStatus.noUsableEvidence
+          : hasPresentationOmissions
+              ? RankedEvidenceSetStatus.budgetTruncated
+              : RankedEvidenceSetStatus.ranked,
+      diagnostics: [
+        ...rankedEvidenceSet.diagnostics,
+        'CONTEXT_PRESENTATION_BUDGET_CHARACTERS_APPLIED',
+        if (budgetOmittedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_OMITTED',
+        if (budgetTruncatedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_TRUNCATED',
+        'CONTEXT_BUDGET_USED_UTF16_CODE_UNITS',
+      ],
+    );
+    return AssistantKnowledgeContextBuildResult(
+      text: boundedResult,
+      knownEvidenceIds: combinedBatch.candidates
+          .map((candidate) => candidate.evidenceId)
+          .toList(growable: false),
+      rankedEvidence: rankedEvidence,
+      rankedEvidenceSet: presentationRankedEvidenceSet,
+    );
+  }
+
+  static AssistantKnowledgeContextBuildResult _buildLegacyStructuredOnlyResult(
+    String base,
+    LegacyStructuredEvidenceExtraction extraction,
+    CandidateEvidenceBatch combinedBatch,
+    RankedEvidenceSet rankedEvidenceSet,
+  ) {
+    final leadingTrim = base.length - base.trimLeft().length;
+    final result = base.trim();
+    final boundedResult = result.length <= maxContextCharacters
+        ? result
+        : result.substring(0, maxContextCharacters);
+    final evidenceStartOffsets = <String, int>{};
+    final evidenceEndOffsets = <String, int>{};
+    for (final block in extraction.blocks) {
+      final evidenceId = '${combinedBatch.requestId}:'
+          '${extraction.batch.requestId}:'
+          '${block.candidate.evidenceId}';
+      evidenceStartOffsets[evidenceId] = block.startOffset;
+      evidenceEndOffsets[evidenceId] = block.endOffset;
+    }
+
+    final presentedEvidenceIds = <String>{};
+    final budgetOmittedEvidenceIds = <String>[];
+    final budgetTruncatedEvidenceIds = <String>[];
+    final candidatesById = {
+      for (final candidate in combinedBatch.candidates)
+        candidate.evidenceId: candidate,
+    };
+    for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      final startOffset = evidenceStartOffsets[evidenceId];
+      final endOffset = evidenceEndOffsets[evidenceId];
+      if (startOffset == null || endOffset == null) {
+        budgetOmittedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      final visibleStart = startOffset - leadingTrim;
+      final visibleEnd = endOffset - leadingTrim;
+      if (visibleEnd <= boundedResult.length) {
+        presentedEvidenceIds.add(evidenceId);
+      } else if (visibleStart < boundedResult.length) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+      } else {
+        budgetOmittedEvidenceIds.add(evidenceId);
+      }
+    }
+
+    final rankedEvidence = <AssistantKnowledgeEvidenceReference>[
+      for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds)
+        if (presentedEvidenceIds.contains(evidenceId))
+          AssistantKnowledgeEvidenceReference(
+            evidenceId: evidenceId,
+            sourceId: candidatesById[evidenceId]!.sourceId,
+          ),
+    ];
     final hasPresentationOmissions =
         budgetOmittedEvidenceIds.isNotEmpty ||
             budgetTruncatedEvidenceIds.isNotEmpty;
