@@ -503,3 +503,57 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - Core-4 One-shot：后续独立切片在现有 `assistant_messages` 加 nullable `invocation_key` 和部分唯一索引，以隐藏 `role=tool` 事件记录 CLAIMED/TERMINAL；进程恢复时未完成 claim 转为 UNKNOWN，不自动重放。不得新增第二套会话表。该代码切片仍待重基线与精确 HEAD CI。
 - **Core-4 当前仍为 PARTIAL：** Gate、Request、Adapter 与 Invocation Ledger 仍是独立契约/持久化切片，尚未接入 Native 工具模式生产 Request/Response、App 确认 UI、HeadlessToolDispatcher 或下一轮真实 ExecutionResult 回流。模型参数不能越过 App schema、原始用户文本解析和用户确认直接送入执行器。
 - 后续硬门槛：工具模式接入结构化 Request/Response；App 确认 UI 独立展示并绑定原 requestId/allowlist；持久化 claim 成功后才调用现有 Dispatcher；真实 `AssistantToolResult` 经适配加入下一轮 Request 供模型解释，同时 App 保留原始执行结果/来源。Page-only、未登记能力、缺参、非法参数、拒绝、取消和 UNKNOWN 均不得伪装成功；UNKNOWN 不自动重放。
+
+
+---
+
+### Core-0：五层职责契约与当前源码映射（2026-11-26 基线）
+
+**审计基线：** \`master@5889383b13742ea68ca4156fce5f7e657b3dde62\`（已包含 #558 Request/Adapter 与 #559 One-shot Ledger）。本节是代码映射和数据所有权冻结，不代表各层运行时工作已全部完成。未合并 PR 的代码只能列为候选实现，不能计入 master 已落地状态。
+
+#### 1. 五层契约、真实入口和输出
+
+| 层 | 真实代码入口 / 主要所有者 | 输出契约 | 失败状态与硬边界 | 当前证据 |
+|---|---|---|---|---|
+| Core-1 会话记忆 | \`SessionStateSnapshotBuilder.build\`；\`LocalAiConversationHistory\`；\`AssistantConversationStore\`；Native \`LocalAiSessionStateInputPolicy.validate\` | \`SessionStateSnapshot(sessionId, revision, status, facts, evidenceReferences, activeTaskId, omittedUserMessageCount)\`；事实带 \`SessionFactProvenance\` | RESTORED / PARTIAL / SESSION_MISMATCH / UNKNOWN；owner 不匹配全量拒绝；只读快照不替代 transcript；RAG 正文不能进入记忆；隐藏 \`role=tool\` Ledger 事件不得进入记忆；没有 token budget 或自动压缩时不能声称已完成预算治理 | \`test/session_state_snapshot_builder_test.dart\`、\`test/session_state_snapshot_prompt_formatter_test.dart\`、Native \`LocalAiSessionStateInputPolicyTest\` 与 transcript isolation tests |
+| Core-2 知识召回 | \`AssistantKnowledgeContextBuilder.buildAsync/buildWithEvidenceAsync\`；\`ClassicEvidencePipeline\`、\`MedicalCaseEvidencePipeline\`、\`GujiEvidencePipeline\` | 候选集合、\`knownEvidenceIds\`、sourceId 映射和实际组装的证据正文；\`AssistantKnowledgeContextResult\` | NO_RESULTS / RETRIEVED / PARTIAL / FAILED；候选 ID 与正文是否实际送入模型是两件事；未解析来源不能伪装成可导航来源 | \`test/assistant_knowledge_context_test.dart\`、各 Evidence Pipeline 测试、\`test/ai_retrieval_golden_snapshot_test.dart\` |
+| Core-2 证据排序 | \`MultiSourceEvidencePipeline.combine\`；\`SourceAwareLegacyEvidenceRanker.rank\` | \`RankedEvidenceSet\`：候选身份、KEEP/DROP 决策、策略元数据与上下文预算；Request 只接收完整提供给模型的 \`rankedEvidence\`，\`knownEvidenceIds\` 可保留被丢弃候选身份 | 排序不是来源真实性、经典出处或医学正确性判断；known-but-dropped ID 不可作为模型引用；呈现字符上限不等于 token budget | \`test/multi_source_evidence_pipeline_test.dart\`、\`test/source_aware_legacy_evidence_ranker_test.dart\`、\`test/ai_retrieval_golden_snapshot_test.dart\` |
+| Core-3 语言推理 | \`ReasoningRequest\`；\`ReasoningRequestPromptFormatter.formatSupplementalContext\`；\`LocalAiService.sendReasoningMessage\`；Native \`MainActivity.sendLocalReasoningMessage\`；\`ReasoningResponseCodec.decode\`；\`ReasoningKnowledgeAnswerAdapter.decodeAndResolve\` | App 构造的 Request 与严格 v1 Response；ANSWER/CLARIFICATION/REFUSAL/INSUFFICIENT_EVIDENCE；证据引用回填为 App-owned sourceIds | EMPTY / PARSE_FAILED / UNKNOWN / requestId mismatch / unranked reference 均不作为成功回答；模型输出是非可信载荷；模型不能声明来源真实或动作已执行 | \`test/reasoning_request_prompt_formatter_test.dart\`、\`test/reasoning_response_codec_test.dart\`、\`test/reasoning_knowledge_answer_adapter_test.dart\`、\`test/local_ai_service_test.dart\` |
+| Core-4 业务执行 | \`ReasoningActionProposalGate\`、\`ReasoningActionProposalAdapter\`、\`ToolExecutionPlan\`、\`HeadlessToolDispatcher.executePlan\`、\`AssistantToolInvocationLedger\`、\`ReasoningExecutionResultAdapter\` | Gate 只产生 App-owned 预览/已确认计划；Dispatcher 输出 \`AssistantToolResult\`；Ledger 终态安全读回后才能投影为 \`ReasoningExecutionResult\` | allowlist 不等于用户授权；必须显式确认；CLAIMED 必须先于 Dispatcher；FAILED/UNKNOWN 不带成功值或来源；UNKNOWN、进程中断、终态读回失败不自动重放 | \`test/reasoning_action_proposal_adapter_test.dart\`、\`test/headless_tool_dispatcher_test.dart\`、\`test/assistant_tool_invocation_ledger_test.dart\`、\`test/reasoning_execution_result_adapter_test.dart\` |
+| Core-5 端到端 | Flutter widget/integration tests、Kotlin Native policy tests、Android arm64 build、真实设备 TRACE | 按同一 requestId/conversationId 关联 Memory、Evidence、Reasoning、Execution 和最终答复 | CI SKIPPED 不是 PASS；旧 SHA 的结果不替代当前 PR HEAD；云端 CI 不能替代 E4B/GPU/CPU/进程恢复设备 TRACE | \`test/local_ai_interview_screen_test.dart\`、Native \`LocalAiConversationHistoryPolicyTest\`、Android arm64 workflow；完整五层 E2E 和设备 TRACE 仍待补齐 |
+
+#### 2. Native 调用字段与数据所有权
+
+\`LocalAiService._sendReasoningMessage\` 将不同所有权的数据分字段传递，Native \`MainActivity\` 逐项读取并校验，不应把它们合并成一个无来源区分的 prompt 字符串：
+
+| MethodChannel 字段 | 来源 / 所有者 | 用途 | 不允许的混用 |
+|---|---|---|---|
+| \`text\` | 用户原始输入，Dart UI | 当前轮用户意图；不得被检索 query 改写替代 | 不得用归一化 query 取代原始用户文本 |
+| \`context\` | Core-2 App 检索组装 | 实际检索到且通过上下文预算的证据正文 | 不进入 Native 持久化 transcript 或 SessionStateSnapshot |
+| \`reasoning_context\` | \`ReasoningRequestPromptFormatter\` | requestId、session 元信息、ranked/known evidence ID、能力 allowlist、允许暴露的 executionResults | 不承担 source 正文；不能被模型当成用户确认或执行授权 |
+| \`session_state_context\` | \`SessionStateSnapshotPromptFormatter\` | 当前会话有界事实和来源引用 | 不是检索上下文；必须与 \`session_state_conversation_id\` 一并校验 |
+| \`session_state_conversation_id\` | App 当前会话 ID | Native owner binding | 不匹配即拒绝，不做跨会话回退 |
+| \`trace_id\` | App Trace 生命周期 | 关联各阶段诊断 | Trace 成功不代表模型答案或业务执行成功 |
+
+Native 推理是双阶段提交：\`sendReasoningMessage\` 返回待校验回复，不等于成功轮次；Dart 完成 Response schema、requestId、证据引用和来源映射校验后，才调用 \`finalizeReasoningTurn\`；拒绝或校验失败调用 \`rejectReasoningTurn\`。终态 ACK 只允许重试 ACK 操作，不重放模型推理。普通知识正文、模型原始 JSON、隐藏 Ledger 消息和 SessionStateSnapshot 必须保持不同的持久化边界。
+
+#### 3. DTO 字段约束与信任边界
+
+- \`ReasoningRequest\`：App 生成 requestId、sessionId、原始 userText、mode 和 schemaVersion；\`rankedEvidence\` 是本轮实际提供的引用集合；\`knownEvidenceIds\` 只用于识别已知但可能被 DROP 的候选；\`executionResults\` 只能来自 App 验证；\`allowedCapabilityIds\` 仅定义当前请求允许模型提出的能力范围，不能替代确认。
+- \`SessionStateSnapshot\`：只携带有界事实和证据指针；事实记录 USER_ORIGINAL、USER_CONFIRMED、MODEL_INFERRED、APP_RESULT、SOURCE_REFERENCE 来源类别。UNKNOWN / SESSION_MISMATCH 状态不能携带可暴露事实。
+- \`ReasoningResponse\`：v1 必须包含固定字段；未知字段、缺字段、重复 ID、requestId 不匹配、kind/status 不一致、未排名引用或未允许能力全部 fail-closed。模型声明的 status 不能覆盖 App 解码结果。
+- \`ReasoningExecutionResult\`：SUCCEEDED 必须同时有实际参数、结构化结果和值来源；FAILED/UNKNOWN 必须有 failureCode，且不得带成功 values/sourceIds；NOT_STARTED 不得携带执行数据。
+- \`AssistantToolInvocationLedger\`：只存储执行 claim 和 terminal，不作为聊天记忆或 RAG 证据。SessionStateSnapshotBuilder 只从 user/assistant 消息提取来源引用，明确跳过隐藏 tool-role 事件。
+
+#### 4. 当前调用方覆盖与未闭合项
+
+- master 已完成结构化 Request/Response 的 learning 路径；普通知识问答仍由 \`ReasoningKnowledgeAnswerAdapter\` 做严格解析和来源回填。
+- 截至本审计基线，tools mode 生产调用方仍不能按“全部 Core-4 已接线”描述。Gate、Request/Adapter、Ledger 是契约/持久化基础；待合并的协调器、显式确认 UI、真实 Dispatcher 调用和 executionResults 下一轮回流，必须分别以当前 PR HEAD CI 验收后再计入生产状态。
+- \`ReasoningRequestPromptFormatter.maxSupplementalContextCharacters\` 是 UTF-16 字符上限，不是 tokenizer token budget；现有历史字符裁剪也不等同于模型输入 token 预算。
+- SessionStateSnapshot 是结构化记忆投影，不替代 transcript，不承载 RAG 正文，也未解决所有跨进程恢复语义；没有确定证据的状态保持 UNKNOWN。
+- Core-2 当前保留排序审计对象，但任何未来算法变更仍需冻结候选快照、比较旧/新 KEEP-DROP、保持既有 golden 行为；不能用召回候选数增长证明改进。
+- Core-5 尚缺把跨层 CI、真实 Native 多轮、工具执行、应用重启恢复和设备 TRACE 串为一个可复核验收包。
+
+#### 5. Core-0 放行结论
+
+**Core-0 文档映射：完成本轮冻结。** 五层主要代码入口、DTO、字段传输、数据所有权、失败语义、测试锚点和文件责任已形成明确映射。此结论只关闭“契约/源码映射”文档工作，不把 Core-1 至 Core-5 标记为完成；后续生产接线必须按本节对应的真实入口和边界实施。

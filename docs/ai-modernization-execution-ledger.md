@@ -4752,3 +4752,17 @@ PR HEAD 门禁证据：
 - **Core-4 状态：** 仍为 PARTIAL。#558 只完成 Request/Adapter 合同，#559 只完成持久化 Ledger 与记忆隔离底座；均不代表 tools mode Native 生产发送、App 确认 UI、Dispatcher 实际调用及 ExecutionResult 往返已经闭环。
 - **Core-5 / 设备：** 云端先完成跨层测试与精确 HEAD CI；Find N2 GPU/CPU、多轮、进程恢复和真实 Native TRACE 留到全部云端工作结束后由本地执行。设备验收不阻塞云端代码实现。
 - **工作流 I：** Markdown 书架继续 DEFERRED / NOT_AUTHORIZED。
+
+
+## 118. 2026-11-26 Core-0 五层契约与源码映射冻结
+
+- **基线：** \`master@5889383b13742ea68ca4156fce5f7e657b3dde62\`，包含 PR #558 Request/Adapter 和 PR #559 One-shot Ledger。以当前 master 真实源码映射为准；开放 PR 的代码不计作已合并生产能力。
+- **Core-0 输出：** 在 \`docs/ai-layered-runtime-architecture.md\` 增补五层实际入口、DTO 输出、失败状态、数据所有权、Native 字段传输、测试锚点和未闭合项。未新增服务、数据库、Native 通道或生产调用顺序。
+- **Memory：** \`SessionStateSnapshotBuilder\` 从当前会话 transcript 与结构化 TCM task state 投影有界事实/来源指针；Native \`LocalAiSessionStateInputPolicy.validate\` 校验 conversation owner。隐藏 \`role=tool\` Ledger 事件不进入记忆；PARTIAL/UNKNOWN/session mismatch 不得伪装为 RESTORED。
+- **Retrieval/Ranking：** \`AssistantKnowledgeContextBuilder\` 汇总 Classic/MedicalCase/Guji pipelines；\`MultiSourceEvidencePipeline\` 和 \`SourceAwareLegacyEvidenceRanker\` 形成候选及 KEEP/DROP 决策；模型可引用的 rankedEvidence 仅是实际包含在本轮上下文中的集合，knownEvidenceIds 不能扩大引用许可。来源真实性与检索排序分离。
+- **Reasoning：** \`ReasoningRequest\`、\`ReasoningRequestPromptFormatter\`、Native \`sendLocalReasoningMessage\`、\`ReasoningResponseCodec\` 和 \`ReasoningKnowledgeAnswerAdapter\` 定义输入/输出与来源映射；LocalAiService send/finalize/reject 双阶段提交，模型原始 JSON 不是成功 transcript。当前 master 只有 learning 生产路径完成严格接线，工具模式待后续 PR。
+- **Execution：** #558 Gate/Request/Adapter 契约与 #559 SQLite v8 one-shot Ledger 已合并；Ledger claim/terminal 复用 assistant_messages 和部分唯一 invocation_key，成功结果必须安全读回。Coordinator 与 Tools mode Native 生产接线仍以 PR #561/#562 当前 HEAD 和 CI 为准，未验收前不得写为 master 已完成。
+- **字段所有权：** \`text\`=原始用户输入；\`context\`=Core-2 实际检索正文；\`reasoning_context\`=Request 元数据；\`session_state_context\`=Core-1 快照；\`session_state_conversation_id\`=会话 owner；\`trace_id\`=诊断关联。禁止把 evidence 正文写入长期记忆或把 allowlist 当作用户授权。
+- **缺口：** 24,000 UTF-16 字符补充上下文上限不是 token budget；自动压缩和全部跨进程恢复仍未闭合；Core-2 排序策略仍需稳定的候选快照对照；Core-3 其他模式未全部迁移；Core-4 tools-mode 生产生命周期需以精确 HEAD 合并验收；Core-5 跨层 E2E/Find N2 TRACE 未完成。
+- **状态：** Core-0 文档契约/源码映射完成本轮冻结；Core-1/2/3/4/5 仍按各自实际代码及验收证据保持 PARTIAL/UNKNOWN。工作流 I（Markdown 书架）继续 DEFERRED / NOT_AUTHORIZED；Find N2 设备验收留到云端任务收尾后本地执行。
+- **变更范围：** 仅更新本架构文档和执行台账；不改变生产代码、SQLite schema、Native ai_access/AiModelAccessGate、检索排序行为或既有 E4B GPU/CPU fallback。
