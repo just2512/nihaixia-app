@@ -80,7 +80,10 @@ void main() {
         knowledge: _knowledge(),
       );
 
-      expect(result.decodeResult.isUsable, isTrue);
+      expect(result.decodeResult.isUsable, isFalse);
+      expect(result.decodeResult.response, isNull);
+      expect(result.decodeResult.diagnostics,
+          contains('ACTION_PROPOSAL_AWAITING_APP_CONFIRMATION'));
       expect(result.requiresConfirmation, isTrue);
       expect(result.gateResult?.preview, isNotNull);
       expect(result.gateResult?.plan, isNull);
@@ -131,6 +134,30 @@ void main() {
       expect(
         result.decodeResult.diagnostics,
         contains('REASONING_RESPONSE_CAPABILITY_NOT_REGISTERED'),
+      );
+    });
+
+    test('rejects action proposals that carry evidence references the preview would hide', () {
+      final request = _request();
+      final payload = jsonDecode(_proposalPayload()) as Map<String, dynamic>;
+      payload['referencedEvidenceIds'] = ['evidence-1'];
+      final result = ReasoningActionProposalAdapter.decodeAndPrepare(
+        raw: jsonEncode(payload),
+        request: request,
+        knowledge: _knowledge(),
+      );
+
+      expect(result.isRejected, isTrue);
+      expect(
+        result.decodeResult.diagnostics,
+        contains('REASONING_ACTION_PROPOSAL_MUST_NOT_DROP_EVIDENCE_REFERENCES'),
+      );
+    });
+
+    test('refuses unsupported capability IDs before they enter a model request', () {
+      expect(
+        () => _request(capabilities: const {'guji_library'}),
+        throwsArgumentError,
       );
     });
 
