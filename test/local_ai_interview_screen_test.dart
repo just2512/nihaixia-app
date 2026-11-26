@@ -1049,26 +1049,83 @@ class _PostSendStatusFailureService extends _TextSendService {
     return _readyStatus;
   }
 
-  @override
-  Future<String> sendMessage(
-    String text, {
+  Future<LocalAiReasoningPendingReply> _sendStructured({
+    required String text,
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
-    sentTexts.add(text);
-    _statusUnavailable = true;
     if (failSend) {
+      sentTexts.add(text);
+      _statusUnavailable = true;
       throw PlatformException(
         code: 'INFERENCE_FAILED',
         message: '模拟本地推理失败',
       );
     }
-    return '本轮回复：$text';
+    final pending = traceId == null
+        ? await super.sendReasoningMessage(
+            text,
+            conversationId: conversationId,
+            requestId: requestId,
+            context: context,
+            reasoningContext: reasoningContext,
+          )
+        : await super.sendReasoningMessageWithTrace(
+            text,
+            conversationId: conversationId,
+            requestId: requestId,
+            context: context,
+            reasoningContext: reasoningContext,
+            traceId: traceId,
+          );
+    _statusUnavailable = true;
+    return pending;
   }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructured(
+    text: text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+  );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructured(
+    text: text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
 
   void recoverAsReady() {
     _statusUnavailable = false;
