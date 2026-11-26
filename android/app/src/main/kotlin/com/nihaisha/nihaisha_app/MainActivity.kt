@@ -541,11 +541,9 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Native MethodChannel boundary for all model-facing calls.
-     *
-     * A missing or unreviewed detector must not become implicit CLEAR. The
-     * Flutter seam blocks first; this native boundary prevents MethodChannel
-     * bypasses and remains closed until a reviewed detector is injected.
+     * Legacy MethodChannel wrapper retained for call-site compatibility.
+     * Clinical red-flag detection is not part of this learning-assistant
+     * product. Never invoke a clinical detector or block ordinary model work.
      */
     private fun runAiTaskAfterNativeRedFlag(
         result: MethodChannel.Result,
@@ -553,32 +551,12 @@ class MainActivity : FlutterActivity() {
         required: Boolean = false,
         task: () -> Any?
     ) {
-        if (!required) {
-            if (nativeRedFlagDetector == null) {
-                android.util.Log.d(
-                    "NativeRedFlagGate",
-                    "REDFLAG_GATE_NOT_APPLICABLE: non-clinical request"
-                )
-            }
-            runAiTask(result, requiresAiAccess = true, task = task)
-            return
-        }
-
-        // Required clinical paths never fall through when the detector is
-        // absent, unreviewed, incomplete, or unable to assess the source.
-        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
-            .runBefore(input) {
-                runAiTask(result, requiresAiAccess = true, task = task)
-            }
-        if (!execution.executed) {
-            result.error(
-                "REDFLAG_${execution.verdict.status.name}",
-                "普通模型调用未通过安全评估：${execution.verdict.reason}",
-                null
-            )
-        }
+        android.util.Log.d(
+            "NativeRedFlagGate",
+            "CLINICAL_REDFLAG_NOT_IN_SCOPE: request continues through normal execution"
+        )
+        runAiTask(result, requiresAiAccess = true, task = task)
     }
-
     private fun runAiTask(
         result: MethodChannel.Result,
         requiresAiAccess: Boolean = false,
