@@ -1449,6 +1449,7 @@ class LocalAiSymptomQuestionCandidate {
 }
 
 /// 模型从对话中提取的用户自述草稿。只保留固定字段，不接受辨证或处方字段。
+/// `redFlags` 仅整理用户明确提到的急症相关表现供本人核对，不做检测、风险分级或调用拦截。
 class LocalAiSymptomDraft {
   final String? mainComplaint;
   final String? onset;
