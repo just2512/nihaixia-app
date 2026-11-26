@@ -1183,7 +1183,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AssistantMode mode,
     required AiTraceContext traceContext,
     String? retrievalQuery,
+    String? attachmentPath,
+    ReasoningAttachmentType? attachmentType,
   }) async {
+    if ((attachmentPath == null) != (attachmentType == null)) {
+      throw ArgumentError('REASONING_ATTACHMENT_PATH_TYPE_MISMATCH');
+    }
+    final attachmentPromptGenerated = attachmentType != null && text.trim().isEmpty;
+    final requestUserText = attachmentPromptGenerated
+        ? attachmentType == ReasoningAttachmentType.image
+            ? '【App附件任务（用户未提供文字）】请描述照片中可直接观察到的信息。'
+            : '【App附件任务（用户未提供文字）】请逐句转写录音内容。'
+        : text.trim();
     final traceId = traceContext.traceId;
     final sessionStateSnapshot =
         await _buildSessionStateSnapshot(conversationId);
