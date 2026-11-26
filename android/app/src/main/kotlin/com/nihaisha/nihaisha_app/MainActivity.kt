@@ -478,11 +478,9 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Native MethodChannel boundary for all model-facing calls.
-     *
-     * A missing or unreviewed detector must not become implicit CLEAR. The
-     * Flutter seam blocks first; this native boundary prevents MethodChannel
-     * bypasses and remains closed until a reviewed detector is injected.
+     * Shared Native execution boundary for model-facing MethodChannel calls.
+     * Every inference path is subject to the App's ordinary AI access policy;
+     * it is not a clinical triage or diagnosis gate.
      */
     private fun runAiTask(
         result: MethodChannel.Result,
