@@ -1262,3 +1262,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 request-bound ACTION_PROPOSAL policy and regression tests; only four existing plan-eligible Headless capabilities are accepted; proposals require a separate App-owned consent decision before a single-step plan is created; the gate itself never executes tools; ownership evidence required.
+
+Files:
+ lib/services/reasoning_action_proposal_adapter.dart
+ test/reasoning_action_proposal_adapter_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-4 structured tool-turn adapter and regression tests. It binds App-owned capability allowlist to ReasoningRequest, validates ACTION_PROPOSAL through the Gate, suppresses model proposal narrative and evidence-citation loss, and returns confirmation preview data only; no UI or executor invocation is included; ownership evidence required.

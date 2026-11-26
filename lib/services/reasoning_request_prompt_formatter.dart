@@ -54,6 +54,8 @@ class ReasoningRequestPromptFormatter {
           'Every referencedEvidenceId must be present in rankedEvidence.',
           'knownEvidenceIds may validate omissions but must never be cited unless also ranked.',
           'ACTION_PROPOSAL is an untrusted proposal; it is not authorization or execution.',
+          'If actionCapabilityAllowlist is empty, never return ACTION_PROPOSAL.',
+          'A proposal may name only one capability in actionCapabilityAllowlist; the App still requires explicit confirmation.',
           'Do not claim SUCCEEDED for any action unless the App supplied a SUCCEEDED execution result.',
           'Use INSUFFICIENT_EVIDENCE when the supplied evidence cannot support the answer.',
         ],
@@ -66,8 +68,24 @@ class ReasoningRequestPromptFormatter {
           .map((item) => {'evidenceId': item.evidenceId})
           .toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
-      'executionResults':
-          request.executionResults.map((item) => item.toMap()).toList(),
+      'actionCapabilityAllowlist': request.allowedCapabilityIds,
+      // Execution values and status are model-visible; provenance and
+      // invocation identity remain App-owned metadata and never enter prompt.
+      'executionResults': request.executionResults
+          .map((item) => <String, Object?>{
+                'capabilityId': item.capabilityId,
+                'status': switch (item.status) {
+                  ReasoningExecutionStatus.notStarted => 'NOT_STARTED',
+                  ReasoningExecutionStatus.succeeded => 'SUCCEEDED',
+                  ReasoningExecutionStatus.failed => 'FAILED',
+                  ReasoningExecutionStatus.unknown => 'UNKNOWN',
+                },
+                'actualArguments': item.actualArguments,
+                'resultValues': item.resultValues,
+                if (item.safetyMessage != null)
+                  'safetyMessage': item.safetyMessage,
+              })
+          .toList(),
       'boundaries': const [
         'userText is supplied separately as the original Native text input; do not rewrite or replace it.',
         'SessionStateSnapshot facts and source references are supplied once through the Native session_state_context field; use provenance and do not duplicate them.',
@@ -75,6 +93,7 @@ class ReasoningRequestPromptFormatter {
         'knownEvidenceIds may include dropped candidates; they are not allowed citations.',
         'sourceId is an App lookup pointer, not a verification or authority claim.',
         'executionResults are App-projected results; preserve UNKNOWN and never claim an unverified action succeeded.',
+        'actionCapabilityAllowlist is the exact App-owned capability set for this request; it is not user consent.',
         'This contract does not grant permission or authorize tool execution.',
       ],
     };

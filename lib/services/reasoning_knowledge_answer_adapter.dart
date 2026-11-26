@@ -98,6 +98,8 @@ class ReasoningKnowledgeAnswerAdapter {
     required String mode,
     required SessionStateSnapshot sessionState,
     required AssistantKnowledgeContextResult knowledge,
+    List<String> allowedCapabilityIds = const [],
+    List<ReasoningExecutionResult> executionResults = const [],
   }) {
     return ReasoningRequest(
       requestId: requestId,
@@ -114,6 +116,8 @@ class ReasoningKnowledgeAnswerAdapter {
               ))
           .toList(growable: false),
       knownEvidenceIds: knowledge.knownEvidenceIds,
+      executionResults: executionResults,
+      allowedCapabilityIds: allowedCapabilityIds,
     );
   }
 
