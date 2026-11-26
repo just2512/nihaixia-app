@@ -23,6 +23,11 @@ import '../services/assistant_knowledge_context.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/reasoning_knowledge_answer_adapter.dart';
 import '../services/reasoning_request_prompt_formatter.dart';
+import '../services/reasoning_action_proposal_adapter.dart';
+import '../services/reasoning_action_proposal_gate.dart';
+import '../services/assistant_tool_invocation_ledger.dart';
+import '../services/assistant_tool_execution_coordinator.dart';
+import '../models/reasoning_request.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
@@ -1502,6 +1507,421 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       }
     }
+
+    Future<_AssistantTurnResponse> sendStructuredTools(
+      AssistantKnowledgeContextResult knowledge,
+    ) async {
+      final requestId = _newReasoningRequestId(traceId);
+      final capabilityAllowlist =
+          ReasoningActionProposalGate.supportedCapabilityIds;
+      final request = ReasoningActionProposalAdapter.createRequest(
+        requestId: requestId,
+        sessionId: conversationId,
+        userText: text.trim(),
+        sessionState: sessionStateSnapshot,
+        knowledge: knowledge,
+        requestCapabilityAllowlist: capabilityAllowlist,
+      );
+
+      final knowledgeText = knowledge.modelContextText;
+      final roleContext = '当前角色：工具助手。\n'
+          '${AssistantMode.tools.promptHint}\n'
+          '只在用户明确要求执行 App 已登记的工具任务时提出一个动作提案；普通解释、比较、学习或闲聊应直接回答或澄清。'
+          '模型只负责理解任务和提出参数候选，不运行计算、不生成业务结果、不声称动作已执行。'
+          '本轮允许的 capability 只有：'
+          'dosage（仅古今度量衡单位换算，参数必须包含 value、unit，可按工具校验要求提供 standard；不得推断药物剂量）；'
+          'solar_terms（节气知识查询，只能提供可选 term，省略表示查询 App 当前节气）；'
+          'yuxiaji_omen（玉匣灵兆，不接收模型参数，时刻与数据均由 App 决定）；'
+          'sanshan_lingqian（三山国王灵签，不接收模型参数，签由 App 本地随机选择）。'
+          '不得提出其他工具，不得生成多步计划，不得补默认值；缺少关键参数、口径不明或用户没有明确执行意图时必须先澄清。'
+          'ACTION_PROPOSAL 是给用户审核的候选，并非执行授权。'
+          '${knowledgeText.isEmpty ? '本轮未检索到可引用的本地知识资料；不得编造出处或把未知内容说成已知。' : '以下为本轮实际提供的本地知识资料摘录；资料仅用于解释，不可替代 App 工具执行。\n$knowledgeText'}';
+
+      var activeRequestId = requestId;
+      var nativeInvocationStarted = false;
+      var nativeReplyReceived = false;
+      var nativeRequestMayBePending = false;
+      var nativeFinalizeStarted = false;
+      var nativeFinalizeConfirmed = false;
+      var nativeTurnRejected = false;
+
+      Future<LocalAiReasoningPendingReply> invokeNative(
+        ReasoningRequest currentRequest,
+        String currentContext,
+      ) {
+        final supplementalContext =
+            ReasoningRequestPromptFormatter.formatSupplementalContext(
+          currentRequest,
+        );
+        nativeInvocationStarted = true;
+        nativeRequestMayBePending = true;
+        return traceId == null
+            ? _service.sendReasoningMessage(
+                currentRequest.userText,
+                conversationId: conversationId,
+                requestId: currentRequest.requestId,
+                context: currentContext,
+                reasoningContext: supplementalContext,
+                sessionStateContext: sessionStateContext,
+                sessionStateConversationId: conversationId,
+                requireMedicalSafety: requireMedicalSafety,
+                redFlagContext: redFlagContext,
+                redFlagContextTruncated: redFlagContextTruncated,
+              )
+            : _service.sendReasoningMessageWithTrace(
+                currentRequest.userText,
+                conversationId: conversationId,
+                requestId: currentRequest.requestId,
+                context: currentContext,
+                reasoningContext: supplementalContext,
+                traceId: traceId,
+                sessionStateContext: sessionStateContext,
+                sessionStateConversationId: conversationId,
+                requireMedicalSafety: requireMedicalSafety,
+                redFlagContext: redFlagContext,
+                redFlagContextTruncated: redFlagContextTruncated,
+              );
+      }
+
+      Future<void> finalizeCurrent(String answer) async {
+        nativeFinalizeStarted = true;
+        await _service.finalizeReasoningTurn(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+          validatedAnswer: answer,
+        );
+        nativeFinalizeConfirmed = true;
+        nativeRequestMayBePending = false;
+      }
+
+      Future<void> rejectCurrent() async {
+        await _service.rejectReasoningTurn(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+        );
+        nativeRequestMayBePending = false;
+        nativeTurnRejected = true;
+      }
+
+      String appResultText(ReasoningExecutionResult execution) {
+        final succeeded =
+            execution.status == ReasoningExecutionStatus.succeeded;
+        final tool = AssistantToolRouter.byId(execution.capabilityId);
+        final title = tool?.title ?? execution.capabilityId;
+        if (!succeeded) {
+          final status = switch (execution.status) {
+            ReasoningExecutionStatus.failed => 'FAILED',
+            ReasoningExecutionStatus.unknown => 'UNKNOWN',
+            ReasoningExecutionStatus.notStarted => 'NOT_STARTED',
+            ReasoningExecutionStatus.succeeded => 'SUCCEEDED',
+          };
+          return 'App 工具执行状态：$status。\n'
+              '${execution.safetyMessage ?? 'App 未提供可确认的成功结果。'}'
+              '不会自动重试；请根据提示补充信息或在确认状态后重新发起新的请求。';
+        }
+        return [
+          '【App 已执行并从本地持久化记录回读的结果】',
+          '工具：$title',
+          '状态：SUCCEEDED',
+          if (execution.actualArguments.isNotEmpty)
+            '实际执行参数：${execution.actualArguments.entries.map((entry) => '${entry.key}=${entry.value}').join('；')}',
+          ...execution.resultValues.entries.map(
+            (entry) => '${entry.key}：${entry.value}',
+          ),
+          '以上字段来自 App 工具结果；此处不包含 AI 的额外推断。',
+        ].join('\n');
+      }
+
+      try {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.contextAssembly,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_tools_request',
+          mode: AssistantMode.tools.name,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.modelInput,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_tools_request',
+          mode: AssistantMode.tools.name,
+        );
+        final pending = await invokeNative(request, roleContext);
+        nativeReplyReceived = true;
+        final prepared = ReasoningActionProposalAdapter.decodeAndPrepare(
+          raw: pending.reply,
+          request: request,
+          knowledge: knowledge,
+        );
+
+        if (prepared.isUsableAnswer && prepared.answerResult != null) {
+          await finalizeCurrent(prepared.answerResult!.answerText);
+          return _AssistantTurnResponse(
+            text: prepared.answerResult!.answerText,
+            sourceIds: prepared.answerResult!.sourceIds,
+            knowledgeStatus: knowledge.statusLabel,
+          );
+        }
+
+        if (!prepared.requiresConfirmation ||
+            prepared.gateResult?.preview == null) {
+          await rejectCurrent();
+          return _AssistantTurnResponse(
+            text: '本轮工具助手结构化回复未通过协议、能力范围或参数校验，已拒绝；没有执行任何工具，也未写入模型成功历史。',
+            knowledgeStatus: 'PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: prepared.decodeResult.diagnostics.isEmpty
+                ? 'REASONING_TOOL_RESPONSE_REJECTED'
+                : prepared.decodeResult.diagnostics.first,
+          );
+        }
+
+        final preview = prepared.gateResult!.preview!;
+        final tool = AssistantToolRouter.byId(preview.toolId);
+        if (tool == null) {
+          await rejectCurrent();
+          return const _AssistantTurnResponse(
+            text: 'App 未登记该工具，动作提案已拒绝；没有执行任何工具。',
+            knowledgeStatus: 'PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: 'REASONING_ACTION_PROPOSAL_TOOL_NOT_REGISTERED',
+          );
+        }
+        if (!mounted) {
+          await rejectCurrent();
+          return const _AssistantTurnResponse(
+            text: '当前对话界面已关闭，动作提案已拒绝；没有执行任何工具。',
+            knowledgeStatus: 'PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: 'REASONING_ACTION_PROPOSAL_SCREEN_DISPOSED',
+          );
+        }
+
+        final argumentLines = preview.arguments.isEmpty
+            ? const <String>['参数：由 App 本地规则/数据生成，模型未提供参数。']
+            : preview.arguments.entries
+                .map((entry) => '${entry.key}：${entry.value}')
+                .toList(growable: false);
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: true,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('确认执行 App 工具'),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(tool.title, style: Theme.of(dialogContext).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(tool.description),
+                    const SizedBox(height: 12),
+                    const Text('即将提交给 App 的参数：'),
+                    const SizedBox(height: 4),
+                    ...argumentLines.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Text(line),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      '模型只提出了候选动作。只有你点击“确认执行”后，App 才会校验并调用本地工具；取消或关闭不会执行。',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('确认执行'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          const cancelled =
+              '你已取消本次工具动作；App 未调用工具，未产生业务执行结果。';
+          await finalizeCurrent(cancelled);
+          return const _AssistantTurnResponse(
+            text: cancelled,
+            knowledgeStatus: 'ACTION_CANCELLED',
+          );
+        }
+
+        final coordinator = AssistantToolExecutionCoordinator(
+          ledger: AssistantToolInvocationLedger(_conversationStore),
+        );
+        final coordinated = await coordinator.executeConfirmedProposal(
+          conversationId: conversationId,
+          invocationId: _newReasoningRequestId(null),
+          request: request,
+          preview: preview,
+          confirmedByUser: true,
+          executorOverride: widget.testHeadlessToolExecutor,
+        );
+        final execution = coordinated.executionResult;
+        if (execution == null ||
+            execution.status != ReasoningExecutionStatus.succeeded) {
+          const fallback =
+              'App 未返回经过持久化读回验证的成功结果；本次状态保持 UNKNOWN/失败，不会自动重放。';
+          final appText = execution == null ? fallback : appResultText(execution);
+          await finalizeCurrent(appText);
+          return _AssistantTurnResponse(
+            text: appText,
+            sourceIds: const [],
+            knowledgeStatus: 'TOOL_EXECUTION_NOT_SUCCEEDED',
+          );
+        }
+
+        // The first Native turn contains an untrusted proposal, not an answer.
+        // Reject it before creating a new, independent reasoning turn carrying
+        // the verified App execution result.
+        await rejectCurrent();
+
+        final invocationId = execution.invocationId;
+        final evidenceId = 'tool-result-$invocationId';
+        final sourceId = 'assistant-tool-invocation:$invocationId';
+        final toolResultContext = [
+          '【App 工具实际执行结果】',
+          '工具：${tool.title}',
+          '执行状态：SUCCEEDED',
+          '实际执行参数：${execution.actualArguments.entries.map((entry) => '${entry.key}=${entry.value}').join('；')}',
+          ...execution.resultValues.entries.map(
+            (entry) => '${entry.key}：${entry.value}',
+          ),
+        ].join('\n');
+        final resultKnowledge = AssistantKnowledgeContextResult(
+          text: [
+            knowledge.text,
+            toolResultContext,
+          ].where((item) => item.trim().isNotEmpty).join('\n\n'),
+          sources: [
+            ...knowledge.sources,
+            AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 工具执行结果',
+              title: tool.title,
+              localBacklink: 'app://assistant/tool-invocation/$invocationId',
+              sourceKind: 'tool_execution',
+            ),
+          ],
+          status: knowledge.status == AssistantKnowledgeRetrievalStatus.failed
+              ? AssistantKnowledgeRetrievalStatus.partial
+              : AssistantKnowledgeRetrievalStatus.retrieved,
+          failureMessage: knowledge.failureMessage,
+          knownEvidenceIds: [
+            ...knowledge.knownEvidenceIds,
+            evidenceId,
+          ],
+          rankedEvidence: [
+            ...knowledge.rankedEvidence,
+            AssistantKnowledgeEvidenceReference(
+              evidenceId: evidenceId,
+              sourceId: sourceId,
+            ),
+          ],
+        );
+        final followupRequestId = _newReasoningRequestId(null);
+        final followupRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+          requestId: followupRequestId,
+          sessionId: conversationId,
+          userText: text.trim(),
+          mode: 'tools',
+          sessionState: sessionStateSnapshot,
+          knowledge: resultKnowledge,
+          // A post-execution explanation is read-only. The model receives
+          // executionResults but no capability with which to propose a replay.
+          allowedCapabilityIds: const [],
+          executionResults: [execution],
+        );
+        activeRequestId = followupRequestId;
+        nativeRequestMayBePending = true;
+        nativeInvocationStarted = true;
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.contextAssembly,
+          status: AiTraceStatus.succeeded,
+          route: 'tool_result_reasoning_context',
+          mode: AssistantMode.tools.name,
+          sourceIds: [sourceId],
+        );
+        final resultContext = '当前角色：工具助手。\n'
+            'App 已完成一次本地确定性工具执行；以下结构化 executionResults 和结果证据是本轮唯一可据以解释的实际返回字段。'
+            '请对结果进行归纳、说明单位/字段含义及边界，区分 App 计算与 AI 解释。不得篡改、重算或补造结果，不得提出第二个动作，不得要求自动重试。'
+            '若某字段为 MISSING 或执行状态不是 SUCCEEDED，必须原样说明未知。\n'
+            '${resultKnowledge.modelContextText}';
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.modelInput,
+          status: AiTraceStatus.succeeded,
+          route: 'tool_result_reasoning_request',
+          mode: AssistantMode.tools.name,
+        );
+        final followupPending =
+            await invokeNative(followupRequest, resultContext);
+        nativeReplyReceived = true;
+        final followup = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+          raw: followupPending.reply,
+          request: followupRequest,
+          knowledge: resultKnowledge,
+        );
+        if (!followup.isUsable) {
+          final appText = appResultText(execution) +
+              '\n\nAI 对结果的补充解释未通过结构化证据校验；以上仅保留 App 已验证结果，不展示未验证解释。';
+          await finalizeCurrent(appText);
+          return _AssistantTurnResponse(
+            text: appText,
+            sourceIds: const [],
+            knowledgeStatus: 'APP_TOOL_RESULT_ONLY',
+            protocolValidated: true,
+            protocolFailureCode: followup.failureCode ??
+                'TOOL_RESULT_REASONING_RESPONSE_REJECTED',
+          );
+        }
+        await finalizeCurrent(followup.answerText);
+        return _AssistantTurnResponse(
+          text: followup.answerText,
+          sourceIds: followup.sourceIds,
+          knowledgeStatus: resultKnowledge.statusLabel,
+        );
+      } catch (error) {
+        if (nativeRequestMayBePending) {
+          try {
+            await rejectCurrent();
+          } catch (_) {
+            // The Native acknowledgement may have been lost. Do not replay
+            // inference or the business tool; the durable ledger is authoritative.
+          }
+        }
+        final nativeStatus = nativeFinalizeConfirmed || nativeTurnRejected
+            ? AiTraceStatus.succeeded
+            : nativeInvocationStarted
+                ? AiTraceStatus.unknown
+                : AiTraceStatus.notStarted;
+        final message =
+            '工具助手本轮未能确认完整结束：$error。已执行的工具结果仍以本地一次性记录为准，不会自动重放。';
+        return _AssistantTurnResponse(
+          text: message,
+          knowledgeStatus: 'TOOL_REASONING_STATE_UNKNOWN',
+          nativeInferenceStatus: nativeStatus,
+          protocolValidated: false,
+          protocolFailureCode: error is PlatformException
+              ? error.code
+              : error.runtimeType.toString(),
+        );
+      }
+    }
+
     switch (mode) {
       case AssistantMode.automatic:
         final query = _knowledgeQueryForCurrentTurn(text);
