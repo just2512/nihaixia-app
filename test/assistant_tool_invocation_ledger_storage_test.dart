@@ -53,6 +53,21 @@ void main() {
         },
       ),
     );
+    await legacy.insert('assistant_conversations', {
+      'id': 41,
+      'title': '迁移前的旧会话',
+      'mode': 'tools',
+      'created_at': '2026-11-25T10:00:00.000Z',
+      'updated_at': '2026-11-25T10:01:00.000Z',
+      'last_message_preview': '迁移前的最后一条消息',
+    });
+    await legacy.insert('assistant_messages', {
+      'conversation_id': 41,
+      'role': 'assistant',
+      'content': '这是一条旧会话消息',
+      'created_at': '2026-11-25T10:01:00.000Z',
+      'metadata': null,
+    });
     await legacy.close();
 
     DatabaseHelper.configureTestDatabase(
@@ -76,6 +91,15 @@ void main() {
     final columns = await database.rawQuery('PRAGMA table_info(assistant_messages)');
     expect(columns.any((column) => column['name'] == 'invocation_key'), isTrue);
 
+    final migratedConversations = await store.getAssistantConversations();
+    final migratedLegacy = migratedConversations.singleWhere(
+      (row) => row['id'] == 41,
+    );
+    expect(migratedLegacy['last_message_preview'], '迁移前的最后一条消息');
+    final migratedMessages = await store.getAssistantMessages(conversationId: 41);
+    expect(migratedMessages, hasLength(1));
+    expect(migratedMessages.single['content'], '这是一条旧会话消息');
+
     final conversationId = await store.createAssistantConversation(mode: 'tools');
     await store.saveAssistantMessage(
       conversationId: conversationId,
@@ -83,7 +107,9 @@ void main() {
       content: '请计算三两换算',
     );
     final before = await store.getAssistantConversations();
-    final previewBefore = before.single['last_message_preview'];
+    final previewBefore = before.singleWhere(
+      (row) => row['id'] == conversationId,
+    )['last_message_preview'];
 
     await store.saveAssistantMessage(
       conversationId: conversationId,
@@ -93,7 +119,10 @@ void main() {
       invocationKey: 'request-1:claim',
     );
     final after = await store.getAssistantConversations();
-    expect(after.single['last_message_preview'], previewBefore);
+    expect(
+      after.singleWhere((row) => row['id'] == conversationId)['last_message_preview'],
+      previewBefore,
+    );
 
     final opened = await store.database;
     await opened.close();
@@ -120,8 +149,8 @@ void main() {
   test('invocation keys are restricted to hidden tool-role messages', () async {
     final store = DatabaseHelper.instance;
     final conversationId = await store.createAssistantConversation(mode: 'tools');
-    expect(
-      () => store.saveAssistantMessage(
+    await expectLater(
+      store.saveAssistantMessage(
         conversationId: conversationId,
         role: 'assistant',
         content: 'not a ledger event',
