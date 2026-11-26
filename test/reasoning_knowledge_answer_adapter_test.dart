@@ -37,6 +37,8 @@ AssistantKnowledgeContextResult knowledge({
 ReasoningRequest request(
   AssistantKnowledgeContextResult context, {
   String mode = 'learning',
+  ReasoningAttachmentType? attachmentType,
+  bool attachmentPromptGenerated = false,
 }) =>
     ReasoningKnowledgeAnswerAdapter.createRequest(
       requestId: 'request-1',
@@ -52,6 +54,8 @@ ReasoningRequest request(
         diagnostics: const ['SESSION_STATE_UNKNOWN'],
       ),
       knowledge: context,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
 
 String payload({
@@ -62,6 +66,7 @@ String payload({
   List<String> segments = const ['基于本地证据的解释'],
   List<String> omittedEvidenceIds = const ['dropped-1'],
   Object? proposal,
+  Object? attachmentResult,
 }) =>
     jsonEncode({
       'schemaVersion': 1,
@@ -74,6 +79,7 @@ String payload({
       'conflicts': ['两处资料表述不同'],
       'omittedEvidenceIds': omittedEvidenceIds,
       if (proposal != null) 'actionProposal': proposal,
+      if (attachmentResult != null) 'attachmentResult': attachmentResult,
     });
 
 void main() {
