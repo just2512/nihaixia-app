@@ -124,6 +124,7 @@ class ReasoningActionProposalAdapter {
       raw: raw,
       request: request,
       knowledge: knowledge,
+      requireEvidenceForAnswer: request.rankedEvidence.isNotEmpty,
     );
     return ReasoningActionProposalTurnResult(
       decodeResult: answer.decodeResult,
