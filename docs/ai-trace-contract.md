@@ -67,9 +67,11 @@
 
 复用现有 `AiTraceStage`，不另造重复枚举：
 
-`INPUT → PREFLIGHT → RED_FLAG → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
+`INPUT → PREFLIGHT → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
 
 不适用的阶段写 `NOT_APPLICABLE`；尚未开始写 `NOT_STARTED`；明确完成写 `SUCCEEDED`；明确失败写 `FAILED`；超时、进程中断、Native Future 未完成或跨层 ID 不匹配写 `UNKNOWN`。不得把 UNKNOWN 映射为 FAILED 或 SUCCEEDED。
+
+`AiTraceStage.redFlag` 仅保留旧 TRACE 文件的 wire 兼容性；新调用链不生成该阶段事件。它不是当前产品的安全门禁，也不代表医学风险评估。
 
 事件字段沿用 `AiTraceEvent`：schema_version、trace_id、stage、status、occurred_at、duration_ms、conversation_id、message_id、route、mode、tool_id、backend、model_version、source_ids、error_code。error_code 必须是稳定枚举/allowlist，不能写入异常原文。
 
