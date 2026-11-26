@@ -7,6 +7,8 @@ void main() {
     final mainActivity = File(
       'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
     ).readAsStringSync();
+    final localAiService = File('lib/services/local_ai_service.dart').readAsStringSync();
+    final screenSource = File('lib/screens/local_ai_interview_screen.dart').readAsStringSync();
     final gateSource = File(
       'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/AiModelAccessGate.kt',
     ).readAsStringSync();
@@ -19,6 +21,16 @@ void main() {
     expect(gateSource, contains('@Volatile'));
     expect(gateSource, isNot(contains('SharedPreferences')));
     expect(gateSource, isNot(contains('File(')));
+
+    expect(mainActivity, isNot(contains('NativeRedFlagExecutionBoundary')));
+    expect(mainActivity, isNot(contains('runAiTaskAfterNativeRedFlag')));
+    expect(mainActivity, isNot(contains('require_red_flag')));
+    expect(localAiService, isNot(contains('require_red_flag')));
+    expect(screenSource, isNot(contains('RedFlagGate')));
+
+    // A fixed general reminder remains; it is not a detector or an execution gate.
+    expect(mainActivity, contains('立即拨打120或前往急诊'));
+    expect(mainActivity, contains('不开展病情分级、临床分诊或急救操作指导'));
 
     final whenStart = mainActivity.indexOf('when (call.method)');
     final whenEnd = mainActivity.indexOf('else -> result.notImplemented()', whenStart);
@@ -46,8 +58,7 @@ void main() {
       final body = handler.substring(match.start, end);
       if (maintenanceOnly.contains(name)) continue;
       expect(
-        body.contains('requiresAiAccess = true') ||
-            body.contains('runAiTaskAfterNativeRedFlag'),
+        body.contains('requiresAiAccess = true'),
         isTrue,
         reason: 'Native AI handler "$name" must require ai_access',
       );
