@@ -1330,46 +1330,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final contextualEntry = widget.resolveContextualKnowledgeEntry
         ? await _resolveCurrentKnowledgeEntry()
         : null;
-    Future<String> sendWithContext(String context) async {
-      const evidencePresentationBoundary =
-          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
-          '只能依据实际提供的资料内容回答；不得声称资料已核验或模型已逐条引用，资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\n$context';
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.contextAssembly,
-        status: AiTraceStatus.succeeded,
-      );
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.modelInput,
-        status: AiTraceStatus.succeeded,
-      );
-      return traceId == null
-          ? _service.sendMessageWithContext(
-              text,
-              conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-              context: guardedContext,
-              requireMedicalSafety: requireMedicalSafety,
-              redFlagContext: redFlagContext,
-              redFlagContextTruncated: redFlagContextTruncated,
-            )
-          : _service.sendMessageWithContextAndTrace(
-              text,
-              conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-              context: guardedContext,
-              traceId: traceId,
-              requireMedicalSafety: requireMedicalSafety,
-              redFlagContext: redFlagContext,
-              redFlagContextTruncated: redFlagContextTruncated,
-            );
-    }
-    Future<_AssistantTurnResponse> sendStructuredLearning(
+    Future<_AssistantTurnResponse> sendStructuredAnswer(
       AssistantKnowledgeContextResult knowledge, {
+      required AssistantMode answerMode,
+      required String roleContext,
+      required bool modeNeutral,
       String? requestIdOverride,
     }) async {
       final requestId = requestIdOverride ?? _newReasoningRequestId(traceId);
@@ -1377,20 +1342,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         requestId: requestId,
         sessionId: conversationId,
         userText: text.trim(),
-        mode: 'learning',
+        mode: answerMode.name,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
       );
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
-      final knowledgeText = knowledge.modelContextText;
-      final roleContext = '当前角色：学习助手。\n'
-          '${AssistantMode.learning.promptHint}\n'
-          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
       final guardedContext = '$evidencePresentationBoundary\n$roleContext';
+      final modeLabel = switch (answerMode) {
+        AssistantMode.automatic => '通用助手',
+        AssistantMode.consultation => '问诊助手',
+        AssistantMode.learning => '学习助手',
+        AssistantMode.tools => '工具助手',
+        AssistantMode.metaphysics => '玄学助手',
+      };
       var nativeInvocationStarted = false;
       var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
@@ -1402,11 +1370,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           traceContext,
           stage: AiTraceStage.contextAssembly,
           status: AiTraceStatus.succeeded,
+          route: modeNeutral ? 'mode_neutral_reasoning_context' : 'learning_reasoning_context',
+          mode: answerMode.name,
         );
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.modelInput,
           status: AiTraceStatus.succeeded,
+          route: modeNeutral ? 'mode_neutral_reasoning_request' : 'learning_reasoning_request',
+          mode: answerMode.name,
         );
         nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
@@ -1437,11 +1409,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 redFlagContextTruncated: redFlagContextTruncated,
               );
         nativeReplyReceived = true;
-        final decoded = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
-          raw: pending.reply,
-          request: request,
-          knowledge: knowledge,
-        );
+        final decoded = modeNeutral
+            ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+                raw: pending.reply,
+                request: request,
+                knowledge: knowledge,
+              )
+            : ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+                raw: pending.reply,
+                request: request,
+                knowledge: knowledge,
+              );
         if (!decoded.isUsable) {
           await _service.rejectReasoningTurn(
             conversationId: conversationId,
@@ -1450,8 +1428,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           nativeRequestMayBePending = false;
           nativeTurnRejected = true;
           return _AssistantTurnResponse(
-            text: '本轮学习回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
-                '未写入成功历史。可重新发送问题，或继续普通对话。',
+            text: '本轮$modeLabel回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
+                '未写入成功历史。可以补充信息后重新发送。',
             knowledgeStatus: 'PROTOCOL_REJECTED',
             protocolValidated: false,
             protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
@@ -1489,13 +1467,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : nativeInvocationStarted
                     ? AiTraceStatus.unknown
                     : AiTraceStatus.notStarted;
+        final failureReason =
+            error is PlatformException && (error.message?.trim().isNotEmpty ?? false)
+                ? '（' + error.message!.trim() + '）'
+                : '';
         final failureText = nativeTurnRejected
-            ? '本轮结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
+            ? '本轮$modeLabel结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。$failureReason'
             : nativeFinalizeStarted
-                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
+                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。$failureReason'
                 : nativeReplyReceived
-                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
-                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
+                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。$failureReason'
+                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。$failureReason';
         return _AssistantTurnResponse(
           text: failureText,
           knowledgeStatus: 'PROTOCOL_REJECTED',
@@ -1506,6 +1488,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               : error.runtimeType.toString(),
         );
       }
+    }
+
+    Future<_AssistantTurnResponse> sendStructuredLearning(
+      AssistantKnowledgeContextResult knowledge, {
+      String? requestIdOverride,
+    }) {
+      final knowledgeText = knowledge.modelContextText;
+      final roleContext = '当前角色：学习助手。\n'
+          '${AssistantMode.learning.promptHint}\n'
+          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
+      return sendStructuredAnswer(
+        knowledge,
+        answerMode: AssistantMode.learning,
+        roleContext: roleContext,
+        modeNeutral: false,
+        requestIdOverride: requestIdOverride,
+      );
     }
 
     Future<_AssistantTurnResponse> sendStructuredTools(
@@ -1979,45 +1978,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         if (knowledgeIntent.mode == AssistantMode.learning) {
           return sendStructuredLearning(knowledge);
         }
-        // 无命中且无失败时，不注入知识检索框架与角色 context——
-        // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
-        // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
+        // Keep ordinary conversation free of synthetic NO_RESULTS retrieval text,
+        // while still enforcing the same request/response and Native commit contract.
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
-          await _traceRecorder.record(
-            traceContext,
-            stage: AiTraceStage.contextAssembly,
-            status: AiTraceStatus.notApplicable,
-          );
-          await _traceRecorder.record(
-            traceContext,
-            stage: AiTraceStage.modelInput,
-            status: AiTraceStatus.succeeded,
-          );
-          final reply = traceId == null
-              ? await _service.sendMessage(
-                  text,
-                  conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-                  requireMedicalSafety: requireMedicalSafety,
-                  redFlagContext: redFlagContext,
-                  redFlagContextTruncated: redFlagContextTruncated,
-                )
-              : await _service.sendMessageWithTrace(
-                  text,
-                  conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-                  traceId: traceId,
-                  requireMedicalSafety: requireMedicalSafety,
-                  redFlagContext: redFlagContext,
-                  redFlagContextTruncated: redFlagContextTruncated,
-                );
-          return _AssistantTurnResponse(
-            text: reply,
-            sourceIds: knowledge.sourceIds,
-            knowledgeStatus: knowledge.statusLabel,
+          final roleContext = '当前角色：通用助手。\n'
+              '${AssistantMode.automatic.promptHint}\n'
+              '正常回答用户的一般问题；不要把普通寒暄或一般聊天强行归入中医学习。'
+              '只有识别到明确的个人症状、知识学习或工具执行意图时，才切换对应领域。';
+          return sendStructuredAnswer(
+            knowledge,
+            answerMode: AssistantMode.automatic,
+            roleContext: roleContext,
+            modeNeutral: true,
           );
         }
         final context = StringBuffer(
@@ -2030,22 +2003,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ..writeln('以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知：')
             ..write(knowledge.modelContextText);
         }
-        final reply = await sendWithContext(context.toString());
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
+        return sendStructuredAnswer(
+          knowledge,
+          answerMode: AssistantMode.automatic,
+          roleContext: context.toString(),
+          modeNeutral: true,
         );
       case AssistantMode.consultation:
-        // Consultation uses the same bundled classical-text and TCM knowledge
-        // content as learning. Source identity and retrieval audit data stay
-        // in App metadata; they are not inserted into the dialogue prompt.
+        // Consultation shares the local TCM corpus with learning, but its
+        // output remains explanatory: deterministic interview/diagnosis logic
+        // and confirmed task state stay owned by the App.
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(
+        final knowledge = await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
         final modelKnowledgeContext = knowledge.modelContextText;
         final knowledgeContext = modelKnowledgeContext.isEmpty
@@ -2053,18 +2026,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : '以下为本轮可用的本地知识资料摘录。只解释资料明确覆盖的内容；'
                 '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\n'
                 '$modelKnowledgeContext';
-        final reply = await sendWithContext(
-          '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
-              '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
-              '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
-              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
-              '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
-              '$knowledgeContext',
-        );
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
+        final roleContext =
+            '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
+            '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
+            '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
+            '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
+            '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
+            '$knowledgeContext';
+        return sendStructuredAnswer(
+          knowledge,
+          answerMode: AssistantMode.consultation,
+          roleContext: roleContext,
+          modeNeutral: true,
         );
       case AssistantMode.learning:
         if (contextualEntry != null) {
@@ -2113,8 +2086,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '八字、紫微等排盘结果必须由 App 工具生成；结果返回后，应基于完整回传字段作总结、关联解释和分层归纳。'
             '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。';
-        return _AssistantTurnResponse(
-          text: await sendWithContext(context),
+        return sendStructuredAnswer(
+          const AssistantKnowledgeContextResult(text: ''),
+          answerMode: AssistantMode.metaphysics,
+          roleContext: context,
+          modeNeutral: true,
         );
     }
   }
