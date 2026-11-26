@@ -60,14 +60,18 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
     String? metadata,
     String? invocationKey,
   }) async {
-    if (invocationKey != null) {
-      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    if (invocationKey != null &&
+        savedMessages.any((message) =>
+            message['conversationId'] == conversationId &&
+            message['invocation_key'] == invocationKey)) {
+      throw StateError('Duplicate invocation key: $invocationKey');
     }
     savedMessages.add({
       'conversationId': conversationId,
       'role': role,
       'content': content,
       'metadata': metadata,
+      'invocation_key': invocationKey,
     });
     return savedMessages.length;
   }
@@ -121,7 +125,10 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
   @override
   Future<List<Map<String, Object?>>> getAssistantMessages({
     required int conversationId,
-  }) async => const [];
+  }) async => savedMessages
+      .where((message) => message['conversationId'] == conversationId)
+      .map((message) => Map<String, Object?>.unmodifiable(message))
+      .toList(growable: false);
 
   @override
   Future<void> saveTcmInterviewTaskState({
