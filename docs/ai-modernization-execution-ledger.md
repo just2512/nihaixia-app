@@ -4779,3 +4779,20 @@ PR HEAD 门禁证据：
 - **云端未闭合项：** PR #575 尚无 master-base 精确 HEAD CI（当前 stacked base 不触发默认 PR 门禁）；待 #573 合并后将 PR #575 base 调整到 master 并运行完整 Flutter regression/analyze、Android arm64/JVM、Fork License。当前实现只恢复 SQLite transcript 与请求终态，不持久化 LiteRT KV Cache；E4B token/input budget、自动压缩仍 UNKNOWN/NOT IMPLEMENTED。
 - **设备策略：** Find N2 的 GPU/CPU、多轮、Activity/进程恢复、Token 实测和真实 TRACE 仍留在全部云端工作完成后本地验收；设备不阻塞 Core-1/2/3/4/5 云端代码推进。
 - **工作流 I：** Markdown 书架保持 DEFERRED / NOT AUTHORIZED，不进入本轮改造。
+
+## 120. 2026-11-26 当前主线 Core-0 至 Core-5 状态与 Native 辅助入口审计
+
+- **基线：** `master@700d6e87e6e86d25c6e75ab3d602e3fbb0897720`。本条为当前状态摘要；此前 §117–§119 继续作为相应提交当时的历史记录保留，不再覆盖当前事实。
+- **Core-1：** PR #575 已合入 master（head `9fe364df135e42be122259043c408485b78779b7`；merge commit 即当前基线）。已实现 Native reasoning turn PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED、SQLite transcript 对账恢复、失败非 replayable、隐藏 role=tool Ledger 不进入 Memory。未实现 LiteRT KV Cache 持久化、真实 Token budget 或自动压缩。
+- **Core-2：** PR #568 已合入（head `83d93eb0d96a39c6b1da01911d8caac4ea718e2a`），Flutter regression `45816706631` 与 Fork license `45816706463` 均 SUCCESS。已落地 typed CandidateEvidence、多源合并、来源/query provenance、确定性 KEEP/DROP 和 golden snapshot。排序仍是旧顺序及来源上限保真，不是数值语义相关性分数或来源可信度。呈现阶段 6,500 UTF-16 字符限制不等于模型 Token budget。
+- **Core-3：** PR #573 已合入（head `d1d175a792dbe32ae2e347f5a2bfb0f1d304a590`），Flutter `45833175558` 和 Fork license `45833175319` 均 SUCCESS。自动、问诊、学习、工具、玄学五种主文本模式接入 ReasoningRequest/Response v1 与 Native 双阶段提交。工具模式的实际结果解释回合使用单独 requestId 和空 capability allowlist。
+- **Core-3 辅助调用：** Native 当前仍保留 `resolveAssistantIntent`（App 候选白名单选择）、`extractBaziSlots`（固定字段 + 原文 evidence）、`extractSymptoms`（固定问诊 schema + candidate evidence）、`understandTcmInterviewAnswer`（单题合法选项 + 原文 evidence）；均由 Dart 专用 parser/选项白名单再校验，不能输出诊断或业务结果。它们属于窄范围辅助推理，不是主 ReasoningRequest 生产路径。
+- **Core-3 未闭合附件旁路：** `sendImage` 和 `sendAudio` 仍由 Native 直接做自由文本生成，没有 Request/Response v1、requestId、ReasoningTurnLedger finalize/reject。LocalAiInterviewScreen 将其包装为默认 `protocolValidated=true` 的响应，可能进入成功历史；Audio transcript 另作为“尚待用户核对”草稿写入 Native 输入记录。必须单独完成附件类型化 Request/Response、严格校验、双阶段提交、转写草稿标记与用户确认测试。未完成前，不得宣称所有输入形态均经过 Core-3 统一协议。
+- **Core-1 恢复入口：** `restoreConversation` 以裁剪后的 SQLite transcript 重建 Native Conversation，是 context bootstrap，不是 LiteRT KV cache 持久化，也不是用户可见的新答案；`initialPrompt` 只是输入框预填，发送时进入正常 UI 路由。
+- **旧兼容入口：** `LocalAiService.sendMessage/sendMessageWithContext` 和 Native `sendMessage` 自由文本 API 仍存在；本次检查的 LocalAiInterviewScreen 主文本路径未发现调用。必须在全仓确认调用者后再废弃，不能仅凭主界面无引用就删除。
+- **Core-4：** PR #561（Coordinator，head `c9025150d8a042c0f7c5ca9dadac7e514d9938c3`）与 PR #566（tools production，head `bfa9b5d02769ec07ebaeb3a1a73295dabad759fd`）已合入；两者精确 head 的 Flutter 和 Fork license runs 均 SUCCESS。工具生产链已接通 ACTION_PROPOSAL → App Gate/参数校验 → 用户显式确认 → 持久化 one-shot claim → Headless Dispatcher → Ledger 安全读回 → 独立只读结果解释请求。非 SUCCEEDED、UNKNOWN 或终态读回失败不自动重放。
+- **Core-5：** PR #579 当前 HEAD 为 `88ff50fdc2bdbe7b1c77baac20ea0253b02a7ff3`，包含 20 轮真实本地知识库查询、请求/会话身份隔离、一次工具确认/执行/结果解释的 Flutter 跨层测试。该切片使用测试 Native service 与测试工具执行器，不等于真实 E4B 或硬件验收。Fork license run `45849146352` SUCCESS；Flutter run `45849146141` 截至本条记录仍 IN_PROGRESS，full regression 正在执行；Branch validation job `140010589666` 为 SKIPPED，不能计为 PASS。先前旧 head `c16a64c` 的 Flutter 与 Android arm64 run 结果不能替代最新 HEAD 的 Flutter 终态；最新 Dart-only 修正未触发 Android arm64 workflow。
+- **Core-5 数据语义修正：** PR #579 在最新 HEAD 将工具执行失败分支的 `toolArguments` fallback 从模型提案预览参数改为空 map。未得到 App 执行结果时，不得把模型建议参数标记为已执行参数。
+- **当前结论：** Core-1/2/4 云端主线能力已合入；Core-3 五种主文本模式已接入，但多模态附件旁路仍未闭合；Core-5 处于精确 HEAD 全量 Flutter 回归验收中。不得把 SKIPPED、旧 SHA 的成功或模拟 Native 测试写成最终验收通过。
+- **设备阶段：** Find N2 的 E4B 实际多轮、GPU/CPU 输出可靠性、Activity/进程重启、模型 Token 输入预算及真实 TRACE 均留待所有云端工作完成后本地验收，不阻塞当前云端任务。
+- **范围控制：** 工作流 I（Markdown 书架）继续 DEFERRED / NOT AUTHORIZED；本轮不引入 Embedding、FTS5、ANN、独立向量库、Reranker、云端推理、第二套会话表或重复授权门禁。
