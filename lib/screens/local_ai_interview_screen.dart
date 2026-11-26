@@ -2052,12 +2052,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // output remains explanatory: deterministic interview/diagnosis logic
         // and confirmed task state stay owned by the App.
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge = await _retrieveKnowledgeWithTrace(
-          query,
-          traceContext: traceContext,
-          includeMedicalCases:
-              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
-        );
+        final knowledge = attachmentType != null
+            ? const AssistantKnowledgeContextResult(text: '')
+            : await _retrieveKnowledgeWithTrace(
+                query,
+                traceContext: traceContext,
+                includeMedicalCases:
+                    AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+              );
         final modelKnowledgeContext = knowledge.modelContextText;
         final knowledgeContext = modelKnowledgeContext.isEmpty
             ? '本轮没有提供可用的本地知识资料；不得编造原文、出处或诊断依据。'
