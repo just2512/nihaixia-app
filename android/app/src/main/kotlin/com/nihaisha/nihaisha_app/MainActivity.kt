@@ -1906,7 +1906,7 @@ class MainActivity : FlutterActivity() {
         }
         if (sourceEntries.isEmpty()) {
             return mapOf(
-                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[],"candidate_answers":[]}""",
+                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"user_reported_urgent_signs":[],"unknowns":[],"candidate_answers":[]}""",
                 "sourceTruncated" to sourceWasTruncated,
                 "backend" to activeBackend
             )
@@ -1940,7 +1940,7 @@ class MainActivity : FlutterActivity() {
               "aggravating_factors": string[],
               "relieving_factors": string[],
               "associated_symptoms": string[],
-              "red_flags": string[],
+              "user_reported_urgent_signs": string[],
               "unknowns": string[],
               "candidate_answers": [{"question_id":string,"answer":string,"evidence":string}]
             }
