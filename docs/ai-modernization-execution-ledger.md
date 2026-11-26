@@ -4726,3 +4726,18 @@ PR HEAD 门禁证据：
 - **CI：** 原代码 HEAD `0d353506baf6132e7dfb53c29fa6f68409ebc72f` 的 push 定向测试、静态分析和许可证历史结果不继承到新 HEAD；重基线后必须等待本分支精确 HEAD 的 Branch validation、PR 全量 Flutter regression、Android arm64/JVM 和 Fork license。SKIPPED 不计 PASS。
 - **下一切片：** 持久化 one-shot invocation 状态必须在任何 Dispatcher 调用前 claim；用户确认后仅一次调用；实际 `AssistantToolResult` 加入下一轮 `ReasoningRequest.executionResults` 供语言模型解释。终态 UNKNOWN 不重放；学习模式空 allowlist 继续禁止动作。
 - **设备策略：** E4B 真机 Native 往返、GPU/CPU、进程恢复、多轮 TRACE 仍放到所有云端工作完成后本地验收。
+
+## 116. 2026-11-26 Core-4 One-shot Invocation Ledger 与会话记忆隔离（当前契约基线）
+
+- **基线：** 从 Core-4 Request/Adapter 最新内容基线 `23e54986a7aa91d3021e19ed343ed48e196b7dc8` 建立独立分支 `work/core4-one-shot-ledger-current-contract-23e5498-20261126`；不继承旧 One-shot 分支的历史提交。
+- **持久化：** 复用现有 `assistant_messages`，SQLite schema v7 → v8 增加 nullable `invocation_key`；建立 `(conversation_id, invocation_key)` 部分唯一索引。升级使用 `ALTER TABLE`，保留既有会话/消息；同一会话内同一 claim/terminal key 只能写入一次。
+- **claim 顺序：** 用户显式确认后才可申请 claim；业务 Dispatcher 必须在 claim 已持久化且状态为 `claimed` 后才可调用。重复 claim、身份重绑定、重复终态和冲突终态分别返回明确状态；不得通过重试绕过唯一约束。
+- **终态与安全读回：** `recordResult` 持久化真实 `AssistantToolResult`；对 toolId、实际参数、结果结构和来源进行复核。新增 `loadTerminalResult` 从隐藏 Ledger 事件读回，并再次验证成功记录；仅完整有效的 `SUCCEEDED` 可返回 values/sourceIds。状态不是 SUCCEEDED、记录损坏、参数不匹配或来源不完整时，读回一律清空 values/sourceIds 并按 FAILED/UNKNOWN 保留原终态；禁止将原始 Dispatcher 返回对象绕过 Ledger 直接交给模型。
+- **进程恢复：** 对已 claim 但无终态的记录写入 `UNKNOWN / interrupted=true`；只标记状态，不重新执行业务动作。恢复并发冲突需要重新读终态确认；无法确认时保持失败关闭。
+- **记忆隔离修复：** `SessionStateSnapshotBuilder` 之前会从所有角色消息的 metadata 提取 sourceIds；隐藏 `role=tool` Ledger 终态由此可能进入下一轮 SessionStateSnapshot prompt。当前切片将 evidence-reference 提取严格限制为 `user/assistant` 角色，并新增回归，验证 tool ledger sourceId 不会进入会话记忆；普通 UI/history transcript 原已只恢复 user/assistant。
+- **测试：** `assistant_tool_invocation_ledger_test.dart` 覆盖 claim 唯一、request/tool/capability/arguments 绑定、成功读回、非法成功降级 UNKNOWN 后空结果、终态幂等、失败状态区分、进程恢复 UNKNOWN 与禁止重放；SQLite 测试覆盖 v7→v8 迁移、旧消息保留、唯一索引和重开读取；`session_state_snapshot_builder_test.dart` 覆盖 tool-role 来源隔离。
+- **范围边界：** 本切片是持久化及安全读回底座，不宣称 Native tools mode 已接入，不宣称 App 确认 UI、真实 Dispatcher 调用或下一轮 ExecutionResult 回流已完成。Core-4 仍为 PARTIAL；下一片把 #552 Gate、#558 Adapter、Ledger 和现有 HeadlessToolDispatcher 接到同一请求生命周期。
+- **License：** 新增 Ledger service 与两项测试已登记到 `.reuse/dep5` 与 Fork inventory；新增文件均按现有 fork ownership 证据要求登记，不改变第三方文件许可归属。
+- **CI：** 本分支当前精确 HEAD 的 Flutter regression、静态分析/changed-test pairing、Android arm64/JVM 与 Fork License 均须重新运行；旧 One-shot HEAD 的通过结果不继承。任何 SKIPPED 不计 PASS。
+- **设备策略：** Find N2 实机、E4B 多轮、GPU/CPU、Activity/进程恢复及真实模型 TRACE 在所有云端工作结束后再统一本地验收。
+
