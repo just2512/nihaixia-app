@@ -492,10 +492,13 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 **最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、E4B 负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态；书架只是未来可选知识源。先完成核心分层和多轮/证据边界，再决定是否扩展书架、Embedding 或 Reranker。
 
 
-### 5.3 Core-3 learning-only 生产接线与 Core-4 当前切片
+### 5.3 Core-3 learning-only 生产接线与 Core-4 当前阶段
 
-- Core-3 已落地部分：PR #540 在 master e2cdc1c1541eea369a5135d91c1bf9eb0891669a 合并。显式 learning 和 automatic entity-hit learning 使用 Request/Response v1；其他模式未迁移。
-- Native 双阶段提交：sendReasoningMessage 生成原始 JSON，但不将它作为完成轮次写入 LocalAiConversationHistory；返回 Dart 前 Native 从此前成功 transcript 重建 Conversation，清除模型 KV 中的原始 JSON。Dart strict decoder 与 evidence/source 映射通过后调用 finalizeReasoningTurn，失败调用 rejectReasoningTurn。终态确认未知时不重放模型推理。
-- 证据边界：ranked evidence IDs 是本轮唯一可引用的证据集合；sourceId / evidenceId / 本地存储定位只作为 App 内部元数据，不进入普通回答文本。学习路径允许 capability 集合为空，动作提案一律 fail-closed。
-- Core-4 当前分支：work/core4-execution-result-projection-master-e2cdc1-20261126 新增 ReasoningExecutionResultAdapter，映射已验证 AssistantToolResult 到 Core-3 ReasoningExecutionResult。成功保留实际参数/结构化值/真实来源；FAILED 仅保留稳定错误码和实际参数；UNKNOWN 保持 UNKNOWN；NO_RESULT/CANCELLED 使用不同 failureCode，不伪装为 SUCCEEDED。该切片尚未接入真实 Native tool-explanation 请求，也不处理 ACTION_PROPOSAL 授权；CI 待当前分支精确 HEAD 结果。
-- 硬边界：不以该投影适配器宣称 Core-4 完成；后续必须补 request-scoped capability allowlist、严格 typed args、显式用户确认、重复 invocation 防护，再由 App 调用现有 HeadlessToolDispatcher，并将真实 ExecutionResult 回流。Page-only、未登记 capability、参数不完整或状态 UNKNOWN 均不得执行/重放。
+- Core-3 已落地部分：PR #540 在 master e2cdc1c1541eea369a5135d91c1bf9eb0891669a 合并。显式 learning 和 automatic entity-hit learning 使用 Request/Response v1；其他模式尚未迁移。
+- Native 双阶段提交：sendReasoningMessage 生成原始 JSON，但不将其作为完成轮次写入 LocalAiConversationHistory；返回 Dart 前 Native 从此前成功 transcript 重建 Conversation，清除模型 KV 中的原始 JSON。Dart strict decoder 与 evidence/source 映射通过后调用 finalizeReasoningTurn，失败调用 rejectReasoningTurn。终态确认未知时不重放模型推理。
+- 证据边界：ranked evidence IDs 是本轮唯一可引用的证据集合；sourceId / evidenceId / 本地存储定位只作为 App 内部元数据，不进入普通回答文本。learning 请求强制空 capability allowlist；普通知识回答禁止 ACTION_PROPOSAL。
+- Core-4 Gate：独立分支 `work/core4-action-proposal-gate-contract-20261126` 提供 App-owned `ReasoningActionProposalGate`，只对当前 requestId、request allowlist、四个既有 plan-eligible Headless capability 和既有参数 schema 做验证；准备阶段只返回不可变确认预览，只有显式用户确认后才生成单步 ToolExecutionPlan；Gate 本身不执行工具。
+- Core-4 Request/Adapter：独立分支 `work/core4-tool-proposal-runtime-contract-20261126` 把不可变 `allowedCapabilityIds` 加入 `ReasoningRequest`，仅 tools 模式可非空；prompt 输出精确 `actionCapabilityAllowlist`；`ReasoningActionProposalAdapter` 仅接受 Gate 支持的能力、调用 Gate 预校验、拒绝携带被丢弃证据引用的 action proposal，并只暴露 App-owned preview，不把模型 prose 当成用户确认内容。确认后按当前 requestId/allowlist 重新校验。
+- Core-4 执行结果：`ReasoningExecutionResultAdapter` 可把已验证 `AssistantToolResult` 投影成 `ReasoningExecutionResult`；SUCCEEDED 保留实际参数/值/来源，FAILED/NO_RESULT/CANCELLED 保留显式失败语义，UNKNOWN 不降级也不得重放。
+- **当前仍为 PARTIAL：** 上述 Gate、Request 和 Adapter 目前是独立契约切片；尚未接入 Native 工具模式生产 Request/Response、确认 UI、持久化一次性 invocation ledger、HeadlessToolDispatcher 及后续轮真实 ExecutionResult 回流。不得宣称 Core-4 已形成生产闭环。
+- 后续硬门槛：工具模式先接入结构化 Request/Response，学习模式继续空 allowlist；App 独立确认后通过持久化 one-shot 状态防止重复调用，再调用现有 Dispatcher；将真实执行结果加到下一轮 Request 供模型解释，但原始工具结果和来源始终由 App 保留。Page-only、未登记 capability、参数不完整、取消和 UNKNOWN 均不得伪装成功；UNKNOWN 不自动重放。
