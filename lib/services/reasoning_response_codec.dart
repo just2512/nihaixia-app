@@ -297,7 +297,7 @@ class ReasoningResponseCodec {
       if (value.length != 2 || !value.containsKey('transcriptDraft')) return null;
       final draft = _nonEmptyString(value['transcriptDraft']);
       if (draft == null || draft.length > 8000) return null;
-      return ReasoningAttachmentResult(attachmentType: type!, transcriptDraft: draft!);
+      return ReasoningAttachmentResult(attachmentType: type!, transcriptDraft: draft);
     }
     return null;
   }
