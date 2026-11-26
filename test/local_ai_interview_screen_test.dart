@@ -466,6 +466,7 @@ class _TextSendService extends LocalAiService {
   final sentConversationIds = <int>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
+  int legacySendCalls = 0;
   final restoredTranscripts = <String>[];
   final structuredReasoningContexts = <String>[];
   final finalizedReasoningAnswers = <String>[];
@@ -511,6 +512,7 @@ class _TextSendService extends LocalAiService {
     });
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
+    if (traceId != null) sentTraceIds.add(traceId);
     sentContexts.add(context);
     structuredReasoningContexts.add(reasoningContext);
     _pendingReasoningReplies[requestId] = reply;
@@ -701,6 +703,7 @@ class _TextSendService extends LocalAiService {
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
+    legacySendCalls += 1;
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
     return '已收到你的描述：$text';
@@ -836,6 +839,7 @@ class _StructuredToolProposalService extends _TextSendService {
     final reply = jsonEncode(payload);
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
+    if (traceId != null) sentTraceIds.add(traceId);
     sentContexts.add(context);
     structuredReasoningContexts.add(reasoningContext);
     _pendingReasoningReplies[requestId] = reply;
@@ -2235,6 +2239,13 @@ void main() {
     expect(service.sentContexts.single, contains('不得向用户输出 sourceId、evidenceId、路径或内部编号'));
     expect(service.sentContexts.single, contains('结合本轮本地知识库实际命中的条目解释规则结果'));
     expect(service.sentContexts.single, contains('必须区分 App 规则结果、检索资料和 AI 解释'));
+    expect(service.legacySendCalls, 0,
+        reason: '问诊文本必须走结构化推理与 Native 双阶段提交');
+    expect(service.structuredReasoningContexts, hasLength(1));
+    final consultationRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+    ) as Map<String, dynamic>;
+    expect(consultationRequest['mode'], 'consultation');
     expect(tester.takeException(), isNull);
   });
 
@@ -5114,6 +5125,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
+    expect(service.legacySendCalls, 0);
+    final metaphysicsRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+    ) as Map<String, dynamic>;
+    expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.contextAssembly,
@@ -5158,7 +5174,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
+    expect(service.legacySendCalls, 0);
     expect(service.sentContexts.single, contains('玄学大师'));
+    final metaphysicsRequest = jsonDecode(
+      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+    ) as Map<String, dynamic>;
+    expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.nativeInference,
@@ -7383,6 +7404,44 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('自动模式普通寒暄也走结构化推理且不注入 NO_RESULTS 资料块', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, ['你好']);
+    expect(service.legacySendCalls, 0,
+        reason: '无检索命中不应退回无协议的普通 sendMessage');
+    expect(service.structuredReasoningContexts, hasLength(1));
+    expect(service.finalizedReasoningAnswers, hasLength(1));
+    final request = jsonDecode(
+      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+    ) as Map<String, dynamic>;
+    expect(request['mode'], 'automatic');
+    expect(request['rankedEvidence'], isEmpty);
+    expect(request['actionCapabilityAllowlist'], isEmpty);
+    expect(service.sentContexts.single, contains('当前角色：通用助手'));
+    expect(service.sentContexts.single, isNot(contains('NO_RESULTS')));
+    expect(service.sentContexts.single, isNot(contains('本轮知识检索状态')));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('自动模式将已命中的方剂实体与可回查资料共同路由为学习助手', (tester) async {
     final store = _MemoryConversationStore();
