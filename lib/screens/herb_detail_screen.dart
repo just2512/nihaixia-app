@@ -74,7 +74,8 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
       return;
     }
 
-    final prompt = AiContextPromptBuilder.buildHerbKnowledgeEntry(
+    final initialUserMessage =
+        AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
       entry: resolved,
     );
     final sourcePageRoute = ModalRoute.of(context);
@@ -84,7 +85,9 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: prompt,
+      initialUserMessage: initialUserMessage,
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
       initialMode: AssistantMode.learning,
       contextualTitle: herb.name,
       contextualExplanationOnly: true,

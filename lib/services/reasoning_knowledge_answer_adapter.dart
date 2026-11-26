@@ -1,6 +1,8 @@
 import '../models/reasoning_request.dart';
 import '../models/reasoning_response.dart';
 import '../models/session_state_snapshot.dart';
+import 'ai_context_prompt_builder.dart';
+import 'ai_context_resolver.dart';
 import 'assistant_knowledge_context.dart';
 import 'reasoning_response_codec.dart';
 
@@ -25,6 +27,69 @@ class ReasoningKnowledgeAnswerResult {
 
 class ReasoningKnowledgeAnswerAdapter {
   const ReasoningKnowledgeAnswerAdapter._();
+
+
+  /// Materializes one explicitly anchored App knowledge entry as the complete
+  /// request-local evidence for a contextual interpretation turn.
+  ///
+  /// This is not keyword retrieval or a CandidateEvidence projection: the
+  /// source has already been resolved against its exact typed App anchor.
+  /// App source IDs and backlinks stay in the source map, never in model text.
+  static AssistantKnowledgeContextResult createContextualEntryContext({
+    required AiResolvedKnowledgeEntry entry,
+    required String evidenceId,
+  }) {
+    final normalizedEvidenceId = evidenceId.trim();
+    if (normalizedEvidenceId.isEmpty) {
+      throw ArgumentError.value(
+        evidenceId,
+        'evidenceId',
+        'A contextual entry requires a request-local evidence ID.',
+      );
+    }
+    final reference = entry.ref;
+    if (reference.sourceId.trim().isEmpty ||
+        reference.anchorId.trim().isEmpty ||
+        reference.anchorVersion.trim().isEmpty) {
+      throw ArgumentError(
+        'A contextual entry requires a complete resolved App source reference.',
+      );
+    }
+    final localBacklink = switch (reference.moduleId) {
+      'formula' => () {
+          final formulaId = entry.content['id'];
+          if (formulaId is! String || formulaId.trim().isEmpty) {
+            throw StateError('Resolved formula entry is missing its local asset ID.');
+          }
+          return 'assets/data/formulas.json#id=$formulaId';
+        }(),
+      // Other resolver-backed knowledge entries already store their stable
+      // local locator in sourceId (for example herbs and Neijing records).
+      _ => reference.sourceId,
+    };
+    return AssistantKnowledgeContextResult(
+      text: AiContextPromptBuilder.buildKnowledgeEntryModelContext(
+        entry: entry,
+      ),
+      sources: [
+        AssistantKnowledgeSourceReference(
+          sourceId: reference.sourceId,
+          sourceLabel: 'App 当前知识条目',
+          title: entry.title,
+          localBacklink: localBacklink,
+          sourceKind: reference.moduleId,
+        ),
+      ],
+      status: AssistantKnowledgeRetrievalStatus.retrieved,
+      knownEvidenceIds: [normalizedEvidenceId],
+      rankedEvidence: [
+        AssistantKnowledgeEvidenceReference(
+          evidenceId: normalizedEvidenceId,
+          sourceId: reference.sourceId,
+        ),
+      ],
+    );
+  }
 
   static ReasoningRequest createRequest({
     required String requestId,

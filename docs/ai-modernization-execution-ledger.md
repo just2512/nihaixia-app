@@ -4578,6 +4578,39 @@ PR HEAD 门禁证据：
 
 ---
 
+## 109. 2026-11-26 P0 AI 知识解读语义重构与当前条目自动上下文传递
+
+- **最新主线基线：** `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0`，包含并行 Core-4 执行结果适配器及对应架构/清单变更。为避免覆盖主线并行提交，P0 已在独立分支 `work/ai-knowledge-interpretation-current-master-20261126` 上重建。当前交付 PR #548，HEAD `2bbc2214d9b162e1fa70968d35844d708788c089`。
+- **根因：** 旧详情页通过 `initialPrompt` 把完整自然语言包装、JSON、版本/来源内部标识填入 composer；页面点击只是预填，未直接执行“解读”。
+- **解读策略：** `AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent()` 生成短用户意图；`buildKnowledgeEntryModelContext()` 生成独立模型上下文。输出聚焦知识关系、整体结构、配伍逻辑和条目中特殊说明，不逐字段复述；明确区分条目记载、基于条目的归纳和 MISSING/UNKNOWN。证据不足时直说，不凑篇幅。
+- **知识上下文：** 点击后等待模型就绪及情境会话初始化，再自动提交一次短意图；不把 JSON/版本/sourceId/backlink 放入输入框，也不自动弹出键盘。每次 learning turn（含后续追问）都按 typed `contextRef` 重新解析当前 App 条目并校验锚点/版本；失效时 fail-closed。完整 `module/title/content` 经 `ReasoningKnowledgeAnswerAdapter.createContextualEntryContext()` 以独立 model-only knowledge context/request-local evidence 进入 Core-3；App sourceId/backlink 只用于本地来源映射和引用回填，不进入用户消息或模型自然语言正文。
+- **医学事实边界：** 不新增药物、剂量、主治、禁忌、来源、临床证据或未提供规则；不把条目中的经验性记载扩张成已验证疗效或患者用药建议。
+- **回滚边界：** P0 只修改知识解读语义、条目自动上下文传递和详情入口；Android IME/键盘避让由独立 P1 PR #550 处理。
+
+---
+
+## 110. 2026-11-26 P0 证据映射与测试夹具修正
+
+- **Evidence 映射：** 当前解析条目绑定一个 request-local evidenceId；App sourceId/backlink 保存在 `AssistantKnowledgeSourceReference` 内部用于 UI 引用回填。Formula backlink 使用真实 `assets/data/formulas.json#id=...` 定位，不将 anchorId 伪装成文件路径。
+- **严格响应验证：** 单条目成功引用测试的 knownEvidenceIds 仅包含本轮 evidence；响应 omittedEvidenceIds 必须属于本轮已知集合。未知 ID 仍由 decoder fail-closed 拒绝，未修改生产校验规则。
+- **测试初始化：** 资产读取测试先调用 `TestWidgetsFlutterBinding.ensureInitialized()`；针灸入口 widget test 使用隔离 SQLite FFI 数据库。
+- **静态分析修正：** 处理 const 构造断言不允许运行时 trim、移除重复 medical-cases switch case；修正新测试中未正确插值的 databaseSequence，避免 unused-variable warning。失败测试保留并逐项修复，不关闭门禁、不降低断言。
+- **当前 HEAD：** `2bbc2214d9b162e1fa70968d35844d708788c089`。旧基线的 PASS/FAIL 不继承。最新 HEAD 当前 License SUCCESS；Flutter 分支验证因并发工作流取消了一次，PR 回归运行仍在执行，取消状态不计 PASS。
+
+---
+
+## 111. 2026-11-26 七类知识详情页统一接入 AI 解读
+
+- **迁移范围：** 现有明确提供“问 AI 解读当前条目”的七类详情入口已统一迁移：方剂 `formula`、本草 `herb`、穴位 `acupoint`、针灸处方 `acupuncture-prescriptions`、医案 `medical-cases`、六经 `meridian`、内经条文 `neijing-entries`。
+- **统一调用行为：** 七类详情页都不再把 `build*KnowledgeEntry()` 生成的长文本填入 `initialPrompt`；改为短意图、`autoSendInitialMessage=true`、`resolveContextualKnowledgeEntry=true`。完整条目每轮后台重新解析。旧 `initialPrompt` API 仍保留给其他兼容/自由输入场景。
+- **模块分析重点：** formula=整体组方和药物角色关系；herb=条目特性/功用之间联系；acupoint=经络归属/定位/操作关系；acupuncture-prescriptions=穴位安排和条目说明结构；medical-cases=症状/诊断/病机/治法/方药之间的病例证据链，不泛化单一医案；meridian=六经病机线索和概念关系；neijing-entries=经典关键词义、句间关系、上下文和理论逻辑。
+- **测试：** 七类入口各有 contextual-entry Widget 测试，断言 `initialPrompt == null`、短用户意图、自动提交和精确条目解析；新增 `test/acupuncture_contextual_entry_test.dart` 覆盖针灸处方实际入口。Prompt builder 与 Reasoning adapter 测试覆盖内部上下文、request-local evidence/citation 和禁止复述规则。
+- **范围排除：** 经典/古籍选中段落后针对所选文本的自由提问，不是“解读当前详情条目”入口；保留原有自由提问行为，不强行套用当前条目 resolver。
+- **License 清单：** 新测试已加入 `docs/fork-license-file-inventory.json` 和 `.reuse/dep5`；当前清单 1006 changed / 842 added / 164 modified / 15 deleted，新增测试分类 FORK_COMMERCIAL，rights status 为 OWNERSHIP_EVIDENCE_REQUIRED。
+- **验收状态：IN_PROGRESS。** PR #548 最新 HEAD 的 License job SUCCESS；Branch validation/Flutter regression 仍需以当前 HEAD 的最终 Actions 结论为准。Find N2 实机 E4B 解读质量、多轮追问、完整 request TRACE 未验证，均为 UNKNOWN。不得将 Widget/CI 测试冒充实机 PASS。
+- **回滚：** 七类入口与 P0 adapter/prompt 属同一个 PR #548；P1 键盘布局仍单独 PR #550。
+---
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。

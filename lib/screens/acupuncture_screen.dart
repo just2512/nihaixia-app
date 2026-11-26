@@ -213,13 +213,16 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
         );
         return;
       }
-      final prompt = AiContextPromptBuilder.buildAcupunctureKnowledgeEntry(
+      final initialUserMessage =
+          AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
         entry: resolution.value!,
       );
       await showContextualAiSheet(
         context: context,
         contextRef: ref,
-        initialPrompt: prompt,
+        initialUserMessage: initialUserMessage,
+        autoSendInitialMessage: true,
+        resolveContextualKnowledgeEntry: true,
         initialMode: AssistantMode.learning,
         contextualTitle: '针灸处方条目：' + entry.symptom,
         contextualExplanationOnly: true,

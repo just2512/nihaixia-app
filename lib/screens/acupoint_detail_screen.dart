@@ -149,7 +149,8 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
       return;
     }
 
-    final prompt = AiContextPromptBuilder.buildAcupointKnowledgeEntry(
+    final initialUserMessage =
+        AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
       entry: resolved,
     );
     final sourcePageRoute = ModalRoute.of(context);
@@ -159,7 +160,9 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: prompt,
+      initialUserMessage: initialUserMessage,
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
       initialMode: AssistantMode.learning,
       contextualTitle: selected.name,
       contextualExplanationOnly: true,
