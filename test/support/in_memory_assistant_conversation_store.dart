@@ -28,14 +28,29 @@ class InMemoryAssistantConversationStore implements AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
+    String? invocationKey,
   }) async {
+    final normalizedRole = role.trim().toLowerCase();
+    if (invocationKey != null &&
+        (normalizedRole != 'tool' ||
+            invocationKey.trim().isEmpty ||
+            invocationKey != invocationKey.trim() ||
+            invocationKey.length > 160)) {
+      throw ArgumentError.value(invocationKey, 'invocationKey');
+    }
+    final rows = _messages[conversationId] ?? const [];
+    if (invocationKey != null &&
+        rows.any((row) => row['invocation_key'] == invocationKey)) {
+      throw StateError('Assistant invocation key already exists');
+    }
     final id = _nextMessageId++;
     (_messages[conversationId] ??= []).add({
       'id': id,
       'conversation_id': conversationId,
-      'role': role,
+      'role': normalizedRole,
       'content': content,
       'metadata': metadata,
+      'invocation_key': invocationKey,
     });
     return id;
   }
