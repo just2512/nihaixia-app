@@ -259,7 +259,11 @@ class LocalAiService {
     int? sessionStateConversationId,
   }) async {
     if (attachmentType != 'image' && attachmentType != 'audio') {
-      throw ArgumentError.value(attachmentType, 'attachmentType', '只支持 image 或 audio');
+      throw ArgumentError.value(
+        attachmentType,
+        'attachmentType',
+        '只支持 image 或 audio',
+      );
     }
     final normalizedPath = path.trim();
     if (normalizedPath.isEmpty) {
@@ -267,7 +271,10 @@ class LocalAiService {
     }
     final normalizedText = text.trim();
     if (normalizedText.isEmpty) {
-      throw PlatformException(code: 'EMPTY_MESSAGE', message: '附件请求必须有明确任务文本');
+      throw PlatformException(
+        code: 'EMPTY_MESSAGE',
+        message: '附件请求必须有明确任务文本',
+      );
     }
     if (!RegExp(r'^[a-fA-F0-9]{32}
     required int conversationId,
@@ -1712,7 +1719,11 @@ class LocalAiSymptomDraft {
   }
 }
 ).hasMatch(requestId)) {
-      throw ArgumentError.value(requestId, 'requestId', 'REASONING_REQUEST_ID_INVALID');
+      throw ArgumentError.value(
+        requestId,
+        'requestId',
+        'REASONING_REQUEST_ID_INVALID',
+      );
     }
     if (reasoningContext.length > 24000) {
       throw ArgumentError.value(
