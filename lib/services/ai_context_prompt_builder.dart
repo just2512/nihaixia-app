@@ -130,6 +130,46 @@ class AiContextPromptBuilder {
     };
   }
 
+  /// Removes App-owned source locators and snapshot-validation metadata before
+  /// a resolved knowledge record enters model context. The full verified record
+  /// and its provenance remain in the App-side resolver/source map.
+  static const Set<String> _knowledgeIdentityKeys = {
+    'anchorId',
+    'anchorVersion',
+    'capabilityId',
+    'categoryId',
+    'entryId',
+    'executionStatus',
+    'id',
+    'input',
+    'internalSequence',
+    'internalSequenceMeaning',
+    'localBacklink',
+    'localEntryId',
+    'resultSchemaVersion',
+    'ruleVersion',
+    'snapshotId',
+    'sourceId',
+    'sourceIds',
+  };
+
+  static Object? _modelSafeKnowledgeValue(Object? value) {
+    if (value is Map) {
+      return Map<String, Object?>.unmodifiable({
+        for (final item in value.entries)
+          if (item.key is String &&
+              !_knowledgeIdentityKeys.contains(item.key as String))
+            item.key as String: _modelSafeKnowledgeValue(item.value),
+      });
+    }
+    if (value is List) {
+      return List<Object?>.unmodifiable(
+        value.map(_modelSafeKnowledgeValue),
+      );
+    }
+    return value;
+  }
+
   /// Builds model-only context for a resolved entry. It is deliberately
   /// separate from the short user message and is never prefilled in the composer.
   static String buildKnowledgeEntryModelContext({
@@ -157,7 +197,7 @@ class AiContextPromptBuilder {
     final source = <String, Object?>{
       'module': entry.ref.moduleId,
       'title': entry.title,
-      'content': entry.content,
+      'content': _modelSafeKnowledgeValue(entry.content),
     };
     return [
       '【当前知识条目的模型上下文】',
