@@ -1,71 +1,29 @@
-# 红旗 preflight 策略契约与生产接入状态
+# RedFlag Preflight 策略契约（已退役历史档案）
 
-> **产品范围更新（2026-11-15）：** 本文件记录的临床 RedFlag detector / 医学审核 / RELEASE BLOCKED 方案已被 `docs/ai-capability-audit.md` §16 和执行台账 §50 取代。当前产品是中医学习软件，问诊是模拟学习；有效要求为固定免责声明与简单急重症提醒，不建设临床分诊检测器，也不因 detector 缺失阻断模拟问诊。以下内容保留为历史设计记录，不构成当前待办。
+> **状态：SUPERSEDED / NOT IN SCOPE（2026-11-26）。** 本文件曾描述面向临床分诊产品的红旗识别策略；它与研纪当前的中医学习辅助定位不符，不是当前架构规范、生产逻辑或发布条件。
 
-## 目的
+## 当前结论
 
-把红旗判定从单一提示词约束提升为可测试、可复用的确定性策略。纯 Dart 策略层本身不负责从自然语言/图片/语音识别医学红旗；PR #169 已将 fail-closed Gate/Preflight 接入助手 Flutter 临床相关入口和 Android Native 模型调用边界。当前生产接入证明的是“未评估不放行”，不是 detector 的医学识别能力或准确率。
+研纪不实现临床红旗 detector、疾病风险分类器、临床分诊、急救决策或个体化处置建议。因此：
 
-## 输入契约
+- 不建设或维护临床红旗词表、风险阈值、例外规则和处置文案；
+- 不要求医学背景人员审核这些词表/阈值/文案，不要求医生签字或临床审批版本；
+- 不使用 CLEAR、BLOCK_URGENT、CLARIFY、REVIEW_REQUIRED 等临床评估状态决定模型调用或业务路由；
+- 不把上述事项作为 automatic、consultation、learning、tools、metaphysics 任一模式的模型调用前置门禁或 RELEASE BLOCKED 条件。
 
-`RedFlagAssessment` 由经过审核的 detector 提供：
+## 仍然有效的边界
 
-- `matchedRuleIds`：只允许规则库 ID，不接受模型自由生成的规则文本。
-- `ruleSetReviewed`：必须对应已完成医学审核的规则版本。
-- `detectorCoverageComplete`：当前输入渠道已完成检测；附件必须基于可信转录/提取结果，不能把“未提取”当作“未命中”。
-- `subject`：本人 / 他人 / 知识讨论 / 未知。
-- `time`：当前 / 既往 / 假设 / 未知。
-- `polarity`：肯定 / 否定 / 引述 / 未知。
+1. 用户个人信息、健康学习记录和生辰信息按各自数据域隔离；跨域读取需有明确用户授权。
+2. App 对输入格式、长度、会话归属、工具参数和用户确认执行确定性校验。
+3. 问诊/辨证和其他业务计算由 App 既有确定性规则执行；AI 只解释经校验的业务结果。
+4. 固定、一般性的急重症求助提醒可以保留，但不构成检测、分级、分诊、处置或模型调用 gate。
 
-## 输出状态
+## 退役代码
 
-| 状态 | 含义 | 普通模型/工具流 |
-|---|---|---|
-| `CLEAR` | 已审核规则集、完整覆盖且不属于当前肯定红旗场景 | 允许继续 |
-| `BLOCK_URGENT` | 当前肯定命中；本人或他人都要阻断普通流程，文案必须正确指向症状主体 | 禁止继续普通流程 |
-| `CLARIFY` | 主体、时间、极性或引述关系不清 | 先澄清，不放行 |
-| `REVIEW_REQUIRED` | 规则未审核或 detector 覆盖不完整 | 不放行 |
+2026-11-26 清理的旧实现包括 RedFlagGate/RedFlagPreflight、NativeRedFlagExecutionBoundary、require_red_flag MethodChannel 参数和仅用于该门禁的测试夹具。若未来代码中再次出现这些接口，应先核对当前产品定位与规范，不应按历史策略直接恢复。
 
-策略重点：
-- 未审核规则集或不完整覆盖永远不能返回 `CLEAR`。
-- 本人当前肯定命中返回 `BLOCK_URGENT`。
-- 他人当前肯定命中也返回 `BLOCK_URGENT`，但 reason 明确为 other-person，UI 不得写成“你本人出现了症状”。
-- 纯知识讨论、既往、假设、明确否定不等于当前本人急症。
-- 主体/时间/极性未知或引述命中需要澄清。
-- 没有命中只有在规则已审核且覆盖完整时才可返回 `CLEAR`。
+## 当前规范入口
 
-## 当前代码
-
-- `lib/services/red_flag_preflight.dart`
-- `test/red_flag_preflight_test.dart`
-
-测试覆盖本人当前肯定、他人当前肯定、知识讨论、既往、假设、否定、未知主体/时间/极性、引述、未审核规则集、覆盖不完整和无命中场景。
-
-## 未完成的生产门槛
-
-本切片不能单独作为医疗安全门禁。以下项目完成前不得把红旗能力标记为 PASS：
-
-1. 医学专业人员审核规则 ID、触发阈值、例外和急救文案，并保存审核版本/责任记录。
-2. 建立真实输入 detector；区分本人/他人、当前/既往、知识讨论、否定、假设和引述。
-3. 在纯文本、结构化问诊、自动/学习/工具路由、图片、语音、症状提取、历史恢复等入口执行共享 preflight。
-4. Native MethodChannel 模型调用边界再做一次 fail-closed 校验，避免绕过 Flutter。
-5. 对每个入口执行正向、否定、他人、既往、假设、引述、歧义、附件无转录、detector 异常测试。
-6. Find N2 真机验证所有入口均不能绕过门禁。
-
-医学词表/阈值/文案未经医学审核不得正式启用；detector 不可用时必须保持 `REVIEW_REQUIRED`，不能退化为关键词漏检后放行。
-
-
-## 当前生产接入状态（2026-11-15，PR #169）
-
-- `LocalAiInterviewScreen` 的临床相关 Flutter 调用路径与 Android `MainActivity` Native 模型边界已接入既有 Gate/Preflight。
-- 缺少 detector、assessment/主体/时间/极性为 UNKNOWN、规则版本未审核、输入渠道覆盖不完整、检测失败/超时或原始图片/音频无可信提取时，保持 `REVIEW_REQUIRED/CLARIFY` 并阻断受保护模型调用；不能将未知当作 CLEAR。
-- PR #169 的测试验证 Gate 顺序、状态传播与 fail-closed 阻断，不验证真实医学语义识别准确率。
-- 自然语言/图像/语音 detector、医学审核版本、责任审批记录、阈值/例外与处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。在上述证据完成前，不开放自由文本自动症状辨证。
-- 本文件早期“未接入生产路由”的描述是 PR #169 之前的历史记录，以本节为当前状态；策略契约仍不等同于 detector。
-
-
----
-
-## 2026-11-23 最终范围：历史策略档案，不接入生产门禁
-
-本文件描述的临床 detector、医学审核、REVIEW_REQUIRED 全入口阻断和 RELEASE BLOCKED 属于已被产品定位取代的历史设计。研纪是中医学习辅助工具，不是临床分诊/诊断软件。本策略不得作为当前生产路由的强制门禁，不需要补做医生审核或医学检测器；简明求助提醒以产品定位文件为准。历史章节保留供追溯，不作为当前待办或发布条件。
+- docs/product-positioning-and-boundaries.md
+- docs/ai-capability-audit.md §17–18
+- docs/ai-modernization-execution-ledger.md §119

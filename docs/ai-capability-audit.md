@@ -458,3 +458,17 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 简明的一般性急重症求助提示按产品定位文档执行；不建设检测器或分诊流程。
 - 本文历史章节中“红旗安全门禁”“医学词表审核”等描述均为历史设计记录，状态为 `SUPERSEDED / NOT IN SCOPE`，不得转成当前待办。
 
+
+
+## 18. 2026-11-26 临床红旗门禁代码退役与当前边界
+
+本节将 §17 的产品范围声明落实到生产代码和自动化契约：
+
+- 当前产品不建设临床红旗 detector、健康风险分类器、医学阈值、临床分诊流程或医学审核/医生签字门禁。
+- 不要求医学人员审核红旗词表、阈值或处置文案；没有此类审核记录不构成模型调用限制或 RELEASE BLOCKED。
+- Flutter、Dart MethodChannel 服务和 Android Native 模型入口移除了旧 RedFlagGate/RedFlagPreflight、require_red_flag 及 NativeRedFlagExecutionBoundary 生产接线。五种助手模式不依赖临床检测器放行。
+- 既有 Native AiModelAccessGate、会话身份校验、用户数据授权、工具参数/权限校验、确定性问诊规则、结果结构与来源校验保持不变。
+- 简明一般性急重症求助提示可以保留，但仅为固定提醒，不是风险判断、临床分诊、处置建议或模型调用 gate。
+- 既有 §17 的非诊断产品定义继续有效；历史章节中出现的临床 detector/医学审核/REVIEW_REQUIRED/RELEASE BLOCKED 方案仅为历史记录，不能重新作为当前工程要求。
+
+当前修复的 CI 与设备验收状态，以此次变更分支精确 HEAD 的实际结果为准；未完成的 Flutter/Kotlin CI 或 Find N2 实机任务不得提前记为 PASS。

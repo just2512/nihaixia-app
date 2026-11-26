@@ -1,10 +1,12 @@
-# AI 能力静态/动态审计报告
+# AI 能力静态/动态审计报告（历史审计档案）
 
 - 审计日期：2026-11-15（PR #169/#170/#171/#172 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
 - 最新复核基线：`master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
 - 方法：以当前 master HEAD 对照规范文件、执行台账、24 项工具注册表、知识来源定位/直达代码及 PR/Actions。未声称完成 Find N2 真机测试；本报告是源码与 CI 增量复核，不替代设备证据。
+
+> **当前状态说明（2026-11-26）：** 本报告中早期 B 工作流的 PARTIAL / RELEASE BLOCKED、临床 RedFlag detector、医学审核及全入口拦截结论，均是 2026-11-15 时点的历史审计快照。它们已被产品边界和代码范围校准取代，不是当前待办或发布条件。当前以 docs/ai-capability-audit.md §17–18、执行台账 §119 和产品定位文件为准。研纪不建设临床分诊/诊断门禁，不要求医学人员审批词表、阈值或处置文案。
 
 ## 1. 审计结论
 
@@ -13,7 +15,7 @@
 | 工作流 | 状态 | 关键结论 |
 |---|---|---|
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | PR #169 已把 fail-closed Gate 接入助手 Flutter 临床相关入口和 Android Native 模型边界；自然语言/视觉/语音医学 detector 与医学审核仍缺失，不能开放自由文本自动辨证 |
+| B 临床红旗安全门禁 | SUPERSEDED / NOT IN SCOPE | 早期审计设想已由产品定位取代；当前不建设临床 detector、分诊或医学审核门禁，不作为模型调用限制或发布阻塞 |
 | C 检索与引用 | PARTIAL | 83 个讲稿 sourceId 对应本地资产；#171 统一知识条目引用，#172 将古籍章节/内经条目精确直达。普通学习资料以 App 内稳定 sourceId + 可打开本地条目为验收，不要求外部纸本卷页考证；检索覆盖/相关性仍由黄金集约束 |
 | D Headless Capability | PARTIAL | 24 个定义中，23 个常规工具入口有 17 项 Headless executor、6 项 Page-only；structured_diagnosis 为独立内联确定性流程。Page-only 不自动构成待改造缺口 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
@@ -1289,3 +1291,11 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 对已有且可打开的条目，不补充外部纸本版本/卷页，不把外部元数据未核验标成知识库 MISSING，不重复审核已审核知识库。
 - 只有本地条目不存在、检索未命中/失败、sourceId 无法解析/打开，或回答所需内容在该条目中确实为空时，才说明对应本地资料缺失。
 - C 保持 PARTIAL 的理由只限于黄金集揭示的真实召回覆盖、相关性、排序、上下文与引用链路问题；不再把旧 bibliographic locator 缺项算进剩余工作。
+
+## 5. 2026-11-26 当前产品边界复核
+
+- 本报告此前关于临床红旗 detector、医学审核版本/责任审批、医学阈值/处置文案、Flutter/Native 全入口 fail-closed 和 RELEASE BLOCKED 的叙述，均保留为当时决策轨迹；不是当前工程要求。
+- 当前代码退役了生产 RedFlag Gate/Preflight 链路和 Native require_red_flag MethodChannel 合同。它不再扫描五种助手模式，也不决定模型调用或普通业务路由能否继续。
+- 一般性急重症求助提醒继续保留，但不判断用户风险，不作分级/分诊，不提供个体急救操作指导。
+- App 原有确定性问诊/业务规则、AI 对已校验结果的学习解释、权限/会话/参数/来源校验继续按各自契约验收。
+- 后续审计不得把历史 PARTIAL / RELEASE BLOCKED 复制为当前阻塞；如发现新的软件缺陷，应按实际复现和代码证据单独建项。
