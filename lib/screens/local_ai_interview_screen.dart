@@ -1523,6 +1523,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
+        if (currentRequest.attachmentType != null) {
+          if (attachmentPath == null) {
+            throw StateError('REASONING_TOOL_ATTACHMENT_PATH_MISSING');
+          }
+          final selectedAttachmentType = currentRequest.attachmentType!.name;
+          return traceId == null
+              ? _service.sendReasoningAttachmentMessage(
+                  currentRequest.userText,
+                  attachmentType: selectedAttachmentType,
+                  path: attachmentPath,
+                  conversationId: conversationId,
+                  requestId: currentRequest.requestId,
+                  context: currentContext,
+                  reasoningContext: supplementalContext,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                )
+              : _service.sendReasoningAttachmentMessageWithTrace(
+                  currentRequest.userText,
+                  attachmentType: selectedAttachmentType,
+                  path: attachmentPath,
+                  conversationId: conversationId,
+                  requestId: currentRequest.requestId,
+                  context: currentContext,
+                  reasoningContext: supplementalContext,
+                  traceId: traceId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                );
+        }
         return traceId == null
             ? _service.sendReasoningMessage(
                 currentRequest.userText,
