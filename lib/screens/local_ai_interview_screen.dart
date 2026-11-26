@@ -9903,7 +9903,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         route: 'contextual_explanation_only',
         mode: effectiveMode.name,
       );
-    } else if (_assistantMode == AssistantMode.automatic || imagePath != null || audioPath != null) {
+    } else if (_assistantMode == AssistantMode.automatic) {
       // 照片/语音附件默认进入问诊域；不凭附件类型猜测排盘或学习任务。
       _pendingToolSelection = false;
       effectiveMode = AssistantMode.consultation;
