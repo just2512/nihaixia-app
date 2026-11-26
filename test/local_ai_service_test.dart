@@ -240,6 +240,72 @@ void main() {
       expect(result.traceId, traceId);
     });
 
+    test('sends typed image attachment through the structured Native turn contract', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'request_id': requestId,
+          'reply': '{"schemaVersion":1}',
+          'backend': 'gpu',
+          'trace_id': traceId,
+        };
+      });
+
+      final result = await LocalAiService().sendReasoningAttachmentMessageWithTrace(
+        '【App附件任务（用户未提供文字）】请描述照片中可直接观察到的信息。',
+        attachmentType: 'image',
+        path: '/app/cache/tongue.jpg',
+        conversationId: 17,
+        requestId: requestId,
+        context: '照片描述任务上下文',
+        reasoningContext: '包含 attachmentResult 的结构化协议',
+        traceId: traceId,
+        sessionStateContext: '只读会话快照',
+        sessionStateConversationId: 17,
+      );
+
+      expect(received?.method, 'sendReasoningAttachmentMessage');
+      expect(received?.arguments, {
+        'attachment_type': 'image',
+        'path': '/app/cache/tongue.jpg',
+        'conversation_id': 17,
+        'request_id': requestId,
+        'text': '【App附件任务（用户未提供文字）】请描述照片中可直接观察到的信息。',
+        'context': '照片描述任务上下文',
+        'reasoning_context': '包含 attachmentResult 的结构化协议',
+        'session_state_context': '只读会话快照',
+        'session_state_conversation_id': 17,
+        'trace_id': traceId,
+      });
+      expect(result.requestId, requestId);
+      expect(result.backend, 'gpu');
+      expect(result.traceId, traceId);
+    });
+
+    test('rejects unsupported attachment types and blank paths before Native invocation', () async {
+      var invoked = false;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        invoked = true;
+        return <String, Object?>{};
+      });
+
+      Future<void> send(String type, String path) =>
+          LocalAiService().sendReasoningAttachmentMessage(
+            '附件任务',
+            attachmentType: type,
+            path: path,
+            conversationId: 17,
+            requestId: requestId,
+            context: '',
+            reasoningContext: '',
+          );
+
+      await expectLater(send('video', '/app/cache/video.mp4'), throwsArgumentError);
+      await expectLater(send('image', '  '), throwsArgumentError);
+      expect(invoked, isFalse);
+    });
+
     test('rejects a Native response bound to another request ID', () async {
       messenger.setMockMethodCallHandler(channel, (call) async => {
             'request_id': 'fedcba9876543210fedcba9876543210',

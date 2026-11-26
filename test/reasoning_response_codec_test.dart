@@ -30,6 +30,7 @@ void main() {
   ReasoningResponseDecodeResult decode(
     Object payload, {
     Set<String> allowedCapabilities = const {},
+    String? expectedAttachmentType,
   }) =>
       ReasoningResponseCodec.decode(
         raw: payload is String ? payload : jsonEncode(payload),
@@ -37,6 +38,7 @@ void main() {
         rankedEvidenceIds: rankedEvidence,
         knownEvidenceIds: knownEvidence,
         allowedCapabilityIds: allowedCapabilities,
+        expectedAttachmentType: expectedAttachmentType,
       );
 
   test('accepts a completed answer and freezes response collections', () {
@@ -67,6 +69,42 @@ void main() {
       result.response?.responseKind,
       ReasoningResponseKind.insufficientEvidence,
     );
+  });
+
+  test('accepts image observations only for image attachment requests', () {
+    final payload = answerPayload()
+      ..['attachmentResult'] = {
+        'type': 'image',
+        'observations': ['舌体偏淡红', '舌苔分布可见'],
+      };
+    final accepted = decode(payload, expectedAttachmentType: 'image');
+    final mismatch = decode(payload, expectedAttachmentType: 'audio');
+    final unexpected = decode(payload);
+
+    expect(accepted.isUsable, isTrue);
+    expect(accepted.response?.attachmentResult?.observations, ['舌体偏淡红', '舌苔分布可见']);
+    expect(mismatch.status, ReasoningResponseStatus.parseFailed);
+    expect(unexpected.status, ReasoningResponseStatus.parseFailed);
+  });
+
+  test('accepts audio transcript as unconfirmed structured draft', () {
+    final payload = answerPayload()
+      ..['attachmentResult'] = {
+        'type': 'audio',
+        'transcriptDraft': '最近两天睡眠不太好。',
+      };
+    final accepted = decode(payload, expectedAttachmentType: 'audio');
+    final missing = decode(answerPayload(), expectedAttachmentType: 'audio');
+    final wrongShape = answerPayload()
+      ..['attachmentResult'] = {
+        'type': 'audio',
+        'observations': ['不应接受'],
+      };
+
+    expect(accepted.isUsable, isTrue);
+    expect(accepted.response?.attachmentResult?.transcriptDraft, '最近两天睡眠不太好。');
+    expect(missing.status, ReasoningResponseStatus.parseFailed);
+    expect(decode(wrongShape, expectedAttachmentType: 'audio').status, ReasoningResponseStatus.parseFailed);
   });
 
   test('returns EMPTY for an empty model reply', () {

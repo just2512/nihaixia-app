@@ -36,6 +36,20 @@ class BusinessActionProposal {
 /// [referencedEvidenceIds] must refer only to evidence actually supplied to
 /// the current reasoning request. Source truth and local source resolution are
 /// still owned by the data layer and are not established by this response.
+class ReasoningAttachmentResult {
+  ReasoningAttachmentResult({
+    required this.attachmentType,
+    List<String> observations = const [],
+    this.transcriptDraft,
+  }) : observations = List.unmodifiable(observations);
+
+  final String attachmentType;
+  /// Directly observable image details; not a diagnosis or inferred pattern.
+  final List<String> observations;
+  /// Audio transcription is always a draft and must not be promoted to user fact.
+  final String? transcriptDraft;
+}
+
 class ReasoningResponse {
   ReasoningResponse({
     required this.requestId,
@@ -47,6 +61,7 @@ class ReasoningResponse {
     required List<String> conflicts,
     required List<String> omittedEvidenceIds,
     this.actionProposal,
+    this.attachmentResult,
   })  : segments = List.unmodifiable(segments),
         referencedEvidenceIds = List.unmodifiable(referencedEvidenceIds),
         unknowns = List.unmodifiable(unknowns),
@@ -62,6 +77,7 @@ class ReasoningResponse {
   final List<String> conflicts;
   final List<String> omittedEvidenceIds;
   final BusinessActionProposal? actionProposal;
+  final ReasoningAttachmentResult? attachmentResult;
 }
 
 /// Result of decoding an untrusted model payload.

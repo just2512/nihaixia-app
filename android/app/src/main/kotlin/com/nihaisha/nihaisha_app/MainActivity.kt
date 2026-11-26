@@ -304,42 +304,17 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
-                    "sendImage" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val path = call.argument<String>("path")?.trim().orEmpty()
-                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
-                        if (path.isEmpty()) {
-                            result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
-                        } else {
-                            runAiTask(result, requiresAiAccess = true) {
-                                LocalAiTraceIdPolicy.attach(sendLocalImage(conversationId, path, prompt), traceId)
-                            }
-                        }
-                    }
-                    "sendAudio" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val path = call.argument<String>("path")?.trim().orEmpty()
-                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
-                        if (path.isEmpty()) {
-                            result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
-                        } else {
-                            runAiTask(result, requiresAiAccess = true) {
-                                LocalAiTraceIdPolicy.attach(sendLocalAudio(conversationId, path, prompt), traceId)
-                            }
-                        }
-                    }
+                    // Legacy unstructured media entry points are closed.
+                    "sendImage" -> result.error(
+                        "STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED",
+                        "图片必须通过结构化附件推理协议发送",
+                        null
+                    )
+                    "sendAudio" -> result.error(
+                        "STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED",
+                        "音频必须通过结构化附件推理协议发送",
+                        null
+                    )
                     "sendMessage" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
                         val traceId = try {
@@ -424,6 +399,65 @@ class MainActivity : FlutterActivity() {
                                 sendLocalReasoningMessage(
                                     conversationId = conversationId,
                                     requestId = requestId,
+                                    text = text,
+                                    context = context,
+                                    sessionStateContext = validatedSessionState,
+                                    reasoningContext = reasoningContext
+                                ),
+                                traceId
+                            )
+                        }
+                    }
+                    "sendReasoningAttachmentMessage" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
+                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
+                        val attachmentType = call.argument<String>("attachment_type")?.trim().orEmpty()
+                        val path = call.argument<String>("path")?.trim().orEmpty()
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
+                        val text = call.argument<String>("text").orEmpty()
+                        val context = call.argument<String>("context").orEmpty()
+                        val reasoningContext = call.argument<String>("reasoning_context").orEmpty()
+                        val sessionStateContext = call.argument<String>("session_state_context").orEmpty()
+                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
+                            call.argument<Any>("session_state_conversation_id")
+                        )
+                        if (attachmentType != "image" && attachmentType != "audio") {
+                            result.error("INVALID_ATTACHMENT_TYPE", "只支持 image 或 audio 附件", null)
+                            return@handler
+                        }
+                        if (path.isEmpty()) {
+                            result.error("EMPTY_ATTACHMENT_PATH", "没有选择有效附件", null)
+                            return@handler
+                        }
+                        try {
+                            LocalAiReasoningTurnPolicy.validateRequest(requestId, conversationId, text)
+                            LocalAiReasoningTurnPolicy.validateSupplementalContext(reasoningContext)
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_REASONING_REQUEST", error.message, null)
+                            return@handler
+                        }
+                        val validatedSessionState = try {
+                            LocalAiSessionStateInputPolicy.validate(
+                                sessionStateContext,
+                                sessionStateConversationId,
+                                conversationId
+                            )
+                        } catch (error: IllegalArgumentException) {
+                            result.error("SESSION_STATE_INVALID", error.message, null)
+                            return@handler
+                        }
+                        runAiTask(result, requiresAiAccess = true) {
+                            LocalAiTraceIdPolicy.attach(
+                                sendLocalReasoningAttachmentMessage(
+                                    conversationId = conversationId,
+                                    requestId = requestId,
+                                    attachmentType = attachmentType,
+                                    path = path,
                                     text = text,
                                     context = context,
                                     sessionStateContext = validatedSessionState,
@@ -1150,6 +1184,86 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun sendLocalReasoningAttachmentMessage(
+        conversationId: Long,
+        requestId: String,
+        attachmentType: String,
+        path: String,
+        text: String,
+        context: String,
+        sessionStateContext: String,
+        reasoningContext: String
+    ): Map<String, Any> {
+        ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
+        check(pendingReasoningTurn == null) {
+            "REASONING_PENDING_TURN_MUST_BE_FINALIZED_OR_REJECTED"
+        }
+        val before = conversationHistory.snapshot()
+        val prepared = LocalAiMessageInputPolicy.prepare(
+            userText = text,
+            context = context,
+            sessionStateContext = sessionStateContext,
+            reasoningContext = reasoningContext
+        )
+        val contents = when (attachmentType) {
+            "image" -> {
+                val image = requireCachedInput(path, "照片")
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(image.absolutePath, bounds)
+                LocalAiImagePolicy.validationError(bounds.outWidth, bounds.outHeight)?.let { error ->
+                    throw IllegalArgumentException(error)
+                }
+                Contents.of(
+                    Content.ImageFile(image.absolutePath),
+                    Content.Text(prepared.modelInput)
+                )
+            }
+            "audio" -> {
+                val audio = requireCachedInput(path, "录音")
+                LocalAiWavPolicy.validationError(audio)?.let { error ->
+                    throw IllegalArgumentException(error)
+                }
+                Contents.of(
+                    Content.AudioFile(audio.absolutePath),
+                    Content.Text(prepared.modelInput)
+                )
+            }
+            else -> throw IllegalArgumentException("INVALID_ATTACHMENT_TYPE")
+        }
+        val attachmentLabel = if (attachmentType == "image") "照片" else "录音"
+        val historyUserText = "【此前发送过" + attachmentLabel + "附件】\n" + text
+        conversationContainsEphemeralContext = true
+        val rawReply = try {
+            sendWithFirstTurnGpuFallback(
+                userMessageText = historyUserText,
+                commitToHistory = false,
+                preserveRawReply = true
+            ) { conversation ->
+                conversation.sendMessage(contents).toString()
+            }
+        } catch (error: Exception) {
+            conversationContainsEphemeralContext = true
+            throw error
+        }
+        check(conversationHistory.snapshot() == before) {
+            "REASONING_PENDING_MUTATED_COMPLETED_HISTORY"
+        }
+        // Binary attachment bytes and the raw structured envelope never enter the replay transcript.
+        recreateCurrentConversationFromHistory()
+        pendingReasoningTurn = LocalAiReasoningTurnPolicy.createPendingTurn(
+            requestId = requestId,
+            conversationId = conversationId,
+            userText = historyUserText,
+            previousHistory = before
+        )
+        return mapOf(
+            "request_id" to requestId,
+            "reply" to rawReply,
+            "backend" to activeBackend
+        )
+    }
+
     private fun finalizeReasoningTurn(
         conversationId: Long,
         requestId: String,
@@ -1194,7 +1308,23 @@ class MainActivity : FlutterActivity() {
                 error
             )
         }
-        recordUserInput("用户文字自述", pending.userText)
+        val photoAttachmentMarker = "【此前发送过照片附件】"
+        val audioAttachmentMarker = "【此前发送过录音附件】"
+        when {
+            pending.userText.startsWith(photoAttachmentMarker) -> {
+                val originalText = pending.userText.substringAfter('\n', "").trim()
+                if (originalText.isNotEmpty() && !originalText.startsWith("【App附件任务")) {
+                    recordUserInput("用户随照片输入的文字", originalText)
+                }
+            }
+            pending.userText.startsWith(audioAttachmentMarker) -> {
+                val originalText = pending.userText.substringAfter('\n', "").trim()
+                if (originalText.isNotEmpty() && !originalText.startsWith("【App附件任务")) {
+                    recordUserInput("用户随录音输入的文字", originalText)
+                }
+            }
+            else -> recordUserInput("用户文字自述", pending.userText)
+        }
         reasoningTurnCompletions.markCompleted(
             requestId,
             conversationId,

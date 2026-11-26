@@ -42,19 +42,26 @@ AssistantKnowledgeContextResult _knowledgeWithEvidence() =>
 ReasoningRequest _request({
   Set<String> capabilities = const {'dosage'},
   AssistantKnowledgeContextResult? knowledge,
+  ReasoningAttachmentType? attachmentType,
+  bool attachmentPromptGenerated = false,
 }) =>
     ReasoningActionProposalAdapter.createRequest(
       requestId: '0123456789abcdef0123456789abcdef',
       sessionId: 7,
-      userText: '请换算这项方剂剂量',
+      userText: attachmentPromptGenerated
+          ? '【App附件任务】请转写录音。'
+          : '请换算这项方剂剂量',
       sessionState: _session(),
       knowledge: knowledge ?? _knowledge(),
       requestCapabilityAllowlist: capabilities,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
 
 String _proposalPayload({
   String requestId = '0123456789abcdef0123456789abcdef',
   String capabilityId = 'dosage',
+  Object? attachmentResult,
 }) =>
     jsonEncode({
       'schemaVersion': 1,
@@ -66,6 +73,7 @@ String _proposalPayload({
       'unknowns': <String>[],
       'conflicts': <String>[],
       'omittedEvidenceIds': <String>[],
+      if (attachmentResult != null) 'attachmentResult': attachmentResult,
       'actionProposal': {
         'proposalId': 'proposal-001',
         'capabilityId': capabilityId,
@@ -91,6 +99,65 @@ void main() {
         () => request.allowedCapabilityIds.add('yuxiaji_omen'),
         throwsUnsupportedError,
       );
+    });
+
+    test('tool-mode attachment proposals require typed image data and preserve confirmation', () {
+      final request = _request(
+        attachmentType: ReasoningAttachmentType.image,
+        attachmentPromptGenerated: true,
+      );
+      final prepared = ReasoningActionProposalAdapter.decodeAndPrepare(
+        raw: _proposalPayload(
+          attachmentResult: {
+            'type': 'image',
+            'observations': ['照片可见舌体偏淡红'],
+          },
+        ),
+        request: request,
+        knowledge: _knowledge(),
+      );
+      final missingAttachment = ReasoningActionProposalAdapter.decodeAndPrepare(
+        raw: _proposalPayload(),
+        request: request,
+        knowledge: _knowledge(),
+      );
+
+      expect(prepared.requiresConfirmation, isTrue);
+      expect(prepared.gateResult?.plan, isNull);
+      expect(missingAttachment.isRejected, isTrue);
+      expect(missingAttachment.decodeResult.diagnostics.single,
+          contains('ATTACHMENT_RESULT_INVALID_OR_MISMATCHED'));
+    });
+
+    test('tool-mode audio answers keep transcript as unconfirmed draft', () {
+      final request = _request(
+        attachmentType: ReasoningAttachmentType.audio,
+        attachmentPromptGenerated: true,
+      );
+      final result = ReasoningActionProposalAdapter.decodeAndPrepare(
+        raw: jsonEncode({
+          'schemaVersion': 1,
+          'requestId': request.requestId,
+          'responseKind': 'ANSWER',
+          'status': 'COMPLETED',
+          'segments': ['以上是语音内容整理。'],
+          'referencedEvidenceIds': <String>[],
+          'unknowns': <String>[],
+          'conflicts': <String>[],
+          'omittedEvidenceIds': <String>[],
+          'attachmentResult': {
+            'type': 'audio',
+            'transcriptDraft': '今天早上有些头晕。',
+          },
+        }),
+        request: request,
+        knowledge: _knowledge(),
+      );
+
+      expect(result.isUsableAnswer, isTrue);
+      expect(result.answerResult!.answerText,
+          contains('语音转写草稿（尚待用户核对'));
+      expect(result.answerResult!.answerText, contains('今天早上有些头晕。'));
     });
 
     test('decodes an allowed proposal into a preview, never an executable plan', () {
