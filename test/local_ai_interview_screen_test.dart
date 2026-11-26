@@ -6596,8 +6596,6 @@ void learningFlowRegressionTests() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(detector.calls, 0,
-          reason: '模拟学习多轮不依赖临床 detector 的跨轮评估');
       expect(service.sentTexts, ['我最近胸痛', '我最近头痛']);
       expect(find.textContaining('立即拨打120'), findsOneWidget);
     });

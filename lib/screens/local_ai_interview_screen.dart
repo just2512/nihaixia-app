@@ -9167,7 +9167,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
-    final sourceText = _boundedUserContextText(currentText: _inputController.text);
     var persistenceStarted = false;
     var persistenceRecorded = false;
     try {
@@ -9538,6 +9537,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
+    final sourceText = _boundedUserContextText(currentText: _inputController.text);
         try {
       final traceId = traceContext.traceId;
       final schemaController = TcmInterviewConversationController(
