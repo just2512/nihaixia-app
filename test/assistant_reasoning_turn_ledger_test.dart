@@ -186,8 +186,8 @@ void main() {
   });
 
   test('invalid modes and malformed terminal payloads are rejected', () async {
-    expect(
-      () => ledger.begin(
+    await expectLater(
+      ledger.begin(
         conversationId: conversationId,
         requestId: requestId,
         mode: 'tools',
@@ -196,8 +196,8 @@ void main() {
       throwsArgumentError,
     );
     expect(await begin(), AssistantReasoningTurnStartStatus.started);
-    expect(
-      () => ledger.recordTerminal(
+    await expectLater(
+      ledger.recordTerminal(
         conversationId: conversationId,
         requestId: requestId,
         status: AssistantReasoningTurnStatus.unknown,
