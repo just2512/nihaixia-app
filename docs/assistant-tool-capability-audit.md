@@ -44,7 +44,7 @@
 | huangdi_siji | 轩辕黄帝四季歌 | tools/metaphysics | 打开资料页面 | Page Tool |
 | saved_charts | 我的命盘库 | tools/metaphysics | 打开保存命盘页面 | Page Tool |
 
-> 模式栏以注册定义为准；本表不表示这些模式下的安全授权已经完整。医疗、个人生辰和健康历史能力仍须遵守全局审计规范中的领域隔离、显式授权和红旗门禁。
+> 模式栏以注册定义为准；本表不表示这些模式下的授权和参数校验已经完整。病例/健康内容只按用户明确提供的学习语境理解，不将他人病例或历史资料自动视为当前用户事实；个人生辰和健康历史数据仍须遵守领域隔离、明确授权与数据最小化。本项目不设置临床红旗门禁。
 
 ## 3. 现有参数契约
 
@@ -97,7 +97,7 @@
 3. 从当前最容易验证且无医疗/个人敏感权限的工具中选一个，验证是否已有可复用 Headless 业务函数；优先建立一个窄切片，不建通用 Agent/DAG。
 4. 若需抽适配器，先锁定原页面行为黄金测试，再定义版本化 typed args/result；保留原 UI 作为展示/人工确认界面。
 5. 为每个能力增加正向、缺参、非法参数、取消、失败、UNKNOWN 不重放和结果回传测试。
-6. 医疗/玄学领域跨域授权、红旗门禁和用户确认不得由模型自行决定。
+6. 涉及个人数据读取、跨域调用、工具执行或不可逆操作时，授权与用户确认不得由模型自行决定；不建设临床红旗 detector 或临床分诊门禁。
 
 ## 7. 审计状态
 
@@ -270,7 +270,7 @@ Page-only 并不是全部都需要改为 Headless：
 核心代码：
 - `lib/services/assistant_conversation_orchestrator.dart`：规则优先识别工具意图、提取已声明参数、保留未知值并在歧义/缺项时澄清；E4B 候选工具筛选只允许 `headlessExecutor != null` 的能力，不把 Page Tool 路由给模型执行。
 - `lib/screens/local_ai_interview_screen.dart::_requestTool`：收集槽位、追问、保持待补参数状态；只有明确页面意图才走页面导航。
-- `lib/screens/local_ai_interview_screen.dart::_executeHeadlessTool`：执行前参数校验和红旗边界检查，调用 App executor，验证 toolId、结构化输出、实际参数和 sourceIds，写 TRACE、持久化并按结果状态决定是否交给 AI。
+- `lib/screens/local_ai_interview_screen.dart::_executeHeadlessTool`：执行前完成参数、权限和能力声明校验，调用 App executor，验证 toolId、结构化输出、实际参数和 sourceIds，写 TRACE、持久化并按结果状态决定是否交给 AI。
 - `lib/models/assistant_tool_result.dart`：SUCCEEDED 必须有结构化字段和真实来源；拒绝 `local-page-tool:` 合成路由来源。
 - `lib/screens/local_ai_interview_screen.dart::_restoreVisibleConversationToModel`：UNKNOWN/FAILED/CANCELLED/NO_RESULT 或旧式页面 String 结果可供用户查看，但不回放为模型事实；待补参数 `AWAITING_PARAMETERS` 消息仍保留。
 
