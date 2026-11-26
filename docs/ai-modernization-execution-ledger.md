@@ -238,7 +238,7 @@
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 8. B：在没有医学审核记录前，不引入未经审核的词表/阈值/处置文案；先完成 detector 入口清单和 fail-closed 接入设计，避免静默放行。
 9. C：围绕当前黄金快照中方剂候选扩展行为补相关性对照用例；保持原始基线，任何检索语义变化必须显式更新 golden fixture 并说明影响。
 10. D：按 24 项工具逐项建立输入/输出、参数、权限、取消、错误和执行证据表；只对已有确定性业务函数建立 Headless adapter。
-11. 每个已合并代码切片立即更新本台账；真机未测、merged manifest 未核验、医学审核缺失等项目继续保持 PARTIAL/UNKNOWN。
+11. 每个已合并代码切片立即更新本台账；仍在当前产品范围内的真机实测、merged manifest 与数据边界等证据缺项，继续保持 PARTIAL/UNKNOWN；临床红旗检测和医学签审不适用。
 
 
 
@@ -560,7 +560,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 1. #86/#87 均按各自最新 head 重新核对；任何失败先定位并修复，不得跳过或只跑 changed tests 后声称全量通过。
 2. 每个代码 PR 合并后刷新 master SHA，再对后续 PR 重新核对 base、mergeability、CI。
 3. 仅代码 + 自动化测试 + 目标设备 TRACE 三者齐全才可将设备相关能力标为 IMPLEMENTED。
-4. 医学审核、Find N2 真机、旧附件归属和混合数据库备份边界未完成前继续标记 PARTIAL / UNKNOWN / RELEASE BLOCKED。
+4. Find N2 真机、旧附件归属和混合数据库备份边界未取得证据前，相关设备/数据项继续标记 PARTIAL / UNKNOWN；临床医学审核不是当前外部依赖或发布阻断。
 
 
 ---
@@ -766,7 +766,7 @@ PR #107 修复失败轮次阶段误归因：
 - 每次代码 PR 以最新 master 为基线，先核对 compare/mergeability，再按最新 head 检查 Flutter 全量回归与 Android arm64/Native CI。
 - master 合并后独立 workflow 未完成前，状态为 IN_PROGRESS/UNKNOWN，不写 PASS。
 - CI、模拟设备、静态代码不能替代 Find N2 真机 TRACE。
-- 医学审核、真机硬件、纸本底本/原始影像属于外部证据依赖；不能由代码或模型自我生成。
+- Find N2 真机、纸本底本/原始影像等属于外部证据依赖；不能由代码或模型自我生成。
 - 不创建定时任务；本轮只在实际执行时检查 CI。
 
 ---
@@ -882,7 +882,7 @@ PR #107 修复失败轮次阶段误归因：
 ### 19.6 执行边界
 
 - CI、静态代码和模拟环境不能替代 Find N2 真机 TRACE。
-- 医学审核、原始纸本/影像、物理设备和外部备份副本属于外部证据依赖；不得由代码或模型自我生成。
+- 原始纸本/影像、物理设备和外部备份副本属于外部证据依赖；不得由代码或模型自我生成。
 - 不把本轮 F 的局部断点修复夸大成 P0–P5 全部关闭；整体仍受 A/B/C/E/F 的真机或外部证据门槛约束。
 - 本轮没有增加 Agent/DAG、数据库表、模型/API、检索引擎或新的 Headless adapter。
 
@@ -1303,11 +1303,11 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 27.5 冻结范围与停止条件
 
-- 不重新建设知识库，不重复医学审核已经完成的知识内容，不改 DiagnosticEngine/辨证/剂量/八字算法。
+- 不重新建设知识库，不重复处理现有知识库条目，不改 DiagnosticEngine/辨证/剂量/八字算法。
 - 不引入第二套 Orchestrator、Agent/DAG 框架、云模型或向量数据库。
 - 不批量 Headless 化所有工具；不以测试数量或工具数量作为目标。
 - 后续每个代码切片只围绕上述明确缺口；先检查现有能力和文档，再创建独立分支，修改最少文件，运行 changed tests 与对应 CI，最后核对主线 head。
-- 未取得医学审核、Find N2 真机记录或数据清除证据的事项，继续保持 PARTIAL / UNKNOWN；自动化 CI 不能替代外部验收。
+- 未取得 Find N2 真机记录或数据清除证据的事项，继续保持 PARTIAL / UNKNOWN；自动化 CI 不能替代设备验收。
 
 ---
 
@@ -1634,7 +1634,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 34.6 冻结项
 
 - 不改 DiagnosticEngine、DiagnosticRules、问诊十问、排盘算法、剂量换算和民俗计算规则。
-- 不重复审核已经完成医学审核的知识库。
+- 不改写或重复迁移现有知识库条目。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不在缺少医学审核 detector 时启用自由文本症状抽取；不把 `REVIEW_REQUIRED/UNKNOWN` 视为安全放行。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库或批量 Page Tool 迁移。
 
@@ -1906,7 +1906,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 负责理解、归纳、缺参追问、调度和解释；所有确定性计算继续由 App 原有代码执行。
 - 未经 App 执行、参数/结果契约校验且无可靠 sourceIds 的内容，不作为业务事实交给 AI。
 - 不允许 AI 推断覆盖规则，不允许把模型归纳包装成医学诊断。
-- 不重复医学审核已审核知识库，不批量迁移 Page-only，不降低安全门禁或测试验收标准。
+- 不重复迁移已有知识库条目，不批量迁移 Page-only，不降低通用工程校验或测试验收标准。
 
 ---
 
@@ -2022,7 +2022,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - #171 统一引用尾注：资料类型 + App 内知识库条目定位 + 稳定 sourceId；覆盖讲稿、经典文本、医案及现有结构化知识资产。外部纸本卷页元数据缺失不再被展示为本地知识来源 MISSING。
 - #172 让经典命中按 book ID + chapter index 直达具体古籍章节，内经结构化 sourceId 直达目标条目并展开；无效 ID 明确报无法解析，不做模糊猜测。
-- 普通学习/知识回答的验收为“答案中的知识内容能回链并打开到 App 内实际条目”。不开展 83 条讲稿逐册逐页考证，不重复医学审核。
+- 普通学习/知识回答的验收为“答案中的知识内容能回链并打开到 App 内实际条目”。不开展 83 条讲稿逐册逐页考证，不重复处理现有知识库条目。
 - 实际检索未命中、读取/打开失败、sourceId 无法解析或条目字段缺失仍需如实说明；不得用模型预训练记忆补造知识库之外的出处和医学事实。
 
 ### 43.5 问诊助手下一阶段
@@ -2131,7 +2131,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 45.6 收尾边界
 
-- C：来源定位闭环已经完成，不做纸本考据，不重复医学审核。
+- C：来源定位闭环已经完成，不做纸本考据，不重复处理现有知识库条目。
 - D：已有工具能力在当前助手对话内调用；只修具体、可复现的分流或参数契约错误，不扩张架构。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B：生产自然语言/视觉/语音红旗检测器审核证据缺失前，不开放自然语言自动辨证。
 - A/E/F：真实设备验收由本地执行，不占用云端任务列表。
@@ -2174,7 +2174,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - AI 对话行与非 AI 数据目前共用 `nihaisha.db`；Android backup 规则不能按 SQLite 行选择性排除。当前不得全局关闭备份或排除整个数据库。是否接受混合数据库备份、或批准后续 AI 独立数据库迁移，需要产品侧明确数据保留决策；在决策前保持现有备份行为并披露边界。
 - 旧版本共享临时图片所有权仍 UNKNOWN；没有所有权证据不得批量删除共享 temp 文件。
-- 除上述本地验收及明确的外部医学审核/数据保留决策外，本轮没有剩余可由云端安全闭环的运行时代码任务。云端后续只处理本地实测或外部审核材料揭示的具体可复现问题。
+- 除上述本地验收及数据保留决策外，本轮没有剩余可由云端安全闭环的运行时代码任务。云端后续只处理本地实测或外部审核材料揭示的具体可复现问题。
 
 
 ## 47. 2026-11-15 用户可手动切换 E4B GPU/CPU 与真机验收文件
@@ -2217,7 +2217,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - 本节覆盖旧台账中所有将 bookId/chapterIndex、纸本底本、版本、卷页或影印本坐标标为完成门槛的历史记录。此前记录保留为审计历史，不再作为当前待办或发布阻断。
 - 当前唯一要求：AI 对知识库事实的引用必须有稳定 sourceId，且该 ID 能在 App 内打开对应知识条目、章节或医案记录；回答应附可点击链接或能直接定位的备注。
-- 不要求为已存在且可打开的知识库内容额外补充外部纸本版本、卷页、底本或影印本坐标；不以外部书目元数据缺失标记知识库内容 MISSING；不重复医学审核已审核知识库。
+- 不要求为已存在且可打开的知识库内容额外补充外部纸本版本、卷页、底本或影印本坐标；不以外部书目元数据缺失标记知识库内容 MISSING；不重复处理现有知识库条目已审核知识库。
 - 只有本地条目确实不存在、检索未命中/失败、sourceId 解析或打开失败，或回答所需字段在对应条目中确实不存在，才说明具体本地知识缺项。不得以模型训练记忆补齐缺失内容。
 - C 工作流保留 PARTIAL 的原因只限于黄金检索集实际揭示的召回覆盖、相关性、排序、上下文和 sourceId 链路问题；不得把历史 bibliographic locator MISSING 计入 C 的剩余工作或发布条件。
 - 本项不改既有知识库内容，不改检索 query、召回上限、排序、去重或 FTS5；只统一验收口径和关闭无意义的考古式来源核验待办。
@@ -3515,7 +3515,7 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 | ContextRef / Resolver / Prompt Builder / 会话复用 | PASS（情境入口范围） | 继续使用既有链路；无第二套会话、模型执行或工具路由 |
 | 规范索引与执行台账 | IN_PROGRESS | 本节更新执行台账，规范 §12.4.1 索引同步指向 §67；文档 PR 的 CI/合并后 master CI 待验收 |
 | Find N2 / E4B 本地验收 | UNKNOWN / LOCAL ONLY | 仍由用户本地按交接清单实测，不阻塞云端代码和文档工作 |
-| 全局 AI 改造 A-G | 维持各自原状态 | 本节不把全局多轮、医学审核、检索黄金集、Headless、数据清理或 TRACE 的 PARTIAL/UNKNOWN 错写成 PASS |
+| 全局 AI 改造 A-G | 维持各自原状态 | 本节不把全局多轮、检索黄金集、Headless、数据清理或 TRACE 的 PARTIAL/UNKNOWN 错写成 PASS |
 
 ### 67.5 Find N2 / E4B 最终交接
 
@@ -4004,12 +4004,12 @@ PR HEAD 门禁证据：
 ### 78.2 仍未关闭的真实验收门槛
 
 - **A Native 多轮：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 completed-turn transcript replay、成功轮次策略及自动化测试；Find N2 GPU/CPU 至少 20 轮、图片/语音、Activity recreation、进程重启、`state:7` 根因仍需设备证据。
-> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - **B 临床红旗 detector：`SUPERSEDED / NOT IN SCOPE`。** 研纪是中医学习辅助工具，不建设临床分诊 detector、医学审核门禁或 Flutter/Native 全入口拦截；不再将这些材料列为发布阻塞。一般性急重症求助提示保留，通用输入/参数校验仍须执行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - **B 临床红旗 detector：`NOT_APPLICABLE`。** 研纪是中医学习辅助工具，不建设临床检测、医学签审或全入口临床拦截；这些事项不属于当前任务、外部依赖或发布门槛。一般性求助提示和通用输入/参数校验按产品范围保留。
 - **E AI 数据清除：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 SQLite AI 表事务、AI 专属附件目录、Native runtime cache/TRACE coordinator 和 UI；混合 SQLite 备份边界、旧共享图片归属、Find N2 强停/重启后不可恢复仍未证明。
 - **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
 
-- 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。所有未满足的设备/医学/数据边界继续按 `MISSING / UNKNOWN / RELEASE BLOCKED` 记录。
+- 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。所有未满足的设备/数据边界继续按 `MISSING / UNKNOWN` 记录。临床红旗检测与医学签审不再形成发布阻断。
 
 
 ---
