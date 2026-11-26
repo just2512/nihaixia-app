@@ -394,6 +394,12 @@ class _InvocationEvent {
   final AssistantToolInvocationClaim? claim;
   final Map<String, Object?>? terminal;
 
+  String? get invocationId {
+    final terminalId = terminal?['invocationId'];
+    if (terminalId is String) return terminalId;
+    return claim?.invocationId;
+  }
+
   _InvocationEvent merge(_InvocationEvent other) => _InvocationEvent(
         claim: other.claim ?? claim,
         terminal: other.terminal ?? terminal,
