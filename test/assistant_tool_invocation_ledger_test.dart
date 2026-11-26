@@ -133,6 +133,7 @@ void main() {
     expect(rows, hasLength(2));
     expect(rows.last['invocation_key'], '$invocationId:terminal');
     final terminal = jsonDecode(rows.last['metadata'] as String) as Map;
+    expect(terminal['conversationId'], conversationId);
     expect(terminal['status'], 'succeeded');
     expect(terminal['actualArguments'], arguments);
     expect(terminal['resultValues'], {'换算结果': '150g'});
@@ -162,6 +163,7 @@ void main() {
 
     final rows = await store.getAssistantMessages(conversationId: conversationId);
     final terminal = jsonDecode(rows.last['metadata'] as String) as Map;
+    expect(terminal['conversationId'], conversationId);
     expect(terminal['status'], 'unknown');
     expect(terminal['failureCode'], contains('RESULT_VALIDATION_FAILED'));
     final readback = await ledger.loadTerminalResult(
@@ -203,6 +205,7 @@ void main() {
     final rows = await store.getAssistantMessages(conversationId: conversationId);
     expect(rows, hasLength(2));
     final terminal = jsonDecode(rows.last['metadata'] as String) as Map;
+    expect(terminal['conversationId'], conversationId);
     expect(terminal['status'], 'unknown');
     expect(terminal['interrupted'], isTrue);
     expect(terminal['failureCode'], 'PROCESS_INTERRUPTED_WITHOUT_TERMINAL_RESULT');
@@ -292,6 +295,7 @@ void main() {
     );
     final rows = await store.getAssistantMessages(conversationId: conversationId);
     final terminal = jsonDecode(rows.last['metadata'] as String) as Map;
+    expect(terminal['conversationId'], conversationId);
     expect(terminal['status'], 'unknown');
     expect(terminal['failureCode'], contains('ACTUAL_ARGUMENTS_MISMATCH'));
   });
