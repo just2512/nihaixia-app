@@ -1372,8 +1372,6 @@ class _FailOnceTextSendService extends _TextSendService {
 }
 
 class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
-  final sentTraceIds = <String>[];
-
   @override
   Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
@@ -1388,8 +1386,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) {
-    sentTraceIds.add(traceId);
-    // The base fake records each actual Native invocation exactly once.
+    // The inherited fake records each actual Native invocation exactly once.
     return super.sendReasoningMessageWithTrace(
       text,
       conversationId: conversationId,
