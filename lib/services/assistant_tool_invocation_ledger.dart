@@ -492,6 +492,13 @@ class AssistantToolInvocationLedger {
   ) {
     final left = Map<String, Object?>.from(existing)..remove('createdAt');
     final right = Map<String, Object?>.from(candidate)..remove('createdAt');
+    // Preserve idempotent read/write behavior for terminal rows written before
+    // conversationId was added to the terminal schema. _readInvocation already
+    // constrains those rows to the owning conversation.
+    if (left['conversationId'] == null &&
+        right['conversationId'] is int) {
+      left['conversationId'] = right['conversationId'];
+    }
     return jsonEncode(_canonical(left)) == jsonEncode(_canonical(right));
   }
 
