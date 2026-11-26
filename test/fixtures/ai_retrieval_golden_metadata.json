@@ -115,6 +115,21 @@
     "textLength": 1875,
     "localBacklinkStatusCounts": {
       "AVAILABLE": 6
+    },
+    "rankingStrategyId": "LEGACY_SOURCE_ORDER_WITH_PER_SOURCE_LIMITS",
+    "rankedEvidenceSourceIds": [
+      "formula:guizhi_tang",
+      "herb:桂枝",
+      "shanghan:assets/shanghan/clause_001.md",
+      "shanghan:assets/shanghan/clause_014.md",
+      "shanghan:assets/shanghan/clause_015.md",
+      "shanghan:assets/shanghan/clause_017.md"
+    ],
+    "rankingDecisionReasonCounts": {
+      "LEGACY_FORMULA_ORDER_WITHIN_LIMIT": 1,
+      "LEGACY_HERB_ORDER_WITHIN_LIMIT": 1,
+      "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT": 4,
+      "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT": 36
     }
   }
 }
