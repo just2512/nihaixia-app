@@ -4606,3 +4606,19 @@ PR HEAD 门禁证据：
 - Core-5：仍缺少从结构化推理输入、实际工具执行、真实 ExecutionResult 回流、来源核验到最终展示/持久化的完整 E2E。合同单测/投影适配器不等同端到端完成。
 - 工作流 I：用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED，不启动。
 - 设备策略：Find N2 安装升级、GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和 TRACE 仍统一留到云端工作结束后本地验收，不阻塞 Core-4 云端实施。
+
+---
+
+## 109. 2026-11-26 详情页 AI 解读与移动端键盘避让
+
+- **本次代码基线：** `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0`。与历史 §108 的 Core-3 基线不同；本任务从当时实际 master HEAD 派生，不将旧 SHA 的 CI 作为本次验收。
+- **P0：详情页 AI 解读语义与上下文传递 / PR #553：** 独立分支 `fix/contextual-knowledge-auto-analysis`，当前代码提交 `c86f8892c1bcb2acb58cbd323704129431c5c87f`（本台账提交仅追加本节，不改变下列代码范围）。共享 `ContextualAiSheet` 不再把 `initialPrompt` 作为用户输入草稿，而是拆成短的 `initialUserRequest` 与完整 `initialContextPrompt`；模型状态与当前锚点会话初始化完成后自动提交，不要求用户复制/剪辑/二次发送。完整详情资料只进入 model-only context，不进入用户输入框或 user transcript。
+- **P0 解读策略：** `AiContextPromptBuilder.buildContextualAnalysisRequest` 按 formula、herb、caseRecord、classic、acupoint、meridian、acupuncture、toolResult、fieldValue 生成不同分析意图。方剂重点为整体组方结构、药物角色关系、特殊配伍逻辑与值得继续理解的问题；明确禁止逐项复述页面已展示的药物、剂量、功效和主治。通用规则要求解释关系/结构/内在逻辑，区分条目明确记载与基于条目的归纳；不补造资料、剂量、来源或疗效；资料不足写 MISSING/UNKNOWN。
+- **P0 上下文与 Core-3 边界：** 当前详情页来源作为独立 primaryContext 传入，不伪造 CandidateEvidence/rankedEvidence/evidenceId。结构化 Request formatter 增加 `primaryContext.available` 和 separate-context transport 元数据；模型被明确告知该主上下文可在 rankedEvidence 为空时作为本轮依据。Adapter 只有在 App 已解析且当前会话锚点一致时才允许无 RAG 引用的 ANSWER，并把详情页 sourceId 作为 App 来源回填；既无主上下文也无 rankedEvidence 时仍 fail-closed。情境学习解读跳过泛化 RAG，TRACE retrieval 标记 NOT_APPLICABLE，避免其他条目污染当前页面事实范围。后续追问仅在活动会话锚点仍与入口锚点一致时继续携带同一主上下文；切换会话不混入旧条目。
+- **P0 变更文件与回归：** `ai_context_prompt_builder.dart`、`contextual_ai_sheet.dart`、`local_ai_interview_screen.dart`、`reasoning_knowledge_answer_adapter.dart`、`reasoning_request_prompt_formatter.dart`；测试覆盖短请求/隐藏完整资料、旧输入框编辑指令清理、方剂入口不预填资料、自动提交及 transcript 隔离、主上下文无 rankedEvidence 时的结构化响应和来源回填、缺少主上下文与证据时拒绝。架构约束新增至 `docs/ai-layered-runtime-architecture.md` §5.4。
+- **P1：情境弹层键盘避让 / PR #554：** 独立分支 `fix/contextual-ai-keyboard-avoidance`，当前代码 HEAD `016cdd9a8758e4a3f431a6cc02c5cc84c5eecec9`。全屏助手仍由 `AdaptiveHomeNavigation` 外层 Scaffold 处理 IME；只有持有情境弹层 `sheetScrollController` 的助手实例启用自己的 `resizeToAvoidBottomInset`，避免同一层重复应用 inset。Widget 回归在 402×844 视口模拟 300dp 键盘，验证输入框与发送按钮均在键盘上沿之上、键入文字保留、收起键盘后布局恢复。测试 inset 已按 devicePixelRatio 将逻辑高度转换为物理像素；不以错误单位放宽断言。
+- **CI 状态（记录时）：** PR #553 Fork License run `45763654352` SUCCESS；其 Flutter run 曾被 PR 共享并发组取消，代码最终 HEAD 的全量 Flutter/Android 验收仍待串行重跑。PR #554 Fork License run `45763637510` SUCCESS；首轮 Flutter run 暴露测试夹具把物理像素当逻辑像素的失败（期望 544dp、实测 744dp），已修正夹具并以 HEAD `016cdd9a8758e4a3f431a6cc02c5cc84c5eecec9` 启动新全量 run `45763637561`，当时仍 IN_PROGRESS。Branch validation 的 SKIPPED 不计 PASS。不得将上述 IN_PROGRESS/CANCELLED 当作通过。
+- **设备验收：** 本次没有可用的 Find N2/ColorOS 实机执行能力。P1 的实际键盘高度、输入法联动、外屏/内屏窗口变化及键盘收起恢复仍为 UNKNOWN / REQUIRED；Widget test 和 Android CI 不能替代真机验收。
+- **原始发送报错边界：** 用户最初提供了“发送时报错”现象，但没有提供 Native failureCode、实际请求载荷或设备 TRACE。本改造消除了长资料作为可编辑 user message 的错误通道，并改为独立上下文；不能据此反推历史错误一定由 token 超限、上下文长度或某一模型异常导致。真实运行仍需以失败码和 TRACE 定位。
+- **合并门槛：** 两个 PR 分开验收、分开合并；必须确认各自最终 PR HEAD 的适用 Flutter regression/static analysis、Android arm64/JVM 与 Fork License 工作流结果。SKIPPED/旧 SHA/CANCELLED 均不计 PASS。实机验收不伪称已完成，按本节保留为本地交接项。
+
