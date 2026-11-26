@@ -329,8 +329,11 @@ void main() {
   test('captures reproducible Guizhi Tang and Shanghan Lun retrieval baseline', () async {
     final first = await capture();
     final second = await capture();
-    expect(jsonEncode(second), jsonEncode(first),
-        reason: '同一 commit 的检索命中、排序、来源和上下文必须可重复');
+    expect(
+      jsonEncode(summarize(second)),
+      jsonEncode(summarize(first)),
+      reason: '同一 commit 的稳定检索命中、候选顺序、决策和上下文必须可重复；request-local ID 单独校验唯一性',
+    );
 
     final expectedFile = File('test/fixtures/ai_retrieval_golden_metadata.json');
     expect(expectedFile.existsSync(), isTrue,
