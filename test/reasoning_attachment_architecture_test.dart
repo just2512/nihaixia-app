@@ -20,6 +20,22 @@ void main() {
     expect(screen, isNot(contains('_service.sendImage(')));
     expect(screen, isNot(contains('_service.sendAudio(')));
 
+    // Audit every production Dart caller, not only the main assistant screen.
+    // LocalAiService keeps old compatibility methods for source compatibility,
+    // but no production route may invoke their unstructured Native endpoints.
+    final legacyMediaCall = RegExp(r'\\.\\s*send(?:Image|Audio)\\s*\\(');
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart') ||
+          entity.path == 'lib/services/local_ai_service.dart') {
+        continue;
+      }
+      expect(
+        legacyMediaCall.hasMatch(entity.readAsStringSync()),
+        isFalse,
+        reason: 'Unstructured legacy media call remains in ${entity.path}',
+      );
+    }
+
     // The selected mode remains App-owned. Tool mode uses its separate
     // proposal adapter but must carry the same typed attachment metadata.
     expect(screen, contains('case AssistantMode.automatic:'));
