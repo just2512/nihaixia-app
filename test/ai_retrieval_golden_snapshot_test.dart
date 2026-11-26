@@ -351,8 +351,9 @@ void main() {
     final core2 = first['core2']! as Map<String, Object?>;
     final candidateRows =
         (core2['candidateDecisionRows']! as List).cast<Map>();
+    final sourceSelection = core2['sourceSelection']! as Map;
     final orderedOrdinals =
-        (core2['orderedCandidateOrdinals']! as List).cast<int>();
+        (sourceSelection['orderedCandidateOrdinals']! as List).cast<int>();
     final presentedOrdinals =
         (core2['presentedCandidateOrdinals']! as List).cast<int>();
     expect(candidateRows, isNotEmpty);
@@ -371,7 +372,6 @@ void main() {
       isTrue,
       reason: '候选审计快照不得复制知识正文或本地路径',
     );
-    final sourceSelection = core2['sourceSelection']! as Map;
     expect(sourceSelection['strategyId'], isNotEmpty);
     expect(sourceSelection['strategyVersion'], isNotEmpty);
     expect(
