@@ -1,5 +1,7 @@
 # AI 能力静态/动态审计报告
 
+> **历史审计快照，非当前范围基线（2026-11-26 纠偏）**：本文审计日期为 2026-11-15，正文中 B / RedFlag 的 `PARTIAL / RELEASE BLOCKED`、自然语言临床 detector、医学词表/阈值/处置文案签审及发布阻断，均是当时的历史设计和审计状态，已被 2026-11-26 的产品定位纠偏取代。当前临床红旗门禁状态为 **NOT_APPLICABLE**：不建设临床 detector，不要求医学背景人员签审或留存审批记录，不阻断模型调用、业务路由或版本发布。当前准则见 `docs/ai-capability-audit.md §17.1`、`docs/ai-modernization-execution-ledger.md §119`、`docs/ai-redflag-entrypoint-audit.md` 和 `docs/ai-redflag-preflight-policy.md`。
+
 - 审计日期：2026-11-15（PR #169/#170/#171/#172 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
 - 最新复核基线：`master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`
@@ -1289,3 +1291,12 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 对已有且可打开的条目，不补充外部纸本版本/卷页，不把外部元数据未核验标成知识库 MISSING，不重复审核已审核知识库。
 - 只有本地条目不存在、检索未命中/失败、sourceId 无法解析/打开，或回答所需内容在该条目中确实为空时，才说明对应本地资料缺失。
 - C 保持 PARTIAL 的理由只限于黄金集揭示的真实召回覆盖、相关性、排序、上下文与引用链路问题；不再把旧 bibliographic locator 缺项算进剩余工作。
+
+## 22. 2026-11-26 产品范围纠偏与当前状态
+
+- 本报告早期 B 工作流关于临床 RedFlag detector、医学词表/阈值/处置文案签审、医生审批、全模式 fail-closed 和 RELEASE BLOCKED 的判断，均为 2026-11-15 及此前的历史快照；不代表当前产品状态。
+- 当前产品是中医学习辅助工具，不是医疗诊断或临床分诊软件。临床 RedFlag detector、临床风险等级、医学签审及审批记录均为 NOT_APPLICABLE，不建设、不排期、不作为模型调用、工具执行或发布的前置条件。
+- 2026-11-26 已从 Flutter 助手入口和 LocalAiService 移除临床预检与 transport 参数；Android Native 模型调用不再经过 Native 临床 detector boundary。删除了未投入生产的 Dart Gate/Preflight、Native boundary 及专属测试夹具。
+- 保留固定、简明的一般性急重症求助提醒；保留通用输入/附件/权限/工具参数校验、App 确定性规则执行、结果/来源/协议校验、会话恢复状态校验。它们不是临床红旗门禁。
+- Find N2 TRACE 仍按真实设备结果验收；新版本不再要求或生成临床 PREFLIGHT/RED_FLAG 阶段。旧 TRACE 可作为历史数据读取。
+- 本次分支当前 CI/测试状态需以 PR 精确 HEAD 的 workflow 结果为准；本报告不预先宣称 PASS。
