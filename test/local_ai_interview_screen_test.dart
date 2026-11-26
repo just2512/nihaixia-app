@@ -6208,6 +6208,8 @@ void main() {
       reason: '第 20 轮应能读取此前知识追问形成的会话记忆',
     );
 
+    await tester.ensureVisible(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('切换助手角色'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('工具助手').last);
