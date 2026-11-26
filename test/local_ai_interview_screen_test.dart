@@ -84,8 +84,11 @@ class _MemoryConversationStore implements AssistantConversationStore {
     String? metadata,
     String? invocationKey,
   }) async {
-    if (invocationKey != null) {
-      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    if (invocationKey != null &&
+        (_messages[conversationId] ?? const <Map<String, Object?>>[]).any(
+          (row) => row['invocation_key'] == invocationKey,
+        )) {
+      throw StateError('DUPLICATE_TEST_INVOCATION_KEY');
     }
     if (failNextSingleMessageSave) {
       failNextSingleMessageSave = false;
@@ -98,6 +101,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
       'role': role,
       'content': content,
       'metadata': metadata,
+      'invocation_key': invocationKey,
     });
     final conversation = _conversations[conversationId];
     if (conversation != null) {
@@ -746,6 +750,92 @@ class _TextSendService extends LocalAiService {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
     return sendMessage(text, conversationId: conversationId);
+  }
+}
+
+class _StructuredToolProposalService extends _TextSendService {
+  _StructuredToolProposalService()
+      : super(
+          intentResolution: const LocalAiIntentResolution(
+            action: LocalAiIntentAction.none,
+          ),
+        );
+
+  int proposalCalls = 0;
+  int resultExplanationCalls = 0;
+
+  @override
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final separator = reasoningContext.indexOf('\n');
+    if (separator < 0) throw StateError('missing reasoning envelope');
+    final envelope = jsonDecode(
+      reasoningContext.substring(separator + 1),
+    ) as Map<String, dynamic>;
+    final allowlist = (envelope['actionCapabilityAllowlist'] as List<dynamic>)
+        .cast<String>();
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    late final Map<String, Object?> payload;
+    if (allowlist.isNotEmpty) {
+      proposalCalls++;
+      payload = {
+        'schemaVersion': 1,
+        'requestId': requestId,
+        'responseKind': 'ACTION_PROPOSAL',
+        'status': 'COMPLETED',
+        // This untrusted proposal narrative must never be displayed or persisted.
+        'segments': ['PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'],
+        'referencedEvidenceIds': <String>[],
+        'unknowns': <String>[],
+        'conflicts': <String>[],
+        'omittedEvidenceIds': <String>[],
+        'actionProposal': {
+          'proposalId': 'ui-proposal-001',
+          'capabilityId': 'dosage',
+          'arguments': {
+            'value': '3',
+            'unit': '两',
+            'standard': 'han',
+          },
+        },
+      };
+    } else {
+      resultExplanationCalls++;
+      final toolEvidence = rankedEvidence
+          .map((item) => item['evidenceId'] as String)
+          .where((id) => id.startsWith('tool-result-'))
+          .single;
+      payload = {
+        'schemaVersion': 1,
+        'requestId': requestId,
+        'responseKind': 'ANSWER',
+        'status': 'COMPLETED',
+        'segments': ['基于 App 已验证换算结果的结构化解释。'],
+        'referencedEvidenceIds': [toolEvidence],
+        'unknowns': <String>[],
+        'conflicts': <String>[],
+        'omittedEvidenceIds': <String>[],
+      };
+    }
+    final reply = jsonEncode(payload);
+    sentConversationIds.add(conversationId);
+    sentTexts.add(text);
+    sentContexts.add(context);
+    structuredReasoningContexts.add(reasoningContext);
+    _pendingReasoningReplies[requestId] = reply;
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: 'cpu',
+      traceId: traceId,
+    );
   }
 }
 
@@ -5844,6 +5934,147 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('工具助手动作提案必须显式确认，并将 Ledger 回读结果作为只读下一轮输入', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _StructuredToolProposalService();
+    var executionCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          initialMode: AssistantMode.tools,
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (arguments) async {
+            executionCalls++;
+            return DosageToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      '讲讲两、斤、克之间的度量衡关系',
+    );
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (var attempt = 0; attempt < 100 && service.proposalCalls == 0; attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(service.proposalCalls, 1);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
+    expect(executionCalls, 0, reason: '解析出 ACTION_PROPOSAL 不能直接调用工具');
+    expect(store._messages.values.single.where((row) => row['invocation_key'] != null), isEmpty);
+
+    await tester.tap(find.text('确认执行'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (var attempt = 0;
+          attempt < 100 && service.resultExplanationCalls == 0;
+          attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(executionCalls, 1);
+    expect(service.resultExplanationCalls, 1);
+    expect(service.sentTexts, hasLength(2));
+    final firstEnvelope = jsonDecode(
+      service.structuredReasoningContexts.first.split('\n').last,
+    ) as Map<String, dynamic>;
+    final secondEnvelope = jsonDecode(
+      service.structuredReasoningContexts.last.split('\n').last,
+    ) as Map<String, dynamic>;
+    expect(firstEnvelope['actionCapabilityAllowlist'], isNotEmpty);
+    expect(secondEnvelope['actionCapabilityAllowlist'], isEmpty);
+    expect(secondEnvelope['executionResults'], hasLength(1));
+    expect(
+      (secondEnvelope['executionResults'] as List).single['status'],
+      'SUCCEEDED',
+    );
+    expect(
+      (secondEnvelope['executionResults'] as List).single['resultValues'],
+      containsPair('换算结果', '23.438克'),
+    );
+    expect(
+      (secondEnvelope['rankedEvidence'] as List)
+          .any((item) => (item as Map)['evidenceId'].toString().startsWith('tool-result-')),
+      isTrue,
+    );
+    expect(service.rejectedReasoningRequestIds, hasLength(1));
+    expect(
+      service.finalizedReasoningAnswers,
+      contains('基于 App 已验证换算结果的结构化解释。'),
+    );
+    expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
+    expect(find.textContaining('基于 App 已验证换算结果的结构化解释。'), findsOneWidget);
+
+    final ledgerRows = store._messages.values.single
+        .where((row) => row['invocation_key'] != null)
+        .toList(growable: false);
+    expect(ledgerRows, hasLength(2));
+    expect(ledgerRows.map((row) => row['content']), containsAll([
+      'TOOL_INVOCATION_CLAIMED',
+      'TOOL_INVOCATION_TERMINAL',
+    ]));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('取消工具助手动作提案不创建 claim 也不调用执行器', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _StructuredToolProposalService();
+    var executionCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          initialMode: AssistantMode.tools,
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (arguments) async {
+            executionCalls++;
+            return DosageToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      '讲讲两、斤、克之间的度量衡关系',
+    );
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (var attempt = 0; attempt < 100 && service.proposalCalls == 0; attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '取消'));
+    await tester.pumpAndSettle();
+
+    expect(executionCalls, 0);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.finalizedReasoningAnswers.single, contains('已取消本次工具动作'));
+    expect(service.rejectedReasoningRequestIds, isEmpty);
+    expect(store._messages.values.single.where((row) => row['invocation_key'] != null), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
     // Mirror main.dart's startup preload before the widget retrieves formulas.
