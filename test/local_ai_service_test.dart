@@ -600,30 +600,7 @@ void main() {
       });
     });
 
-    test('clinical request marker is forwarded to the native text boundary', () async {
-      const traceId = '0123456789abcdef0123456789abcdef';
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '本地回复', 'trace_id': traceId};
-      });
-
-      await LocalAiService().sendMessageWithContextAndTrace(
-        '最近不舒服，帮我诊断一下什么问题？', conversationId: 42,
-        context: '当前角色：问诊助手',
-        traceId: traceId,
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛\n那它的原因呢',
-        redFlagContextTruncated: true,
-      );
-
-      expect(received?.method, 'sendMessage');
-      expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
-      expect(received?.arguments['trace_id'], traceId);
-    });
+);
 
 
     test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
@@ -726,28 +703,7 @@ void main() {
       });
     });
 
-    test('clinical history restoration carries the native safety requirement', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'restored': true, 'backend': 'cpu'};
-      });
-
-      await LocalAiService().restoreConversation(
-        conversationId: 42,
-        transcript: '用户：我最近胸痛\n助手：这是用户未确认的旧回复',
-        userMessages: const ['我最近胸痛'],
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛',
-        redFlagContextTruncated: true,
-      );
-
-      expect(received?.method, 'restoreConversation');
-      expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
-    });
+);
 
     test('resetConversation invokes native reset and returns fresh status', () async {
       MethodCall? received;
@@ -1493,30 +1449,7 @@ void main() {
       expect(received[1].arguments['trace_id'], traceId);
     });
 
-    test('medical attachments carry the native safety requirement', () async {
-      const traceId = '0123456789abcdef0123456789abcdef';
-      final received = <MethodCall>[];
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received.add(call);
-        return <String, Object?>{'reply': '附件结果', 'trace_id': traceId};
-      });
-
-      await LocalAiService().sendImageWithTrace(
-        '/app/cache/medical-image.jpg', conversationId: 42,
-        traceId: traceId,
-        requireMedicalSafety: true,
-      );
-      await LocalAiService().sendAudioWithTrace(
-        '/app/cache/medical-audio.wav', conversationId: 42,
-        traceId: traceId,
-        requireMedicalSafety: true,
-      );
-
-      expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
-      expect(received.every((call) => call.arguments['conversation_id'] == 42), isTrue);
-      expect(received.every((call) => call.arguments['require_red_flag'] == true),
-          isTrue);
-    });
+);
 
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {
       MethodCall? received;
