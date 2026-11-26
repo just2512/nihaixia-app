@@ -754,6 +754,18 @@ class _TextSendService extends LocalAiService {
   }
 }
 
+class _ToolProposalRouteObserver extends NavigatorObserver {
+  Route<dynamic>? toolScreenRoute;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route.settings.name == 'tool-proposal-screen') {
+      toolScreenRoute = route;
+    }
+  }
+}
+
 class _StructuredToolProposalService extends _TextSendService {
   _StructuredToolProposalService()
       : super(
@@ -6028,6 +6040,9 @@ void main() {
     );
     expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
     expect(find.textContaining('基于 App 已验证结果的结构化解释。'), findsOneWidget);
+    expect(find.text('本轮检索资料'), findsOneWidget);
+    await tester.tap(find.text('本轮检索资料'));
+    await tester.pumpAndSettle();
     expect(find.text('App 工具执行结果'), findsOneWidget);
     await tester.tap(find.text('App 工具执行结果'));
     await tester.pumpAndSettle();
@@ -6109,29 +6124,46 @@ void main() {
   testWidgets('确认面板期间页面被卸载时拒绝动作提案且不执行工具', (tester) async {
     final store = _MemoryConversationStore();
     final service = _StructuredToolProposalService();
+    final routeObserver = _ToolProposalRouteObserver();
     var executionCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
-          initialMode: AssistantMode.tools,
-          audioRecorder: _NoopLocalAiAudioRecorder(),
-          conversationStore: store,
-          service: service,
-          testHeadlessToolExecutor: (arguments) async {
-            executionCalls++;
-            return AssistantToolResult(
-              toolId: 'yuxiaji_omen',
-              title: '玉匣灵兆',
-              values: const {'签文': '第七签'},
-              sourceIds: const ['local-engine:yuxiaji-omen:v1'],
-              arguments: arguments,
-            );
-          },
+        navigatorObservers: [routeObserver],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: 'tool-proposal-screen'),
+                    builder: (_) => LocalAiInterviewScreen(
+                      redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+                      initialMode: AssistantMode.tools,
+                      audioRecorder: _NoopLocalAiAudioRecorder(),
+                      conversationStore: store,
+                      service: service,
+                      testHeadlessToolExecutor: (arguments) async {
+                        executionCalls++;
+                        return AssistantToolResult(
+                          toolId: 'yuxiaji_omen',
+                          title: '玉匣灵兆',
+                          values: const {'签文': '第七签'},
+                          sourceIds: const ['local-engine:yuxiaji-omen:v1'],
+                          arguments: arguments,
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('打开工具助手测试页'),
+            ),
+          ),
         ),
       ),
     );
+    await tester.tap(find.text('打开工具助手测试页'));
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -6150,9 +6182,16 @@ void main() {
 
     expect(service.proposalCalls, 1);
     expect(find.byType(AlertDialog), findsOneWidget);
+    expect(routeObserver.toolScreenRoute, isNotNull);
 
-    // Removing the route owner while confirmation is pending must fail closed.
-    await tester.pumpWidget(const SizedBox.shrink());
+    // Remove only the screen route; keep the root Navigator/dialog alive so
+    // the pending confirmation future completes after its owner is disposed.
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.removeRoute(routeObserver.toolScreenRoute!);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('确认执行'));
     await tester.pumpAndSettle();
 
     expect(executionCalls, 0);
