@@ -589,7 +589,6 @@ class _TextSendService extends LocalAiService {
     _pendingReasoningReplies.remove(requestId);
   }
 
-
   @override
   Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async =>
       const LocalAiSymptomDraft();
@@ -917,7 +916,6 @@ class _DeferredModelSetupService extends LocalAiService {
   }
 }
 
-
 class _ModelControlFailureService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -1190,8 +1188,6 @@ class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
   }
 }
 
-
-
 class _DelayedHistoryConversationStore extends _MemoryConversationStore {
   final Completer<void> firstReadGate = Completer<void>();
 
@@ -1358,7 +1354,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
@@ -2148,7 +2144,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(conversationStore: _store, 
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -2454,7 +2450,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
           ),
@@ -2835,8 +2831,6 @@ void main() {
     },
   );
 
-
-
   testWidgets('快速切换历史会话时较早的异步读取不能覆盖较新的选择', (tester) async {
     final store = _DelayedHistoryConversationStore();
     final firstId = await store.createAssistantConversation(title: '较早会话');
@@ -2986,7 +2980,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: _UnexpectedStatusFailureService(),
           ),
         ),
@@ -3012,7 +3006,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(conversationStore: _store, 
+            home: LocalAiInterviewScreen(conversationStore: _store,
               service: service,
               imagePicker: picker,
             ),
@@ -3164,7 +3158,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(conversationStore: _store, 
+            home: LocalAiInterviewScreen(conversationStore: _store,
               service: service,
               imagePicker: picker,
             ),
@@ -3446,7 +3440,6 @@ void main() {
     expect(service.sentTexts, isEmpty);
     expect(_store.createConversationCalls, 1);
   });
-
 
   testWidgets('情境助手仅复用完整锚点一致的历史会话，并将追问继续绑定同一锚点', (tester) async {
     const contextRef = {
@@ -3845,8 +3838,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-
-
   testWidgets('五运六气未提供日期时由 App 使用设备本地日期在对话内执行',
       (tester) async {
     final now = DateTime.now();
@@ -3996,8 +3987,6 @@ void main() {
       everyElement(AiTraceStatus.succeeded),
     );
   });
-
-
 
   testWidgets('E4B 只补充有逐字证据的八字自然语言参数，再交给 App 校验执行',
       (tester) async {
@@ -5087,7 +5076,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-
   testWidgets('梅花数字起卦在助手对话内执行并自动解释真实结果', (tester) async {
     final store = _MemoryConversationStore();
     final service = _TextSendService();
@@ -5752,7 +5740,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-
   testWidgets('黄帝四季歌在当前助手对话分轮追问、执行本地结果并解释，不打开页面',
       (tester) async {
     final service = _TextSendService();
@@ -5851,7 +5838,6 @@ void main() {
     expect(metadata.sourceIds, contains('local-data:huangdi-siji-ge'));
     expect(tester.takeException(), isNull);
   });
-
 
   testWidgets('工具助手动作提案必须显式确认，并将 Ledger 回读结果作为只读下一轮输入', (tester) async {
     final store = _MemoryConversationStore();
@@ -6109,7 +6095,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-
   testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
     // Mirror main.dart's startup preload before the widget retrieves formulas.
     await tester.runAsync(() => FormulaRepository.load());
@@ -6249,7 +6234,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-
   testWidgets('子午流注在助手对话中追问时刻、执行四法并解释真实结果',
       (tester) async {
     final store = _MemoryConversationStore();
@@ -6356,8 +6340,6 @@ void main() {
     ]);
     expect(tester.takeException(), isNull);
   });
-
-
 
   testWidgets('周公解梦在对话中追问缺参、处理候选并接收补充情节', (tester) async {
     final service = _TextSendService();
@@ -6471,7 +6453,6 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
-
 
   testWidgets('受生债在当前助手对话逐轮补齐参数，执行原表格并解释已校验结果',
       (tester) async {
@@ -6852,7 +6833,6 @@ void main() {
 
 }
 
-
 testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文资产',
       (tester) async {
     const sourceId = 'shanghan:assets/shanghan/clause_001.md';
@@ -6950,7 +6930,6 @@ testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文
     );
     expect(tester.takeException(), isNull);
   });
-
 
   testWidgets('自动模式将已命中的方剂实体与可回查资料共同路由为学习助手', (tester) async {
     final store = _MemoryConversationStore();
@@ -7067,7 +7046,6 @@ testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文
     }
     expect(tester.takeException(), isNull);
   });
-
 
 }
 
