@@ -48,7 +48,7 @@ PR #77 已合并：真实 SQLite FFI 测试成功写入两条消息；使用 SQL
 - Native transcript、Flutter UI、SQLite transcript 的逐轮一致性仍缺少设备 TRACE。
 - Find N2 GPU/CPU 各至少 20 轮、图片/语音、进程中断恢复均未取得本轮真实 TRACE。
 
-## 3. B：红旗门禁（历史章节，已废止）（历史章节，已废止）
+## 3. B：红旗门禁（历史章节，已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
@@ -194,7 +194,7 @@ F 仍 PARTIAL。
 - PR #77 已合并：assistant turn 的双消息持久化原子性测试。
 - 尚缺 Find N2 真机 GPU/CPU 长轮次、图片/语音、多轮切换、进程重启与 TRACE 证据；设备验收保持 UNKNOWN。
 
-### B. 医学红旗安全：PARTIAL / RELEASE BLOCKED（历史章节，已废止）（历史章节，已废止）
+### B. 医学红旗安全：PARTIAL / RELEASE BLOCKED（历史章节，已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
@@ -387,7 +387,7 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 - 不新增数据库表/列，不自动重放 UNKNOWN 请求，不改变用户输入保留、手动重试和历史恢复语义。
 - F 仍 PARTIAL：该增量不是所有模式的完整 TRACE；结构化问诊/工具/恢复的端到端失败终态与 Find N2 真机 TRACE 仍缺。
 
-### 17.3 B：红旗门禁生产入口复核（历史章节，已废止）（历史章节，已废止）
+### 17.3 B：红旗门禁生产入口复核（历史章节，已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
@@ -422,7 +422,7 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 
 ---
 
-## 18. 2026-11-12 PR #109 集成后红旗门禁复核（历史章节，已废止）（历史章节，已废止）
+## 18. 2026-11-12 PR #109 集成后红旗门禁复核（历史章节，已废止）
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 > [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
