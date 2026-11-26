@@ -4766,3 +4766,50 @@ PR HEAD 门禁证据：
 - **缺口：** 24,000 UTF-16 字符补充上下文上限不是 token budget；自动压缩和全部跨进程恢复仍未闭合；Core-2 排序策略仍需稳定的候选快照对照；Core-3 其他模式未全部迁移；Core-4 tools-mode 生产生命周期需以精确 HEAD 合并验收；Core-5 跨层 E2E/Find N2 TRACE 未完成。
 - **状态：** Core-0 文档契约/源码映射完成本轮冻结；Core-1/2/3/4/5 仍按各自实际代码及验收证据保持 PARTIAL/UNKNOWN。工作流 I（Markdown 书架）继续 DEFERRED / NOT_AUTHORIZED；Find N2 设备验收留到云端任务收尾后本地执行。
 - **变更范围：** 仅更新本架构文档和执行台账；不改变生产代码、SQLite schema、Native ai_access/AiModelAccessGate、检索排序行为或既有 E4B GPU/CPU fallback。
+
+ 
+---
+
+## 119. 2026-11-26 当前主线五层状态复核与 Native 多轮 / Core-5 并行修复
+
+### 119.1 基线与主线集成事实
+
+- **当前 master 基线：** `a7f2672be1f40ba2c4408ac3381046126b9c4167`。本节是截至该 master 的核对快照；开放 PR 不计入主线已完成能力。
+- **Core-4 生产接线：** PR #561 已合并（merge `9ec0f2886b6bcecd3d447e859c3adf3e4aac09cf`），提供确认后 one-shot 执行协调与持久化 Ledger；PR #566 已合并（merge `7ccb6f0ab6931df503524cdcc2b0a9620b4d7601`），把 Tools mode 生产请求、App 确认 UI、Headless Dispatcher 与结果回流接线。该路径只允许 Gate 登记的四项 capability，不等于全部 Router 工具都进入模型执行权限。
+- **Core-2 结构化本地证据：** PR #568 已合并（merge `d7fe128537cbdea2707538e7b31dd910b3d3610a`）。`LocalStructuredEvidencePipeline` 将 formula、herb、acupuncture、acupoint、Neijing 结构化 legacy block 适配为 CandidateEvidence，并保留原 builder 文本/顺序；CandidateEvidence source identity 和 KEEP/DROP 进入黄金快照。该适配不改变旧匹配策略，不表示语义排序或医学真实性判定。
+- **Core-3 跨模式普通文本接线：** PR #573 已合并，当前 master 即 merge `a7f2672be1f40ba2c4408ac3381046126b9c4167`。Automatic、Consultation、Learning、Metaphysics 普通文本对话使用统一 ReasoningRequest/Response 与 Native finalize/reject 双阶段提交；Tools mode 使用单独 ACTION_PROPOSAL/执行结果路径。图片/音频、转写、症状草稿抽取、八字 slot 抽取和意图分类等任务型入口仍存在独立 DTO/Native 入口，不能据此写成全模型入口统一完成。
+- **Core-0：** 五层职责、DTO、字段所有权、Native 通道、失败语义和测试锚点已冻结；只关闭契约/源码映射文档任务，不代表 Core-1 至 Core-5 完成。
+ 
+### 119.2 Core-1 Native 多轮请求持久化（PR #575，未合并）
+
+- **分支：** `work/core1-persisted-reasoning-turn-ledger-core3-20261126`，基于当前 master `a7f2672be1f40ba2c4408ac3381046126b9c4167`。
+- **当前 HEAD：** `9fe364df135e42be122259043c408485b78779b7`；PR #575 仍 OPEN，mergeable；不将未合并代码计入 master。
+- **实现范围：** 新增 `AssistantReasoningTurnLedger`，复用现有 `assistant_messages` 隐藏 `role=tool` 行和已有唯一 invocation_key，记录 PENDING / FINALIZED / REJECTED / UNKNOWN / SUPERSEDED；请求身份绑定 conversation、mode 和 userText；Native 进程中断后未完成请求转 UNKNOWN，不自动重放；最终状态与可见 transcript 不一致时可按已验证终态重建。隐藏请求/执行 Ledger 不得进入普通 SessionStateSnapshot 记忆内容。
+- **CI：** 精确 PR HEAD 的 Flutter regression job `139978452194` SUCCESS；Fork License run `45839888050` SUCCESS；Android arm64 CI verification job `139983387397` 在本节记录时仍 IN_PROGRESS。PR Branch validation 为 SKIPPED，不计 PASS；旧 HEAD `b759509...` 的失败/成功结果不替代当前 HEAD。
+- **首轮故障修复：** 旧测试 fake `_NoopAssistantConversationStore` 对 invocationKey 抛出 UnsupportedError，且历史读取恒为空，造成跨层 handoff 六处测试未进入模型调用。当前 fake 增加 conversation-scoped 幂等 invocationKey 写入和历史读取；没有改生产失败关闭逻辑，也没有删除测试。
+- **状态：PARTIAL / PR CI 部分通过。** Android arm64 验收完成前不得合并；设备进程恢复、E4B KV 多轮和真实 TRACE 仍 UNKNOWN / LOCAL ONLY。
+
+### 119.3 Core-5 20 轮知识追问 + 工具执行 E2E（PR #577，未合并）
+
+- **分支：** `work/core5-layered-e2e-20turn-20261126`，当前堆叠在 Core-1 PR #575 分支上；#575 合并后必须将 #577 重定向到 master 并重新跑精确 HEAD CI。
+- **当前 HEAD：** `91fa25c1b90d1aa15f7b957737f0a7c0819e2f7d`；PR #577 OPEN。当前 HEAD 的工作流尚无完成结果，不能标记 PASS。
+- **覆盖目标：** 同一 conversation 连续 20 轮知识追问；每轮 requestId 唯一且 sessionId 绑定 conversation；第 20 轮 session state 可回忆前序内容；Native reasoning pending/terminal 和 tool claim/terminal 隐藏行不进入 SessionStateSnapshot；随后一次 Tools mode ACTION_PROPOSAL 必须经过显式确认、durable claim、单次 Dispatcher 执行和 Ledger 安全读回；真实 executionResults 作为只读下一轮输入。
+- **CI 故障迭代：** 初次失败为 20 轮后 ListView 懒加载导致顶部角色选择器未在 widget tree 构建；测试补充收起 IME、滚回列表顶部并确认 selector 存在。随后出现“第七签”在自然语言答复中不可见的错误预期：App 工具真实结果并不直接拼接为模型答案，而是通过 App-owned evidence source/backlink 单独读取；测试改为打开当前 assistant reply 的“本轮检索资料”→“App 工具执行结果”并核对 Ledger 结果。下一次 CI 发现 20 轮后同名来源标签有三个实例，Finder 不应要求唯一匹配，现改为选择最后一轮 assistant reply 的 `.last` source entry。
+- **上次失败 HEAD：** `a439b8e656a96eb9ce32b03ddf982042006186c7`，Flutter Branch validation changed-test job `139983835655` 因 3 个相同“本轮检索资料”标签导致 Finder 不唯一而 FAILURE；该运行的全量 Flutter regression 与 Android arm64 job 为 SKIPPED，不能计 PASS；Fork License run `45841438053` SUCCESS。当前新 HEAD `91fa25c...` 需要重新验收。
+- **状态：NOT PASSED / CI PENDING。** 当前 PR 仅增加端到端测试，不修改生产 UI 或工具执行逻辑；不以改小断言、删除来源验证或降低轮数换取通过。
+
+### 119.4 五层综合状态与下一顺序
+
+| 工作项 | 当前状态 | 放行条件 |
+|---|---|---|
+| Core-0 契约与源码映射 | COMPLETE（文档层） | 生产实现状态按本节后续 master 更新，不把文档完成视为运行时完成 |
+| Core-1 会话记忆 | PARTIAL | #575 精确 HEAD Flutter regression + Android arm64/JVM + Fork License 全部适用检查成功；合并后再做恢复边界回归 |
+| Core-2 召回与排序 | PARTIAL | 结构化本地来源已证据化，普通文本请求已消费 rankedEvidence；后续只做可证明的策略审计/预算诊断，不为增加模块而重写检索 |
+| Core-3 语言推理 | PARTIAL | 普通文本多模式已接入；继续逐项审计任务型 Native/模型入口及其旁路，确认统一安全门禁、请求身份、记忆隔离、失败终态和 TRACE |
+| Core-4 业务执行 | PARTIAL | 四项 capability 的授权到结果回流已接线；逐项审计其余工具的 typed schema、参数来源、敏感级别、副作用、幂等、取消、超时与 UNKNOWN |
+| Core-5 端到端 | NOT PASSED | #577 最新 HEAD 全量 Flutter regression、Analyze/changed-test pairing、Android arm64/JVM、Fork License 精确 CI 通过；随后重定向 master 重跑；最后由本地 Find N2 做真实 E4B/进程恢复 TRACE |
+
+- **当前不合并：** #575 的 Android arm64 job 尚在运行；#577 最新 HEAD 尚无 CI 结果。PR merge gate 未满足。
+- **执行顺序：** 先取得 #575 当前 HEAD 所有适用 CI 结果，再合并 #575；随后把 #577 重定向 master，处理 merge base/diff，重跑全部适用 CI；接着逐项处理 Core-3 任务型调用旁路和 Core-4 剩余 capability 审计；最后更新最终交接文档并由用户本地完成 Find N2 设备验收。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED，不与核心五层收尾混合。
+- **设备策略：** 实机验收只在云端代码、文档与自动验收完成后执行；设备 UNKNOWN 不阻断云端实现，但云端 CI 也不得代替设备 PASS。
