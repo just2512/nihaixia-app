@@ -10082,7 +10082,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         return;
       }
-      _inputController.clear();
+      if (turnResponse.protocolValidated) {
+        _inputController.clear();
+      }
       final nativeRuntimeUnavailable =
           refreshedStatus != null && !refreshedStatus.ready;
       setState(() {
