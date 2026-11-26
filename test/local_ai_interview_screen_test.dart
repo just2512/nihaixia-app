@@ -3393,10 +3393,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    const keyboardHeight = 300.0;
+    tester.view.viewInsets = FakeViewPadding(
+      bottom: keyboardHeight * tester.view.devicePixelRatio,
+    );
     await tester.pumpAndSettle();
 
-    final keyboardTop = size.height - 300;
+    final keyboardTop = size.height - keyboardHeight;
     expect(tester.getRect(find.byType(TextField)).bottom, lessThanOrEqualTo(keyboardTop));
     expect(tester.getRect(find.byTooltip('发送')).bottom, lessThanOrEqualTo(keyboardTop));
 
