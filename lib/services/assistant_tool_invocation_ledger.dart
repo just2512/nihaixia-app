@@ -7,6 +7,7 @@ enum AssistantToolInvocationClaimStatus {
   claimed,
   alreadyClaimed,
   alreadyTerminal,
+  conflictingClaim,
 }
 
 enum AssistantToolInvocationTerminalWriteStatus {
@@ -72,6 +73,14 @@ class AssistantToolInvocationLedger {
       invocationId: invocationId,
     );
     if (existing.claim != null) {
+      final claim = existing.claim!;
+      if (claim.conversationId != conversationId ||
+          claim.requestId != requestId ||
+          claim.toolId != toolId ||
+          claim.capabilityId != capabilityId ||
+          !_sameStringMap(claim.arguments, arguments)) {
+        return AssistantToolInvocationClaimStatus.conflictingClaim;
+      }
       return existing.terminal == null
           ? AssistantToolInvocationClaimStatus.alreadyClaimed
           : AssistantToolInvocationClaimStatus.alreadyTerminal;
@@ -106,6 +115,14 @@ class AssistantToolInvocationLedger {
         invocationId: invocationId,
       );
       if (raced.claim != null) {
+        final claim = raced.claim!;
+        if (claim.conversationId != conversationId ||
+            claim.requestId != requestId ||
+            claim.toolId != toolId ||
+            claim.capabilityId != capabilityId ||
+            !_sameStringMap(claim.arguments, arguments)) {
+          return AssistantToolInvocationClaimStatus.conflictingClaim;
+        }
         return raced.terminal == null
             ? AssistantToolInvocationClaimStatus.alreadyClaimed
             : AssistantToolInvocationClaimStatus.alreadyTerminal;
@@ -311,6 +328,11 @@ class AssistantToolInvocationLedger {
     };
   }
 
+  bool _sameStringMap(Map<String, String> a, Map<String, String> b) {
+    if (a.length != b.length) return false;
+    return a.entries.every((entry) => b[entry.key] == entry.value);
+  }
+
   bool _sameTerminal(
     Map<String, Object?> existing,
     Map<String, Object?> candidate,
@@ -388,7 +410,8 @@ class _InvocationEvent {
       }
       final kind = decoded['kind'];
       if (kind == AssistantToolInvocationLedger._claimKind) {
-        if (decoded['requestId'] is! String ||
+        if (decoded['conversationId'] is! int ||
+            decoded['requestId'] is! String ||
             decoded['toolId'] is! String ||
             decoded['capabilityId'] is! String ||
             decoded['arguments'] is! Map ||
@@ -402,9 +425,7 @@ class _InvocationEvent {
         }
         return _InvocationEvent(
           claim: AssistantToolInvocationClaim(
-            conversationId: decoded['conversationId'] is int
-                ? decoded['conversationId'] as int
-                : 0,
+            conversationId: decoded['conversationId'] as int,
             invocationId: decoded['invocationId'] as String,
             requestId: decoded['requestId'] as String,
             toolId: decoded['toolId'] as String,
