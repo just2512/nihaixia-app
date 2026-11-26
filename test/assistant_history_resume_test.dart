@@ -127,6 +127,19 @@ class _HistoryResumeService extends LocalAiService {
     reasoningContext: reasoningContext,
     traceId: traceId,
   );
+
+  @override
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {}
+
+  @override
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {}
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
