@@ -7443,6 +7443,42 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('自动模式 Native finalize 确认未知时不持久化成功轮次也不重放', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService()
+      ..failReasoningFinalize = true
+      ..failReasoningReject = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.structuredReasoningContexts, hasLength(1));
+    expect(service.sentTexts, ['你好']);
+    expect(service.finalizedReasoningAnswers, isEmpty);
+    expect(service.rejectedReasoningRequestIds, isEmpty);
+    expect(
+      store._messages.values.single.where((row) => row['role'] == 'assistant'),
+      isEmpty,
+      reason: 'Native finalize 与 reject 回执都未知时，不得将该轮写成成功历史',
+    );
+    expect(find.textContaining('Native 提交确认状态未知'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('自动模式将已命中的方剂实体与可回查资料共同路由为学习助手', (tester) async {
     final store = _MemoryConversationStore();
     final service = _TextSendService();
