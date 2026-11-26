@@ -799,12 +799,8 @@ class _StructuredToolProposalService extends _TextSendService {
         'omittedEvidenceIds': <String>[],
         'actionProposal': {
           'proposalId': 'ui-proposal-001',
-          'capabilityId': 'dosage',
-          'arguments': {
-            'value': '3',
-            'unit': '两',
-            'standard': 'han',
-          },
+          'capabilityId': 'yuxiaji_omen',
+          'arguments': <String, String>{},
         },
       };
     } else {
@@ -818,7 +814,7 @@ class _StructuredToolProposalService extends _TextSendService {
         'requestId': requestId,
         'responseKind': 'ANSWER',
         'status': 'COMPLETED',
-        'segments': ['基于 App 已验证换算结果的结构化解释。'],
+        'segments': ['基于 App 已验证结果的结构化解释。'],
         'referencedEvidenceIds': [toolEvidence],
         'unknowns': <String>[],
         'conflicts': <String>[],
@@ -5951,7 +5947,16 @@ void main() {
           service: service,
           testHeadlessToolExecutor: (arguments) async {
             executionCalls++;
-            return DosageToolExecutor.execute(arguments);
+            return AssistantToolResult(
+              toolId: 'yuxiaji_omen',
+              title: '玉匣灵兆',
+              values: const {
+                '签文': '第七签',
+                '解读': '仅供文化参考',
+              },
+              sourceIds: const ['local-engine:yuxiaji-omen:v1'],
+              arguments: arguments,
+            );
           },
         ),
       ),
@@ -5960,7 +5965,7 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      '讲讲两、斤、克之间的度量衡关系',
+      '请按 App 当前时刻生成一个随机文化参考结果，并说明它的含义。',
     );
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
@@ -6006,7 +6011,7 @@ void main() {
     );
     expect(
       (secondEnvelope['executionResults'] as List).single['resultValues'],
-      containsPair('换算结果', '46.875'),
+      containsPair('签文', '第七签'),
     );
     expect(
       (secondEnvelope['rankedEvidence'] as List)
@@ -6016,15 +6021,15 @@ void main() {
     expect(service.rejectedReasoningRequestIds, hasLength(1));
     expect(
       service.finalizedReasoningAnswers,
-      contains('基于 App 已验证换算结果的结构化解释。'),
+      contains('基于 App 已验证结果的结构化解释。'),
     );
     expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
-    expect(find.textContaining('基于 App 已验证换算结果的结构化解释。'), findsOneWidget);
+    expect(find.textContaining('基于 App 已验证结果的结构化解释。'), findsOneWidget);
     expect(find.text('App 工具执行结果'), findsOneWidget);
     await tester.tap(find.text('App 工具执行结果'));
     await tester.pumpAndSettle();
-    expect(find.text('工具执行记录：剂量换算'), findsOneWidget);
-    expect(find.textContaining('46.875'), findsOneWidget);
+    expect(find.text('工具执行记录：玉匣灵兆'), findsOneWidget);
+    expect(find.textContaining('第七签'), findsOneWidget);
     await tester.tap(find.text('关闭'));
     await tester.pumpAndSettle();
 
@@ -6054,7 +6059,16 @@ void main() {
           service: service,
           testHeadlessToolExecutor: (arguments) async {
             executionCalls++;
-            return DosageToolExecutor.execute(arguments);
+            return AssistantToolResult(
+              toolId: 'yuxiaji_omen',
+              title: '玉匣灵兆',
+              values: const {
+                '签文': '第七签',
+                '解读': '仅供文化参考',
+              },
+              sourceIds: const ['local-engine:yuxiaji-omen:v1'],
+              arguments: arguments,
+            );
           },
         ),
       ),
@@ -6063,7 +6077,7 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      '讲讲两、斤、克之间的度量衡关系',
+      '请按 App 当前时刻生成一个随机文化参考结果，并说明它的含义。',
     );
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
