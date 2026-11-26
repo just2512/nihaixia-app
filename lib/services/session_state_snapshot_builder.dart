@@ -110,6 +110,10 @@ class SessionStateSnapshotBuilder {
     final evidenceReferences = <SessionEvidenceReference>[];
     final seenReferenceKeys = <String>{};
     for (final message in validMessages) {
+      // Hidden tool-role invocation ledger events are execution state, not
+      // user/assistant memory or retrieval provenance. They are consumed only
+      // by AssistantToolInvocationLedger and must never enter Native prompts.
+      if (message.role != 'user' && message.role != 'assistant') continue;
       final rawMetadata = message.metadata;
       if (rawMetadata == null || rawMetadata.trim().isEmpty) continue;
       final metadata = AssistantMessageMetadata.decode(rawMetadata);
