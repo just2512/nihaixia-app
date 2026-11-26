@@ -211,7 +211,7 @@ class ReasoningKnowledgeAnswerAdapter {
       if (response.attachmentResult?.attachmentType == 'image')
         '照片可直接观察到的内容：${response.attachmentResult!.observations.join('；')}',
       if (response.attachmentResult?.attachmentType == 'audio')
-        '语音转写草稿（尚待用户核对，未作为用户确认事实）：\\n${response.attachmentResult!.transcriptDraft}',
+        '语音转写草稿（尚待用户核对，未作为用户确认事实）：\n${response.attachmentResult!.transcriptDraft}',
       ...response.segments.map((item) => item.trim()).where((item) => item.isNotEmpty),
       if (response.unknowns.isNotEmpty)
         '待确认：${response.unknowns.join('；')}',
