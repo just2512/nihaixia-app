@@ -91,7 +91,6 @@ AI 功能属于本 Fork 自有修改层，**现有 AI 实现和未来 AI 实现�
 - `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTraceIdPolicy.kt`
 - `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt`
 - `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiWavPolicy.kt`
-- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundary.kt`
 - `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicy.kt`
 
 ## 3. 页面中的 AI 功能接入

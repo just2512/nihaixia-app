@@ -161,9 +161,9 @@ class AssistantConversationOrchestrator {
         ].any(text.contains);
   }
 
-  // These are routing cues only: a match requires a reviewed safety
-  // assessment; it does not label urgency or provide a medical conclusion.
-  // The red-flag examples below mirror the normative audit boundary.
+  // These are ordinary intent-routing cues. They keep personal health narratives
+  // out of metaphysics/tool-selection classification; they do not assess urgency
+  // or create a clinical safety gate.
   static const _symptomCues = [
     '头痛',
     '头晕',
@@ -206,17 +206,6 @@ class AssistantConversationOrchestrator {
     '怕冷',
     '怕热',
   ];
-
-  /// Consultation accepts real user descriptions as well as book, case, and
-  /// hypothetical inputs. Deterministic App rules own diagnosis; the AI explains
-  /// only verified results with local knowledge sources. A separate clinical
-  /// detector is not a prerequisite for this product flow.
-  static bool requiresMedicalSafetyPreflight({
-    required String query,
-    required AssistantMode selectedMode,
-    bool hasAttachment = false,
-    bool structuredInterviewActive = false,
-  }) => false;
 
   static bool shouldExcludeFromIntentModel(String query) {
     final text = query.trim();

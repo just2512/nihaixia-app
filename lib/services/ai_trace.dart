@@ -20,8 +20,6 @@ enum AiTraceStatus {
 
 enum AiTraceStage {
   input,
-  preflight,
-  redFlag,
   dispatch,
   route,
   entityResolution,

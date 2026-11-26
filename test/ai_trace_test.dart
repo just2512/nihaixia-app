@@ -96,7 +96,10 @@ void main() {
     test('trace schema exposes required stages and NOT_APPLICABLE status', () {
       expect(AiTraceStatus.notApplicable.wireValue, 'NOT_APPLICABLE');
       expect(AiTraceStage.input.wireValue, 'INPUT');
-      expect(AiTraceStage.redFlag.wireValue, 'RED_FLAG');
+      final currentStages =
+          AiTraceStage.values.map((stage) => stage.wireValue).toList();
+      expect(currentStages, isNot(contains('PREFLIGHT')));
+      expect(currentStages, isNot(contains('RED_FLAG')));
       expect(AiTraceStage.route.wireValue, 'ROUTE');
       expect(AiTraceStage.entityResolution.wireValue, 'ENTITY_RESOLUTION');
       expect(AiTraceStage.retrieval.wireValue, 'RETRIEVAL');

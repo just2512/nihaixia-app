@@ -1,6 +1,6 @@
 # Local AI TRACE 端到端契约
 
-- 状态：F 部分落地；普通文本/图片/语音常规助手轮次已有 per-turn trace_id、Native bridge correlation 和 SQLite metadata；Debug-only 本地显式开关已纳入实现分支；结构化问诊/澄清/工具等其余分支、完整阶段覆盖及 Find N2 真实 TRACE 仍未闭环
+- 状态：F 部分落地；普通文本/图片/语音常规助手轮次已有 per-turn trace_id、Native bridge correlation 和 SQLite metadata；Debug-only 本地显式开关已纳入实现；结构化问诊/澄清/工具等其余分支、完整阶段覆盖及 Find N2 真实 TRACE 仍未闭环。2026-11-26 起不再记录或要求临床 PREFLIGHT/RED_FLAG 阶段。
 - 最近复核主线：`master @ 14784fa2b93a3746419ea02de8290bf69876ed4b`；PR #127 新增 Debug-only 开关，待当前 PR CI 完成后集成
 - 约束：TRACE 默认关闭；Release/Profile 不提供启用入口；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
 
@@ -67,7 +67,7 @@
 
 复用现有 `AiTraceStage`，不另造重复枚举：
 
-`INPUT → PREFLIGHT → RED_FLAG → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
+`INPUT → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
 
 不适用的阶段写 `NOT_APPLICABLE`；尚未开始写 `NOT_STARTED`；明确完成写 `SUCCEEDED`；明确失败写 `FAILED`；超时、进程中断、Native Future 未完成或跨层 ID 不匹配写 `UNKNOWN`。不得把 UNKNOWN 映射为 FAILED 或 SUCCEEDED。
 
@@ -146,7 +146,7 @@
 - `AiTraceRecorder` 默认 `enabled=false`；没有可用 writer 时也不能启用。TRACE 关闭时不生成 ID、不写事件、不向 Native 传 ID、不向消息 metadata 写 `trace_id`。
 - `LocalAiTraceFileWriter` 写入 App 私有 Application Support 目录中的 `ai_trace.jsonl`，最多 500 条、保留 7 天；只持久化 `AiTraceEvent.toJson()` allowlist 字段。
 - `AiTraceRuntime` 是进程级 recorder/writer 单例。`LocalAiInterviewScreen` 普通文本、知识检索、图片、语音、结构化问诊启动/选项/舌脉输入、澄清路由、Headless/Page 工具和症状整理均已有不同程度的事件记录调用点；普通助手轮次已有可选 turn context、Native bridge correlation 和 user/assistant message metadata。当前代码对 retrieval/context assembly/model input/native inference/model output/argument validation/tool execution/business execution/result validation/persistence/persisted state/presentation/final render 等阶段有明确调用点，但不能据此推断所有路径的事件链已完整。
-- 上述接线不代表所有路径和所有阶段都已覆盖。当前产品准则不建设临床 detector，也不把它作为正常问诊准入门槛；`requireAssessment=false` 的生产路径会把 `PREFLIGHT` 与 `RED_FLAG` 记录为 `NOT_APPLICABLE`（分别使用 `PREFLIGHT_NOT_REQUIRED`、`REDFLAG_ASSESSMENT_NOT_REQUIRED`）。这不代表 detector 已评估、风险已清除或取得安全 PASS。只有某条路径明确要求实际评估时，才按真实评估结果记录；评估器应启用但缺失时记录 `UNKNOWN` 并按该路径暂停。失败/取消/未完成轮次及部分跨层终态仍需在设备上按场景核对；不得根据文件存在或某条正常路径的 JSONL 推断全链路完成。
+- 上述接线不代表所有路径和所有阶段都已覆盖。当前产品不建设临床 detector，也不使用临床 PREFLIGHT/RED_FLAG 阶段作为模型准入条件。2026-11-26 已从 Flutter/Native 生产调用链移除临床 gate 与对应参数；当前 TRACE 不应为普通学习流程生成临床预检事件。旧 JSONL 或旧枚举中的 `PREFLIGHT` / `RED_FLAG` 仅作历史兼容读取，不要求新版本继续产生，也不表示风险已评估或取得医疗安全认证。失败/取消/未完成轮次及部分跨层终态仍需按真实场景核对；不得根据文件存在或某条正常路径的 JSONL 推断全链路完成。
 
 ### 10.2 显式开关的产品与生命周期约束
 
@@ -163,8 +163,8 @@
 
 ### 10.4 尚未通过的验收
 
-- `AiTraceStage` 规范阶段以本文件第 4 节为准。真机记录必须核对每个场景实际适用的阶段；真正不适用才记 `NOT_APPLICABLE`。应有事件却未接线/未写出时记缺失或 `UNKNOWN`，不得伪造补齐。
+- 当前阶段清单以本文件第 4 节为准。真机记录核对该场景实际涉及的阶段；真正不适用才记 `NOT_APPLICABLE`。应有事件却未接线/未写出时记缺失或 `UNKNOWN`，不得伪造补齐。旧 `PREFLIGHT` / `RED_FLAG` 枚举如保留，仅为解析旧记录，不属于当前采集阶段。
 - Debug-only 开关和本地 JSONL writer 只解决“如何显式开启并本地留存”；它们不补齐所有路由节点、失败节点、Native 生命周期节点，也不证明某次模型请求一定由预期 backend 完成。
-- Find N2 GPU 至少 20 轮、CPU 至少 20 轮，图片/语音、进程中断/恢复、模型/Activity 生命周期，以及 AI 数据清除后强停/重启的真实验收仍未执行；未提供设备 TRACE 的项目保持 `UNKNOWN`。当前正常问诊路径的 `PREFLIGHT` / `RED_FLAG` 为 `NOT_APPLICABLE`，不是红旗 detector 的通过结论；不为满足 TRACE 而新增临床 detector 或全入口阻断 Gate。若另有明确要求评估的路径，则必须以真实调用和实际结果验收。
+- Find N2 GPU 至少 20 轮、CPU 至少 20 轮，图片/语音、进程中断/恢复、模型/Activity 生命周期，以及 AI 数据清除后强停/重启的真实验收仍未执行；未提供设备 TRACE 的项目保持 `UNKNOWN`。新版本不再采集临床 `PREFLIGHT` / `RED_FLAG` 阶段，不为满足 TRACE 而新增临床 detector 或全入口阻断 Gate。
 - 因此 F 整体保持 `PARTIAL / DEVICE UNKNOWN`，不能标 `IMPLEMENTED` 或 RELEASE READY。CI、静态审计和 Widget 测试不能替代真实设备 TRACE。
 

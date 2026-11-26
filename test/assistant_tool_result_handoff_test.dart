@@ -19,7 +19,6 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
 import 'package:nihaisha_app/services/yuxiaji_omen_tool_executor.dart';
-import 'support/test_only_red_flag_gate.dart';
 
 
 const _readyStatus = LocalAiModelStatus(
@@ -215,9 +214,6 @@ class _RecordingAssistantService extends LocalAiService {
     required String requestId,
     required String context,
     required String reasoningContext,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) => _sendStructuredReply(
@@ -236,9 +232,6 @@ class _RecordingAssistantService extends LocalAiService {
     required String context,
     required String reasoningContext,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) => _sendStructuredReply(
@@ -276,9 +269,6 @@ class _RecordingAssistantService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -294,9 +284,6 @@ class _RecordingAssistantService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
@@ -312,7 +299,6 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           testToolRouteBuilder: (tool, _) {
@@ -443,7 +429,6 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: _NoopAssistantConversationStore(),
           imagePicker: _NoLostImagePicker(),
         ),
@@ -636,7 +621,6 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
         ),

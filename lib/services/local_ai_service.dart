@@ -86,9 +86,6 @@ class LocalAiService {
     required String requestId,
     required String context,
     required String reasoningContext,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
@@ -98,9 +95,6 @@ class LocalAiService {
         requestId: requestId,
         context: context,
         reasoningContext: reasoningContext,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -112,9 +106,6 @@ class LocalAiService {
     required String context,
     required String reasoningContext,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
@@ -125,9 +116,6 @@ class LocalAiService {
         context: context,
         reasoningContext: reasoningContext,
         traceId: traceId,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -139,9 +127,6 @@ class LocalAiService {
     required String context,
     required String reasoningContext,
     String? traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -168,13 +153,6 @@ class LocalAiService {
         'text': normalizedText,
         'context': context,
         'reasoning_context': reasoningContext,
-        if (requireMedicalSafety) 'require_red_flag': true,
-        if (requireMedicalSafety &&
-            redFlagContext != null &&
-            redFlagContext.trim().isNotEmpty)
-          'red_flag_context': redFlagContext.trim(),
-        if (requireMedicalSafety && redFlagContextTruncated)
-          'red_flag_context_truncated': true,
         if (sessionStateContext?.trim().isNotEmpty == true) ...{
           'session_state_context': sessionStateContext!.trim(),
           'session_state_conversation_id': _requireConversationId(
@@ -265,18 +243,12 @@ class LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
       _sendTextMessage(
         text,
         conversationId: conversationId,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -285,9 +257,6 @@ class LocalAiService {
     String text, {
     required int conversationId,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
@@ -295,9 +264,6 @@ class LocalAiService {
         text,
         conversationId: conversationId,
         traceId: traceId,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -306,9 +272,6 @@ class LocalAiService {
     String text, {
     required int conversationId,
     String? traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -318,13 +281,6 @@ class LocalAiService {
       {
         'conversation_id': _requireConversationId(conversationId),
         'text': text,
-        if (requireMedicalSafety) 'require_red_flag': true,
-        if (requireMedicalSafety &&
-            redFlagContext != null &&
-            redFlagContext.trim().isNotEmpty)
-          'red_flag_context': redFlagContext.trim(),
-        if (requireMedicalSafety && redFlagContextTruncated)
-          'red_flag_context_truncated': true,
         if (sessionStateContext?.trim().isNotEmpty == true) ...{
           'session_state_context': sessionStateContext!.trim(),
           'session_state_conversation_id': _requireConversationId(
@@ -349,9 +305,6 @@ class LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
@@ -359,9 +312,6 @@ class LocalAiService {
         text,
         conversationId: conversationId,
         context: context,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -371,9 +321,6 @@ class LocalAiService {
     required int conversationId,
     required String context,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) =>
@@ -382,9 +329,6 @@ class LocalAiService {
         conversationId: conversationId,
         context: context,
         traceId: traceId,
-        requireMedicalSafety: requireMedicalSafety,
-        redFlagContext: redFlagContext,
-        redFlagContextTruncated: redFlagContextTruncated,
         sessionStateContext: sessionStateContext,
         sessionStateConversationId: sessionStateConversationId,
       );
@@ -394,9 +338,6 @@ class LocalAiService {
     required int conversationId,
     required String context,
     String? traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -411,13 +352,6 @@ class LocalAiService {
         'conversation_id': _requireConversationId(conversationId),
         'text': normalized,
         'context': context.trim(),
-        if (requireMedicalSafety) 'require_red_flag': true,
-        if (requireMedicalSafety &&
-            redFlagContext != null &&
-            redFlagContext.trim().isNotEmpty)
-          'red_flag_context': redFlagContext.trim(),
-        if (requireMedicalSafety && redFlagContextTruncated)
-          'red_flag_context_truncated': true,
         if (sessionStateContext?.trim().isNotEmpty == true) ...{
           'session_state_context': sessionStateContext!.trim(),
           'session_state_conversation_id': _requireConversationId(
@@ -439,7 +373,6 @@ class LocalAiService {
     String path, {
     required int conversationId,
     String prompt = '',
-    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendImage',
@@ -447,7 +380,6 @@ class LocalAiService {
       '照片',
       conversationId: conversationId,
       prompt: prompt,
-      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
@@ -456,7 +388,6 @@ class LocalAiService {
     required int conversationId,
     String prompt = '',
     required String traceId,
-    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendImage',
@@ -465,7 +396,6 @@ class LocalAiService {
       conversationId: conversationId,
       prompt: prompt,
       traceId: traceId,
-      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
@@ -473,7 +403,6 @@ class LocalAiService {
     String path, {
     required int conversationId,
     String prompt = '',
-    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendAudio',
@@ -481,7 +410,6 @@ class LocalAiService {
       '录音',
       conversationId: conversationId,
       prompt: prompt,
-      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
@@ -490,7 +418,6 @@ class LocalAiService {
     required int conversationId,
     String prompt = '',
     required String traceId,
-    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendAudio',
@@ -499,7 +426,6 @@ class LocalAiService {
       conversationId: conversationId,
       prompt: prompt,
       traceId: traceId,
-      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
@@ -510,7 +436,6 @@ class LocalAiService {
     required int conversationId,
     String prompt = '',
     String? traceId,
-    bool requireMedicalSafety = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -519,7 +444,6 @@ class LocalAiService {
         'conversation_id': _requireConversationId(conversationId),
         'path': path,
         'prompt': prompt,
-        if (requireMedicalSafety) 'require_red_flag': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -884,9 +808,6 @@ class LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
@@ -904,14 +825,6 @@ class LocalAiService {
         'conversation_id': _requireConversationId(conversationId),
         'transcript': normalized,
         'userMessages': userMessages,
-        if (requireMedicalSafety) 'require_red_flag': true,
-        if (requireMedicalSafety &&
-            redFlagContext != null &&
-            redFlagContext.trim().isNotEmpty)
-          'red_flag_context': redFlagContext.trim(),
-        if (requireMedicalSafety &&
-            (redFlagContextTruncated || userMessages.length > 60))
-          'red_flag_context_truncated': true,
       },
     );
     if (data?['restored'] != true) {
@@ -1545,7 +1458,7 @@ class LocalAiSymptomDraft {
   final List<String> aggravatingFactors;
   final List<String> relievingFactors;
   final List<String> associatedSymptoms;
-  final List<String> redFlags;
+  final List<String> userReportedUrgentSigns;
   final List<String> unknowns;
   final List<LocalAiSymptomQuestionCandidate> questionCandidates;
   final String sourceText;
@@ -1560,7 +1473,7 @@ class LocalAiSymptomDraft {
     this.aggravatingFactors = const [],
     this.relievingFactors = const [],
     this.associatedSymptoms = const [],
-    this.redFlags = const [],
+    this.userReportedUrgentSigns = const [],
     this.unknowns = const [],
     this.questionCandidates = const [],
     this.sourceText = '',
@@ -1692,7 +1605,11 @@ class LocalAiSymptomDraft {
       aggravatingFactors: stringList('aggravating_factors'),
       relievingFactors: stringList('relieving_factors'),
       associatedSymptoms: stringList('associated_symptoms'),
-      redFlags: stringList('red_flags'),
+      // Legacy model output compatibility only; this field stores user-quoted
+      // reports and is never used for risk classification or request gating.
+      userReportedUrgentSigns: map.containsKey('user_reported_urgent_signs')
+          ? stringList('user_reported_urgent_signs')
+          : stringList('red_flags'),
       unknowns: stringList('unknowns'),
       questionCandidates: List.unmodifiable(candidates),
       sourceText: sourceText.trim(),
@@ -1718,7 +1635,7 @@ class LocalAiSymptomDraft {
     addList('加重因素', aggravatingFactors);
     addList('缓解因素', relievingFactors);
     addList('伴随表现', associatedSymptoms);
-    addList('需留意的自述表现', redFlags);
+    addList('急重症相关的用户自述', userReportedUrgentSigns);
     addList('仍需核实', unknowns);
     return lines;
   }

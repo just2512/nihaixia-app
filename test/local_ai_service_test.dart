@@ -578,7 +578,6 @@ void main() {
       expect(reply, '请继续描述不适出现的时间');
     });
 
-
     test('sendMessageWithContext separates user text from retrieved knowledge context', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -599,32 +598,6 @@ void main() {
         'context': '[App本草库] 柴胡：原始条目内容',
       });
     });
-
-    test('clinical request marker is forwarded to the native text boundary', () async {
-      const traceId = '0123456789abcdef0123456789abcdef';
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '本地回复', 'trace_id': traceId};
-      });
-
-      await LocalAiService().sendMessageWithContextAndTrace(
-        '最近不舒服，帮我诊断一下什么问题？', conversationId: 42,
-        context: '当前角色：问诊助手',
-        traceId: traceId,
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛\n那它的原因呢',
-        redFlagContextTruncated: true,
-      );
-
-      expect(received?.method, 'sendMessage');
-      expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
-      expect(received?.arguments['trace_id'], traceId);
-    });
-
 
     test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
       MethodCall? received;
@@ -704,7 +677,6 @@ void main() {
       );
     });
 
-
     test('restoreConversation forwards bounded history and user-only turns', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -724,29 +696,6 @@ void main() {
         'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
         'userMessages': ['饭后腹胀'],
       });
-    });
-
-    test('clinical history restoration carries the native safety requirement', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'restored': true, 'backend': 'cpu'};
-      });
-
-      await LocalAiService().restoreConversation(
-        conversationId: 42,
-        transcript: '用户：我最近胸痛\n助手：这是用户未确认的旧回复',
-        userMessages: const ['我最近胸痛'],
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛',
-        redFlagContextTruncated: true,
-      );
-
-      expect(received?.method, 'restoreConversation');
-      expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
     });
 
     test('resetConversation invokes native reset and returns fresh status', () async {
@@ -1144,7 +1093,7 @@ void main() {
   "aggravating_factors": ["吃得过饱"],
   "relieving_factors": ["散步后稍缓解"],
   "associated_symptoms": ["嗳气"],
-  "red_flags": [],
+  "user_reported_urgent_signs": [],
   "unknowns": ["是否与某种食物有关"],
   "diagnosis": "不应接受"
 }
@@ -1158,6 +1107,18 @@ void main() {
       expect(draft.unknowns, ['是否与某种食物有关']);
       expect(draft.summaryLines.join('、'), contains('饭后腹胀'));
       expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
+    });
+
+    test('reads legacy red_flags only as user-reported symptom data', () {
+      final draft = LocalAiSymptomDraft.fromModelText(
+        '{"red_flags":["用户自述曾有胸部不适"]}',
+      );
+
+      expect(draft.userReportedUrgentSigns, ['用户自述曾有胸部不适']);
+      expect(
+        draft.summaryLines.join('、'),
+        contains('急重症相关的用户自述'),
+      );
     });
 
     test('accepts ten-question candidates only with an App option and verbatim user evidence', () {
@@ -1491,31 +1452,6 @@ void main() {
       expect(received[1].arguments['conversation_id'], 42);
       expect(received[0].arguments['trace_id'], traceId);
       expect(received[1].arguments['trace_id'], traceId);
-    });
-
-    test('medical attachments carry the native safety requirement', () async {
-      const traceId = '0123456789abcdef0123456789abcdef';
-      final received = <MethodCall>[];
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received.add(call);
-        return <String, Object?>{'reply': '附件结果', 'trace_id': traceId};
-      });
-
-      await LocalAiService().sendImageWithTrace(
-        '/app/cache/medical-image.jpg', conversationId: 42,
-        traceId: traceId,
-        requireMedicalSafety: true,
-      );
-      await LocalAiService().sendAudioWithTrace(
-        '/app/cache/medical-audio.wav', conversationId: 42,
-        traceId: traceId,
-        requireMedicalSafety: true,
-      );
-
-      expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
-      expect(received.every((call) => call.arguments['conversation_id'] == 42), isTrue);
-      expect(received.every((call) => call.arguments['require_red_flag'] == true),
-          isTrue);
     });
 
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {

@@ -117,7 +117,7 @@ GPU 与 CPU 两种实际 backend 分别执行：
 - 同一个 trace_id 能关联 INPUT、ROUTE、RETRIEVAL（适用时）、CONTEXT_ASSEMBLY、MODEL/NATIVE_INFERENCE、TOOL_EXECUTION（适用时）、RESULT_VALIDATION（适用时）、PERSISTENCE、PRESENTATION 和 FINAL_RENDER。
 - 每轮实际 backend 与模型版本可识别。
 - 所选 backend 与实际 backend 分开记录。
-- 当前正常问诊不要求临床 detector；应用应将 PREFLIGHT / RED_FLAG 明确记录为 NOT_APPLICABLE（NOT_REQUIRED），不得把它写成 detector 已评估、CLEAR 或安全 PASS。只有明确要求实际评估的专门路径才必须出现真实评估结果；应评估但未调用/未配置时记 UNKNOWN。
+- 当前版本不建设临床 detector，且不产生 PREFLIGHT / RED_FLAG 临床门禁事件；旧版本 TRACE 中如有对应字段，只作为历史记录读取。设备验收不得以临床 detector 或医学审核为前置条件。
 - 不记录 prompt/response、正文、症状、出生信息、图片/语音内容、附件路径、模型文件或密钥。
 
 TRACE 关闭后确认普通业务路径不受影响；关闭 TRACE 不应改变后端选择或业务执行。
