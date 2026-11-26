@@ -1269,3 +1269,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 structured tool-turn adapter and regression tests. It binds App-owned capability allowlist to ReasoningRequest, validates ACTION_PROPOSAL through the Gate, suppresses model proposal narrative and evidence-citation loss, and returns confirmation preview data only; no UI or executor invocation is included; ownership evidence required.
+
+Files:
+ docs/find-n2-ai-knowledge-interpretation-local-handoff.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored local Find N2 acceptance handoff for P0 contextual knowledge interpretation/context continuity and P1 Android IME behavior; operational test instructions only, no runtime code or device evidence included; ownership evidence required.
