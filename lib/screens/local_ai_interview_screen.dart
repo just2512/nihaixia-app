@@ -2054,9 +2054,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return sendStructuredLearning(knowledge);
 
       case AssistantMode.tools:
-        final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
-            .map((tool) => tool.title)
-            .join('、');
         final requestedQuery = retrievalQuery?.trim().isNotEmpty == true
             ? retrievalQuery!.trim()
             : text;
@@ -2071,23 +2068,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 // calendrical tool explanations.
                 includeMedicalCases: false,
               )
-            : null;
-        final modelKnowledgeContext = knowledge?.modelContextText ?? '';
-        final knowledgeContext = modelKnowledgeContext.isEmpty
-            ? ''
-            : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n'
-                '$modelKnowledgeContext';
-        final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
-            '当前 App 已注册工具：$availableTools。'
-            '新动作优先通过 App 已有 Headless Capability 在当前对话内执行；只有该能力仍为 Page-only 且确需页面交互时，才建议打开工具页。'
-            '对已经完成的工具结果追问，应复用当前会话中的已验证结果与本轮知识检索，不重复执行、不把用户送到工具页面。\n'
-            '$knowledgeContext';
-        final reply = await sendWithContext(context);
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge?.sourceIds ?? const [],
-          knowledgeStatus: knowledge?.statusLabel,
-        );
+            : const AssistantKnowledgeContextResult(text: '');
+        return sendStructuredTools(knowledge);
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
             .map((tool) => tool.title)
