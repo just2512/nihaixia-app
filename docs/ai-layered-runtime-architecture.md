@@ -499,3 +499,18 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - 证据边界：ranked evidence IDs 是本轮唯一可引用的证据集合；sourceId / evidenceId / 本地存储定位只作为 App 内部元数据，不进入普通回答文本。学习路径允许 capability 集合为空，动作提案一律 fail-closed。
 - Core-4 当前分支：work/core4-execution-result-projection-master-e2cdc1-20261126 新增 ReasoningExecutionResultAdapter，映射已验证 AssistantToolResult 到 Core-3 ReasoningExecutionResult。成功保留实际参数/结构化值/真实来源；FAILED 仅保留稳定错误码和实际参数；UNKNOWN 保持 UNKNOWN；NO_RESULT/CANCELLED 使用不同 failureCode，不伪装为 SUCCEEDED。该切片尚未接入真实 Native tool-explanation 请求，也不处理 ACTION_PROPOSAL 授权；CI 待当前分支精确 HEAD 结果。
 - 硬边界：不以该投影适配器宣称 Core-4 完成；后续必须补 request-scoped capability allowlist、严格 typed args、显式用户确认、重复 invocation 防护，再由 App 调用现有 HeadlessToolDispatcher，并将真实 ExecutionResult 回流。Page-only、未登记 capability、参数不完整或状态 UNKNOWN 均不得执行/重放。
+
+### 5.4 详情页 AI 解读：主上下文与用户消息分离
+
+详情页的「AI 解读」是一个已经明确的用户意图，不是要求用户代写提示词的空白入口。必须满足以下契约：
+
+- **用户消息**：App 生成简短、自然的分析请求，只表达“请解读当前条目”的意图。不得把整条 JSON、版本标识、来源 ID、技术元数据或“请在输入框补充”等内部指令预填到输入框或写入用户 transcript。
+- **主知识上下文**：详情页解析并校验后的完整条目内容，作为独立的 model-only context 传递；不与用户原话拼成同一段文本，也不伪装为 RAG CandidateEvidence/rankedEvidence。
+- **解读增量**：模型不能重排详情页已经展示的药物、剂量、功效、主治或原文作为主体答案。应解释内容之间的关系、整体结构、配伍/组合逻辑、差异和值得理解的问题。只引用少量关键字段支撑分析，不重写整条记录。
+- **事实层级**：答案须区分条目明确记载、基于当前条目的归纳、资料不足的 MISSING/UNKNOWN。归纳必须能回指当前条目；不得将推演包装成原文事实或已验证结论，不得补造外部来源、剂量、疗效或规则。
+- **来源契约**：详情页主来源由 App 的当前锚点解析并维护，作为独立的 primaryContextSource；它不是 evidenceId，不得伪造 rankedEvidence。结构化学习响应可在当前主来源已提供且锚点仍一致时，不依赖 RAG rankedEvidence 完成解读；既无主来源又无有效 rankedEvidence 时仍须 fail-closed。
+- **检索边界**：当前页面情境解读以该页面资料为唯一知识范围；不要因默认 learning 路径再追加泛化 RAG，避免其他条目污染当前条目的事实边界。对应 TRACE retrieval 状态为 NOT_APPLICABLE，而不是“已检索无结果”。
+- **跨轮一致性**：初始解读和后续追问都携带同一详情页主上下文；只有活动会话锚点仍与入口锚点一致时才允许注入，切换到其他历史会话不得继续混入旧页面资料。
+- **自动执行**：详情页入口在上下文/会话身份已建立且模型 ready 后自动提交初始分析；失败时明确保留失败状态，不将空回复写为成功结果。用户可继续自然追问，但不承担拼接或发送内部上下文的工作。
+- **输入法布局**：全屏助手仍由 AdaptiveHomeNavigation 外层 Scaffold 统一处理 IME inset；情境底部弹层没有该外层 Scaffold，必须由自身 Scaffold resize，输入框和发送操作保持在键盘上方。禁止对同一层级重复应用 inset。
+
