@@ -1,15 +1,36 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/models/reasoning_request.dart';
 import 'package:nihaisha_app/models/session_state_snapshot.dart';
+import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/assistant_tool_invocation_ledger.dart';
 import 'package:nihaisha_app/services/assistant_tool_execution_coordinator.dart';
+import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 import 'package:nihaisha_app/services/reasoning_action_proposal_adapter.dart';
 import 'package:nihaisha_app/services/reasoning_action_proposal_gate.dart';
 import 'support/in_memory_assistant_conversation_store.dart';
+
+class _RejectingHeadlessToolDispatcher extends HeadlessToolDispatcher {
+  @override
+  Future<HeadlessToolPlanExecutionResult> executePlan({
+    required ToolExecutionPlan plan,
+    FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
+        executorOverride,
+  }) async {
+    return HeadlessToolPlanExecutionResult(
+      planId: plan.planId,
+      status: HeadlessToolPlanExecutionStatus.invalidPlan,
+      toolIds: plan.steps.map((step) => step.toolId),
+      capabilityIds: plan.capabilityIds,
+      offendingToolId: plan.steps.single.toolId,
+      offendingCapabilityId: plan.steps.single.capabilityId,
+    );
+  }
+}
 
 void main() {
   late InMemoryAssistantConversationStore store;
@@ -227,6 +248,34 @@ void main() {
     expect(result.executionResult?.resultValues, isEmpty);
     expect(result.executionResult?.sourceIds, isEmpty);
     expect(dispatchCount, 0);
+  });
+
+  test('dispatcher preflight rejection is reported as not dispatched', () async {
+    final rejectingCoordinator = AssistantToolExecutionCoordinator(
+      ledger: ledger,
+      dispatcher: _RejectingHeadlessToolDispatcher(),
+    );
+    var executorCalls = 0;
+
+    final result = await rejectingCoordinator.executeConfirmedProposal(
+      conversationId: conversationId,
+      invocationId: invocationId,
+      request: request,
+      preview: preview,
+      confirmedByUser: true,
+      executorOverride: (arguments) {
+        executorCalls++;
+        return success(arguments);
+      },
+    );
+
+    expect(result.status,
+        AssistantToolExecutionCoordinatorStatus.dispatchRejected);
+    expect(result.wasDispatched, isFalse);
+    expect(result.executionResult?.status, ReasoningExecutionStatus.failed);
+    expect(result.executionResult?.resultValues, isEmpty);
+    expect(result.executionResult?.sourceIds, isEmpty);
+    expect(executorCalls, 0);
   });
 
   test('dispatcher exception is recorded and read back as UNKNOWN without replay', () async {
