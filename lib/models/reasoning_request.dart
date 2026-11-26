@@ -122,9 +122,11 @@ class ReasoningRequest {
     List<ReasoningEvidenceReference> rankedEvidence = const [],
     List<String> knownEvidenceIds = const [],
     List<ReasoningExecutionResult> executionResults = const [],
+    List<String> allowedCapabilityIds = const [],
   })  : rankedEvidence = List.unmodifiable(rankedEvidence),
         knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
-        executionResults = List.unmodifiable(executionResults) {
+        executionResults = List.unmodifiable(executionResults),
+        allowedCapabilityIds = List.unmodifiable(allowedCapabilityIds) {
     if (requestId.trim().isEmpty || requestId != requestId.trim()) {
       throw ArgumentError('REASONING_REQUEST_ID_INVALID');
     }
@@ -139,6 +141,16 @@ class ReasoningRequest {
     }
     if (responseSchemaVersion != 1) {
       throw ArgumentError('REASONING_RESPONSE_SCHEMA_VERSION_UNSUPPORTED');
+    }
+    final allowedIds = this.allowedCapabilityIds.toSet();
+    if (allowedIds.length != this.allowedCapabilityIds.length ||
+        this.allowedCapabilityIds.any(
+          (id) => id.trim().isEmpty || id != id.trim(),
+        )) {
+      throw ArgumentError('REASONING_ACTION_CAPABILITY_ALLOWLIST_INVALID');
+    }
+    if (this.allowedCapabilityIds.isNotEmpty && mode != 'tools') {
+      throw ArgumentError('REASONING_ACTION_CAPABILITY_MODE_FORBIDDEN');
     }
     if (sessionState != null && sessionState!.sessionId != sessionId) {
       throw ArgumentError('REASONING_SESSION_STATE_SESSION_ID_MISMATCH');
@@ -176,6 +188,9 @@ class ReasoningRequest {
   final List<ReasoningEvidenceReference> rankedEvidence;
   final List<String> knownEvidenceIds;
   final List<ReasoningExecutionResult> executionResults;
+  /// App-owned capabilities that this request may propose, not user consent.
+  /// The execution gate remains authoritative and learning mode must leave it empty.
+  final List<String> allowedCapabilityIds;
   final int responseSchemaVersion;
 
   List<String> get rankedEvidenceIds => List.unmodifiable(
@@ -202,6 +217,7 @@ class ReasoningRequest {
         'executionResults': List.unmodifiable(
           executionResults.map((item) => item.toMap()),
         ),
+        'allowedCapabilityIds': allowedCapabilityIds,
       });
 }
 
