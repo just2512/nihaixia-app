@@ -1232,7 +1232,7 @@ class MainActivity : FlutterActivity() {
             else -> throw IllegalArgumentException("INVALID_ATTACHMENT_TYPE")
         }
         val attachmentLabel = if (attachmentType == "image") "照片" else "录音"
-        val historyUserText = "【此前发送过" + attachmentLabel + "附件】\\n" + text
+        val historyUserText = "【此前发送过" + attachmentLabel + "附件】\n" + text
         conversationContainsEphemeralContext = true
         val rawReply = try {
             sendWithFirstTurnGpuFallback(
