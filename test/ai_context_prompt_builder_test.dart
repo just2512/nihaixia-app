@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
+import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
@@ -87,6 +88,46 @@ void main() {
     expect(modelContext, contains(jsonEncode(entry.content)));
     expect(modelContext, isNot(contains(entry.ref.sourceId)));
     expect(modelContext, isNot(contains(entry.ref.anchorVersion)));
+  });
+
+  test('contextual acupuncture model input omits App-owned source and snapshot identifiers', () async {
+    await AcupunctureRepository.load();
+    final category = AcupunctureRepository.getAll().singleWhere(
+      (item) => item.id == '01',
+    );
+    final entry = category.entries.singleWhere((item) => item.id == 1);
+    final ref = AiContextResolver.buildAcupunctureEntryContextRef(
+      categoryId: category.id,
+      entry: entry,
+    );
+    final resolution = AiContextResolver.resolveAcupunctureEntry(ref: ref);
+    expect(resolution.isResolved, isTrue);
+
+    final modelContext = AiContextPromptBuilder.buildKnowledgeEntryModelContext(
+      entry: resolution.value!,
+    );
+
+    expect(modelContext, contains('冠心病'));
+    expect(modelContext, contains('关元'));
+    expect(modelContext, isNot(contains(ref.sourceId)));
+    expect(modelContext, isNot(contains(ref.snapshotId!)));
+    expect(modelContext, isNot(contains(ref.ruleVersion!)));
+    for (final internalField in [
+      'sourceId',
+      'sourceIds',
+      'snapshotId',
+      'ruleVersion',
+      'capabilityId',
+      'resultSchemaVersion',
+      'categoryId',
+      'entryId',
+      'localBacklink',
+    ]) {
+      expect(modelContext, isNot(contains(internalField)));
+    }
+    // The original source marker is part of the actual prescription record,
+    // not an App locator, and remains available for careful interpretation.
+    expect(modelContext, contains(entry.source));
   });
 
   test('classic selection prompt retains selected text and stable source anchor', () {
