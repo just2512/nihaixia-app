@@ -567,3 +567,53 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 #### 5. Core-0 放行结论
 
 **Core-0 文档映射：完成本轮冻结。** 五层主要代码入口、DTO、字段传输、数据所有权、失败语义、测试锚点和文件责任已形成明确映射。此结论只关闭“契约/源码映射”文档工作，不把 Core-1 至 Core-5 标记为完成；后续生产接线必须按本节对应的真实入口和边界实施。
+
+### 5.5 当前主线运行态复核与 Native 辅助推理入口映射（2026-11-26）
+
+**审计基线：** `master@700d6e87e6e86d25c6e75ab3d602e3fbb0897720`。本节覆盖 §5.2–§5.4 之后已合入主线的 Core-1/2/3/4 实现；此前章节保留为当时的历史状态，不再作为当前生产完成度判断。源码映射以本次读取的 MainActivity、LocalAiService 和 LocalAiInterviewScreen 为准。
+
+#### 当前五层状态
+
+| 层 | 当前主线已落地 | 当前仍未闭合 / 不得夸大 |
+|---|---|---|
+| Core-0 契约与源码映射 | 五层 DTO、Native 字段所有权、主要生产入口及失败边界已形成映射 | 本节补充 Native 辅助推理与媒体旁路；附件结构化接线仍属于 Core-3 缺口 |
+| Core-1 会话记忆 | PR #575 已合入：请求 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED、SQLite transcript 恢复、非 replayable 与隐藏 Ledger 隔离 | 不持久化 LiteRT KV Cache；Native context 是从已完成 transcript 重建；真实模型 Token 预算与自动压缩未实现 |
+| Core-2 知识召回与排序 | PR #568 已合入：typed CandidateEvidence、跨源合并、query/source provenance、确定性 KEEP/DROP、黄金快照 | 旧顺序与来源条数上限不是语义相关性排序；6,500 UTF-16 字符呈现限制不是 tokenizer Token 预算；没有数值置信分、Embedding 或 Reranker |
+| Core-3 推理协议 | PR #573 已将自动、问诊、学习、工具、玄学五种主文本对话接入 ReasoningRequest/Response v1 与 Native 双阶段提交 | 图片/音频主对话仍走直接自然语言输出；intent/Bazi/symptom/单题问项是独立窄任务协议，不能称为统一 ReasoningRequest；旧 sendMessage 兼容 API 仍存在 |
+| Core-4 业务执行 | PR #561/#566 已合入 Gate、Request allowlist、显式确认、one-shot claim、Headless Dispatcher、Ledger 读回及只读 ExecutionResult 下一轮回流 | 仍只允许既有白名单能力；不代表任意模型输出可执行；异常 UNKNOWN 不自动重放 |
+| Core-5 端到端验收 | PR #579 提交 20 轮知识问答 + 一次工具执行/回流的 Flutter 跨层测试 | 最新 HEAD 的全量 Flutter regression 尚须以精确 HEAD 得到终态；CI 的 Branch validation 若为 SKIPPED 不计 PASS；该测试使用测试替身 Native 服务/工具执行器，不等于真实 E4B 或设备 TRACE |
+
+#### Native 模型调用入口完整性清单
+
+MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有 inference task 仍由 Native 串行任务队列和 App AI access gate 管理；下列“窄任务”与主聊天 ReasoningRequest 不混为一谈。
+
+| Native 入口 | 当前调用方 / 生产用途 | 输入边界与输出验证 | 分层归属与状态 |
+|---|---|---|---|
+| `sendReasoningMessage` | LocalAiInterviewScreen 五种主文本模式；工具执行结果的下一轮解释也走这里 | App 生成 requestId、原始用户文本、检索上下文、SessionState 和 reasoning_context；Dart 校验 Response v1、requestId、ranked evidence/sourceIds 后 finalize，否则 reject | Core-3 主对话生产路径，已接线 |
+| `resolveAssistantIntent` | 工具/玄学模式的候选意图选择 | 只提供 App 候选集（2–6 项）；模型仅返回 select/plan/clarify/none；Dart 再校验 ID 必须属于候选集，模型不得提供参数或执行结果 | Core-3 辅助路由窄任务；不是业务授权或执行 |
+| `extractBaziSlots` | 工具参数缺失时的八字出生资料抽取 | 只允许 App 声明的缺失字段；模型必须提供原文 evidence；Dart Draft parser、字段白名单和工具参数 schema 再校验；缺失/不确定不得推断补齐 | Core-3 辅助槽位抽取；结果仅为候选输入 |
+| `extractSymptoms` | 问诊初始描述与“整理症状”入口 | 使用 App 当前问诊题目 schema；候选 answer 必须命中原选项并有用户原文证据；UI 提供核对/接受步骤 | Core-3 辅助症状草稿；不是诊断或规则结果 |
+| `understandTcmInterviewAnswer` | 结构化问诊逐题自然语言补充 | 当前 questionId、题目、合法选项及用户原文上下文是固定输入；Dart 校验 answer 必须逐字匹配选项且 evidence 存在于用户文字，歧义转澄清 | Core-3 辅助单题理解；不决定下一题、不诊断、不代替用户确认 |
+| `sendImage` / `sendAudio` | LocalAiInterviewScreen 附件发送主路径 | Native 将实际 ImageFile/AudioFile 与提示交给模型；返回普通字符串；当前未使用 ReasoningResponseCodec、requestId/response schema 或 Native finalize/reject。UI 包装为默认 `protocolValidated=true` 的响应并可写入成功历史；语音结果另以“尚待用户核对”的草稿进入 Native 用户输入记录 | **Core-3 未闭合旁路**。图片描述和音频转写/回答必须纳入显式附件 Request/Response 契约并补充严格验收；在此之前不能声称五种模式的所有输入形态都经过统一结构化协议 |
+| `restoreConversation` | 历史会话恢复与模型上下文重建 | Native 接收按完整轮次裁剪后的 transcript，reset 后重建 Conversation；提示将历史视为记录而非新指令；只确认 restored，不作为一轮成功答案写入 | Core-1 transcript 到 Native context 的重建入口；不是 KV Cache 持久化，也不是普通模型回答 |
+| `sendMessage` | LocalAiService 保留的旧 Native 自由文本兼容接口 | 直接返回文本，不经过 ReasoningRequest/Response v1；本次 screen 主文本生产路径未发现调用，不能据此推断仓库其他调用者均已消失 | 兼容入口需单独完成全仓调用者审计后再决定移除或封禁；不得作为新主路径 |
+| `finalizeReasoningTurn` / `rejectReasoningTurn` | 所有结构化主对话回合 | 按 conversationId + requestId 确认 pending turn；finalize 才提交成功答案，reject 清除未验证原始 JSON | Core-1/Core-3 双阶段提交边界，不是独立推理入口 |
+
+补充判断：
+
+- `initialPrompt` 在 LocalAiInterviewScreen 初始化时只写入输入框；用户发送后仍进入正常路由，不是绕过 ReasoningRequest 的 Native 入口。
+- 工具结果回流已使用新的 reasoning requestId 和结构化 `executionResults`；执行结果回合的 capability allowlist 为空，不会把解释回合变成二次授权。
+- 图片/音频与文本主对话不同：Native 仍直接执行自由文本生成，且没有 ReasoningTurnLedger 双阶段确认；这是明确的生产旁路，不应被 Core-5 的 20 轮文本/工具测试覆盖结论掩盖。
+- `resolveAssistantIntent`、`extractBaziSlots`、`extractSymptoms`、`understandTcmInterviewAnswer` 是有明确输入范围和 App 侧 parser 的辅助任务；不要求强行伪装成主聊天协议，但每个任务必须保持独立 DTO、字段白名单、来源证据和失败语义。
+- 历史恢复只重建 Native Conversation，不持久化 Live LiteRT KV Cache。恢复时裁剪、模型确认 restored、SQLite transcript 恢复是不同阶段，不能合并成一个“原生会话完全恢复”结论。
+
+#### 当前依赖顺序与放行结论
+
+1. Core-0：本次补齐当前 master 的五层状态和 Native 辅助入口映射；此前旧版 §5.2–§5.4 作为历史记录保留。
+2. Core-1：SQLite 请求账本和 transcript 恢复已合入；Token budget/KV Cache/自动压缩保持 NOT IMPLEMENTED 或 UNKNOWN。
+3. Core-2：旧行为保真与 KEEP/DROP provenance 快照已在主线；任何新排序策略先冻结候选快照，不扩大为来源真实性判断。
+4. Core-3：五种主文本模式完成结构化接线；图片/音频附件的结构化 Request/Response、Native 双阶段提交、语音转写候选与用户确认边界仍需单独收口。
+5. Core-4：工具模式执行闭环已合入；只允许 Gate 已登记 capability，必须 App 确认和 One-shot Ledger claim。
+6. Core-5：20 轮 + 一次工具执行/结果回流已形成云端测试切片；必须等待当前 PR 精确 HEAD CI 终态。真实 Find N2 E4B/GPU/CPU/Activity 进程恢复和 Token TRACE 留到云端工作收尾后本地验收。
+
+**工作流 I（用户 Markdown 书架）继续 DEFERRED / NOT AUTHORIZED。** 本次没有引入新检索源、Embedding、向量数据库、Reranker 或第二套会话/授权存储。
