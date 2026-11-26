@@ -14,9 +14,6 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
-import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
-import 'package:nihaisha_app/theme/app_colors.dart';
-import 'package:nihaisha_app/services/classic_search_service.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
@@ -6849,28 +6846,6 @@ void main() {
 
 
 
-
-
-
-class _OrderedIntentSendService extends _TextSendService {
-  _OrderedIntentSendService(this.events);
-
-  final List<String> events;
-
-  @override
-  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
-    required String query,
-    required List<LocalAiIntentCandidate> candidates,
-    required String traceId,
-  }) {
-    events.add('intent');
-    return super.resolveAssistantIntentWithTrace(
-      query: query,
-      candidates: candidates,
-      traceId: traceId,
-    );
-  }
-}
 
 
 
