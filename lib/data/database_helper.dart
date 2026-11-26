@@ -32,7 +32,7 @@ class DatabaseHelper implements AssistantConversationStore {
     return factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 7,
+        version: 8,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -165,12 +165,18 @@ class DatabaseHelper implements AssistantConversationStore {
         content TEXT NOT NULL,
         created_at TEXT NOT NULL,
         metadata TEXT,
+        invocation_key TEXT,
         FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
       )
     ''');
     await db.execute(
       'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
     );
+    await db.execute('''
+      CREATE UNIQUE INDEX assistant_messages_invocation_key_unique
+      ON assistant_messages(conversation_id, invocation_key)
+      WHERE invocation_key IS NOT NULL
+    ''');
 
     await db.execute('''
       CREATE TABLE tcm_interview_tasks(
@@ -305,6 +311,16 @@ class DatabaseHelper implements AssistantConversationStore {
       )
       ''');
     }
+    if (oldVersion < 8) {
+      await db.execute(
+        'ALTER TABLE assistant_messages ADD COLUMN invocation_key TEXT',
+      );
+      await db.execute('''
+        CREATE UNIQUE INDEX assistant_messages_invocation_key_unique
+        ON assistant_messages(conversation_id, invocation_key)
+        WHERE invocation_key IS NOT NULL
+      ''');
+    }
   }
 
 
@@ -386,8 +402,20 @@ class DatabaseHelper implements AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
+    String? invocationKey,
   }) async {
     final normalizedRole = role.trim().toLowerCase();
+    if (invocationKey != null &&
+        (normalizedRole != 'tool' ||
+            invocationKey.trim().isEmpty ||
+            invocationKey != invocationKey.trim() ||
+            invocationKey.length > 160)) {
+      throw ArgumentError.value(
+        invocationKey,
+        'invocationKey',
+        'Invocation keys are bounded and allowed only for tool ledger events',
+      );
+    }
     if (!const {'user', 'assistant', 'system', 'tool'}.contains(normalizedRole)) {
       throw ArgumentError.value(role, 'role', 'Unsupported assistant message role');
     }
@@ -411,20 +439,30 @@ class DatabaseHelper implements AssistantConversationStore {
         'content': content,
         'created_at': now,
         'metadata': metadata,
+        'invocation_key': invocationKey,
       });
       await txn.rawUpdate(
         '''
         UPDATE assistant_conversations
         SET updated_at = ?,
-            last_message_preview = ?,
+            last_message_preview = CASE
+              WHEN ? = 'tool' THEN last_message_preview
+              ELSE ?
+            END,
             title = CASE
               WHEN title = '新对话' AND ? = 'user' THEN substr(?, 1, 48)
               ELSE title
             END
         WHERE id = ?
         ''',
-        [now, preview.length > 120 ? preview.substring(0, 120) : preview,
-          normalizedRole, preview, conversationId],
+        [
+          now,
+          normalizedRole,
+          preview.length > 120 ? preview.substring(0, 120) : preview,
+          normalizedRole,
+          preview,
+          conversationId,
+        ],
       );
       return id;
     });
