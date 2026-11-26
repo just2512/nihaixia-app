@@ -1184,6 +1184,86 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun sendLocalReasoningAttachmentMessage(
+        conversationId: Long,
+        requestId: String,
+        attachmentType: String,
+        path: String,
+        text: String,
+        context: String,
+        sessionStateContext: String,
+        reasoningContext: String
+    ): Map<String, Any> {
+        ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
+        check(pendingReasoningTurn == null) {
+            "REASONING_PENDING_TURN_MUST_BE_FINALIZED_OR_REJECTED"
+        }
+        val before = conversationHistory.snapshot()
+        val prepared = LocalAiMessageInputPolicy.prepare(
+            userText = text,
+            context = context,
+            sessionStateContext = sessionStateContext,
+            reasoningContext = reasoningContext
+        )
+        val contents = when (attachmentType) {
+            "image" -> {
+                val image = requireCachedInput(path, "照片")
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(image.absolutePath, bounds)
+                LocalAiImagePolicy.validationError(bounds.outWidth, bounds.outHeight)?.let { error ->
+                    throw IllegalArgumentException(error)
+                }
+                Contents.of(
+                    Content.ImageFile(image.absolutePath),
+                    Content.Text(prepared.modelInput)
+                )
+            }
+            "audio" -> {
+                val audio = requireCachedInput(path, "录音")
+                LocalAiWavPolicy.validationError(audio)?.let { error ->
+                    throw IllegalArgumentException(error)
+                }
+                Contents.of(
+                    Content.AudioFile(audio.absolutePath),
+                    Content.Text(prepared.modelInput)
+                )
+            }
+            else -> throw IllegalArgumentException("INVALID_ATTACHMENT_TYPE")
+        }
+        val attachmentLabel = if (attachmentType == "image") "照片" else "录音"
+        val historyUserText = "【此前发送过" + attachmentLabel + "附件】\\n" + text
+        conversationContainsEphemeralContext = true
+        val rawReply = try {
+            sendWithFirstTurnGpuFallback(
+                userMessageText = historyUserText,
+                commitToHistory = false,
+                preserveRawReply = true
+            ) { conversation ->
+                conversation.sendMessage(contents).toString()
+            }
+        } catch (error: Exception) {
+            conversationContainsEphemeralContext = true
+            throw error
+        }
+        check(conversationHistory.snapshot() == before) {
+            "REASONING_PENDING_MUTATED_COMPLETED_HISTORY"
+        }
+        // Binary attachment bytes and the raw structured envelope never enter the replay transcript.
+        recreateCurrentConversationFromHistory()
+        pendingReasoningTurn = LocalAiReasoningTurnPolicy.createPendingTurn(
+            requestId = requestId,
+            conversationId = conversationId,
+            userText = historyUserText,
+            previousHistory = before
+        )
+        return mapOf(
+            "request_id" to requestId,
+            "reply" to rawReply,
+            "backend" to activeBackend
+        )
+    }
+
     private fun finalizeReasoningTurn(
         conversationId: Long,
         requestId: String,
