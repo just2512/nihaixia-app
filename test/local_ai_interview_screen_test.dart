@@ -6220,6 +6220,12 @@ void main() {
     tester.testTextInput.hide();
     tester.view.viewInsets = const FakeViewPadding();
     await tester.pumpAndSettle();
+    // The conversation ListView lazily builds its children. After 20 sends
+    // it is positioned at the latest turn, so the mode selector at the top
+    // does not exist in the widget tree until the list is scrolled back.
+    await tester.drag(find.byType(ListView).first, const Offset(0, 5000));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('切换助手角色'), findsOneWidget);
     await tester.ensureVisible(find.byTooltip('切换助手角色'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('切换助手角色'));
