@@ -1543,7 +1543,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       var nativeRequestMayBePending = false;
       var nativeFinalizeStarted = false;
       var nativeFinalizeConfirmed = false;
-      var nativeTurnRejected = false;
 
       Future<LocalAiReasoningPendingReply> invokeNative(
         ReasoningRequest currentRequest,
@@ -1600,7 +1599,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           requestId: activeRequestId,
         );
         nativeRequestMayBePending = false;
-        nativeTurnRejected = true;
       }
 
       String appResultText(ReasoningExecutionResult execution) {
@@ -1787,6 +1785,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // Reject it before creating a new, independent reasoning turn carrying
         // the verified App execution result.
         await rejectCurrent();
+        // The proposal turn is intentionally discarded. The next Native
+        // inference is a separate request carrying only the verified result.
+        nativeReplyReceived = false;
+        nativeFinalizeStarted = false;
+        nativeFinalizeConfirmed = false;
 
         final invocationId = execution.invocationId;
         final evidenceId = 'tool-result-$invocationId';
@@ -1876,16 +1879,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledge: resultKnowledge,
         );
         if (!followup.isUsable) {
-          final appText = appResultText(execution) +
-              '\n\nAI 对结果的补充解释未通过结构化证据校验；以上仅保留 App 已验证结果，不展示未验证解释。';
+          final appText = '${appResultText(execution)}\n\n'
+              'AI 对结果的补充解释未通过结构化证据校验；以上仅保留 App 已验证结果，不展示未验证解释。';
           await finalizeCurrent(appText);
           return _AssistantTurnResponse(
             text: appText,
             sourceIds: const [],
             knowledgeStatus: 'APP_TOOL_RESULT_ONLY',
             protocolValidated: true,
-            protocolFailureCode: followup.failureCode ??
-                'TOOL_RESULT_REASONING_RESPONSE_REJECTED',
           );
         }
         await finalizeCurrent(followup.answerText);
@@ -1903,11 +1904,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             // inference or the business tool; the durable ledger is authoritative.
           }
         }
-        final nativeStatus = nativeFinalizeConfirmed || nativeTurnRejected
+        final nativeStatus = nativeFinalizeConfirmed
             ? AiTraceStatus.succeeded
-            : nativeInvocationStarted
+            : nativeFinalizeStarted
                 ? AiTraceStatus.unknown
-                : AiTraceStatus.notStarted;
+                : nativeReplyReceived
+                    ? AiTraceStatus.succeeded
+                    : nativeInvocationStarted
+                        ? AiTraceStatus.unknown
+                        : AiTraceStatus.notStarted;
         final message =
             '工具助手本轮未能确认完整结束：$error。已执行的工具结果仍以本地一次性记录为准，不会自动重放。';
         return _AssistantTurnResponse(
