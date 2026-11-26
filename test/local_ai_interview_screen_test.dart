@@ -3798,16 +3798,15 @@ void main() {
     final resultInterpretationEvents = traceEvents
         .where((event) => event.traceId == traceId)
         .toList(growable: false);
-    final preflightEvent = resultInterpretationEvents.singleWhere(
-      (event) => event.stage == AiTraceStage.preflight,
+    expect(
+      resultInterpretationEvents.any(
+        (event) =>
+            event.stage == AiTraceStage.preflight ||
+            event.stage == AiTraceStage.redFlag,
+      ),
+      isFalse,
+      reason: '当前学习产品不采集临床 Preflight/RedFlag 门禁阶段',
     );
-    expect(preflightEvent.status, AiTraceStatus.notApplicable);
-    expect(preflightEvent.errorCode, 'PREFLIGHT_NOT_REQUIRED');
-    final redFlagEvent = resultInterpretationEvents.singleWhere(
-      (event) => event.stage == AiTraceStage.redFlag,
-    );
-    expect(redFlagEvent.status, AiTraceStatus.notApplicable);
-    expect(redFlagEvent.errorCode, 'REDFLAG_ASSESSMENT_NOT_REQUIRED');
     expect(service.sentTexts.last, contains('完整解释'));
     expect(service.sentTexts.last, contains('少阳证'));
     expect(service.sentTexts.last, contains('本地知识库实际检索到的条目说明诊断依据'));
