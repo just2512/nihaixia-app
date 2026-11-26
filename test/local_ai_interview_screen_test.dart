@@ -5978,6 +5978,297 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Core-5：20 轮知识追问与一次工具执行保持跨层身份和记忆隔离', (tester) async {
+    await tester.runAsync(() => FormulaRepository.load());
+    final store = _MemoryConversationStore();
+    final service = _StructuredToolProposalService();
+    var executionCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          audioRecorder: _NoopLocalAiAudioRecorder(),
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (arguments) async {
+            executionCalls++;
+            return AssistantToolResult(
+              toolId: 'yuxiaji_omen',
+              title: '玉匣灵兆',
+              values: const {
+                '签文': '第七签',
+                '解读': '仅供文化参考',
+              },
+              sourceIds: const ['local-engine:yuxiaji-omen:v1'],
+              arguments: arguments,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> sendAndWait(
+      String value, {
+      required int expectedNativeCalls,
+      required int expectedVisibleMessages,
+    }) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        for (var attempt = 0; attempt < 200; attempt++) {
+          final conversations = await store.getAssistantConversations();
+          if (conversations.isNotEmpty) {
+            final rows = await store.getAssistantMessages(
+              conversationId: conversations.single['id'] as int,
+            );
+            final visibleCount = rows
+                .where((row) =>
+                    row['role'] == 'user' || row['role'] == 'assistant')
+                .length;
+            if (service.sentTexts.length >= expectedNativeCalls &&
+                visibleCount >= expectedVisibleMessages) {
+              return;
+            }
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
+      await tester.pumpAndSettle();
+      expect(service.sentTexts, hasLength(expectedNativeCalls));
+    }
+
+    for (var turn = 1; turn <= 20; turn++) {
+      final prompt = turn == 1
+          ? '桔梗汤'
+          : '桔梗汤第$turn轮追问：请继续解释方剂组成、配伍关系和方义。';
+      await sendAndWait(
+        prompt,
+        expectedNativeCalls: turn,
+        expectedVisibleMessages: turn * 2,
+      );
+    }
+
+    expect(service.proposalCalls, 0);
+    expect(service.resultExplanationCalls, 0);
+    expect(service.structuredReasoningContexts, hasLength(20));
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final conversationId = conversations.single['id'] as int;
+    final firstTwentyEnvelopes = service.structuredReasoningContexts
+        .map((context) => jsonDecode(
+              context.split('\n').skip(1).join('\n'),
+            ) as Map<String, dynamic>)
+        .toList(growable: false);
+    final firstTwentyRequestIds = firstTwentyEnvelopes
+        .map((envelope) => envelope['requestId'] as String)
+        .toSet();
+    expect(firstTwentyRequestIds, hasLength(20));
+    expect(
+      firstTwentyEnvelopes.every(
+        (envelope) => envelope['sessionId'] == conversationId,
+      ),
+      isTrue,
+    );
+    expect(firstTwentyEnvelopes.first['rankedEvidence'], isNotEmpty,
+        reason: '首轮桔梗汤查询必须命中真实知识证据，而不是只验证空上下文');
+    expect(
+      service.sentSessionStateConversationIds
+          .take(20)
+          .every((id) => id == conversationId),
+      isTrue,
+    );
+    expect(
+      service.sentSessionStateContexts
+          .take(20)
+          .every((context) =>
+              context == null ||
+              (!context.contains('REASONING_TURN_PENDING') &&
+                  !context.contains('TOOL_INVOCATION_CLAIMED'))),
+      isTrue,
+      reason: '持久化的 Native 推理 Ledger 和工具执行 Ledger 不得进入会话记忆',
+    );
+    expect(
+      service.sentSessionStateContexts[19],
+      contains('桔梗汤'),
+      reason: '第 20 轮应能读取此前知识追问形成的会话记忆',
+    );
+
+    // The screen hides the mode selector while MediaQuery.viewInsets reports
+    // a visible keyboard. Hide the fake IME and reset the test view inset so
+    // the widget tree matches the post-keyboard state before switching modes.
+    tester.testTextInput.hide();
+    tester.view.viewInsets = const FakeViewPadding();
+    await tester.pumpAndSettle();
+    // The conversation ListView lazily builds its children. After 20 sends
+    // it is positioned at the latest turn, so the mode selector at the top
+    // does not exist in the widget tree until the list is scrolled back.
+    await tester.drag(find.byType(ListView).first, const Offset(0, 5000));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('切换助手角色'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工具助手').last);
+    await tester.pumpAndSettle();
+    await sendAndWait(
+      '请按 App 当前时刻生成一个随机文化参考结果，并说明它的含义。',
+      expectedNativeCalls: 21,
+      expectedVisibleMessages: 40,
+    );
+    await tester.runAsync(() async {
+      for (var attempt = 0; attempt < 200 && service.proposalCalls == 0; attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await _pumpUntilFound(tester, find.byType(AlertDialog));
+    expect(service.proposalCalls, 1);
+    expect(executionCalls, 0,
+        reason: 'ACTION_PROPOSAL 只形成候选，不得绕过用户确认');
+    await tester.tap(find.text('确认执行'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (var attempt = 0;
+          attempt < 200 && service.resultExplanationCalls == 0;
+          attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (var attempt = 0; attempt < 200; attempt++) {
+        final conversations = await store.getAssistantConversations();
+        if (conversations.isNotEmpty) {
+          final rows = await store.getAssistantMessages(
+            conversationId: conversations.single['id'] as int,
+          );
+          final visibleCount = rows
+              .where((row) =>
+                  row['role'] == 'user' || row['role'] == 'assistant')
+              .length;
+          if (visibleCount >= 42) return;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(executionCalls, 1);
+    expect(service.resultExplanationCalls, 1);
+    expect(service.sentTexts, hasLength(22));
+    expect(service.structuredReasoningContexts, hasLength(22));
+    expect(service.rejectedReasoningRequestIds, hasLength(1));
+    expect(
+      service.finalizedReasoningAnswers,
+      contains('基于 App 已验证结果的结构化解释。'),
+    );
+    expect(find.textContaining('基于 App 已验证结果的结构化解释。'), findsOneWidget);
+
+    // Tool output is intentionally not duplicated into model-authored chat
+    // text. Verify the App-owned source link opens the durable Ledger result.
+    // Several earlier knowledge turns expose the same source-section label;
+    // the final assistant reply is the one carrying the tool-result source.
+    await tester.tap(find.text('本轮检索资料').last);
+    await tester.pumpAndSettle();
+    expect(find.text('App 工具执行结果'), findsOneWidget);
+    await tester.tap(find.text('App 工具执行结果'));
+    await tester.pumpAndSettle();
+    expect(find.text('工具执行记录：玉匣灵兆'), findsOneWidget);
+    expect(find.textContaining('第七签'), findsOneWidget);
+    await tester.tap(find.text('关闭'));
+    await tester.pumpAndSettle();
+
+    final envelopes = service.structuredReasoningContexts
+        .map((context) => jsonDecode(
+              context.split('\n').skip(1).join('\n'),
+            ) as Map<String, dynamic>)
+        .toList(growable: false);
+    final proposalEnvelope = envelopes.singleWhere(
+      (envelope) =>
+          (envelope['actionCapabilityAllowlist'] as List).isNotEmpty,
+    );
+    final resultEnvelope = envelopes.singleWhere(
+      (envelope) => (envelope['executionResults'] as List).isNotEmpty,
+    );
+    expect(proposalEnvelope['sessionId'], conversationId);
+    expect(resultEnvelope['sessionId'], conversationId);
+    expect(proposalEnvelope['requestId'], isNot(resultEnvelope['requestId']));
+    expect(resultEnvelope['actionCapabilityAllowlist'], isEmpty);
+    expect(resultEnvelope['executionResults'], hasLength(1));
+    expect(
+      (resultEnvelope['executionResults'] as List).single['status'],
+      'SUCCEEDED',
+    );
+    expect(
+      (resultEnvelope['executionResults'] as List).single['resultValues'],
+      containsPair('签文', '第七签'),
+    );
+
+    final rows = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    final visibleRows = rows
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .toList(growable: false);
+    final reasoningRows = rows
+        .where((row) =>
+            row['role'] == 'tool' &&
+            (row['content'] as String).startsWith('REASONING_TURN_'))
+        .toList(growable: false);
+    final businessLedgerRows = rows.where((row) {
+      final key = row['invocation_key'];
+      return key is String &&
+          !key.startsWith('reasoning:') &&
+          (key.endsWith(':claim') || key.endsWith(':terminal'));
+    }).toList(growable: false);
+    expect(visibleRows, hasLength(42));
+    expect(reasoningRows, hasLength(44));
+    expect(businessLedgerRows, hasLength(2));
+    final ledgerRequestIds = reasoningRows
+        .map((row) =>
+            (jsonDecode(row['metadata'] as String) as Map<String, dynamic>)['requestId']
+                as String)
+        .toSet();
+    final allRequestIds = envelopes
+        .map((envelope) => envelope['requestId'] as String)
+        .toSet();
+    expect(ledgerRequestIds, allRequestIds);
+    for (final row in businessLedgerRows) {
+      final payload = jsonDecode(row['metadata'] as String) as Map<String, dynamic>;
+      expect(payload['conversationId'], conversationId);
+      expect(payload['requestId'], proposalEnvelope['requestId']);
+    }
+    final finalAssistant = visibleRows.lastWhere(
+      (row) => row['role'] == 'assistant',
+    );
+    final finalMetadata = AssistantMessageMetadata.decode(
+      finalAssistant['metadata'] as String,
+    );
+    expect(finalMetadata.reasoningRequestId, resultEnvelope['requestId']);
+    expect(finalMetadata.toolId, 'yuxiaji_omen');
+    expect(finalMetadata.toolStatus, 'SUCCEEDED');
+    expect(
+      service.sentSessionStateConversationIds.every(
+        (id) => id == conversationId,
+      ),
+      isTrue,
+    );
+    expect(
+      service.sentSessionStateContexts.every(
+        (context) =>
+            context == null ||
+            (!context.contains('REASONING_TURN_PENDING') &&
+                !context.contains('TOOL_INVOCATION_CLAIMED')),
+      ),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+
   testWidgets('工具助手动作提案必须显式确认，并将 Ledger 回读结果作为只读下一轮输入', (tester) async {
     final store = _MemoryConversationStore();
     final service = _StructuredToolProposalService();
