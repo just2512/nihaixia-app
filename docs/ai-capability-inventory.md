@@ -2,14 +2,14 @@
 
 > **当前范围校准（2026-11-26）：** 本文件较早章节中关于 RedFlag detector、医学审核、临床全入口 fail-closed 和 PARTIAL / RELEASE BLOCKED 的内容属于历史快照。当前不建设临床红旗识别/分诊系统，不要求医学审核或医生签字，不将其作为五种模式的模型调用门槛。具体以本文最新 §2Q、docs/ai-capability-audit.md §17–18 和产品定位文件为准。
 
-本文件早期代码盘点基线为 `master @ 1370855b3f6a94f4a9f0bcb235478f753348443`（2026-11-15）；下方早期日期章节均为历史快照。产品范围以本文 §2Q 和当前 AI 审计规范为准；能力数量/代码现状需按最新源码重新核验，不把旧基线冒充为当前 HEAD。
+本文件早期代码盘点基线为 `master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`（2026-11-15）；下方早期日期章节均为历史快照。产品范围以本文 §2Q 和当前 AI 审计规范为准；能力数量/代码现状需按最新源码重新核验，不把旧基线冒充为当前 HEAD。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
 ## 1. 12 项计划落地矩阵
 
 | # | 事项 | 状态 | 源码/测试证据 | 未关闭项 |
 |---:|---|---|---|---|
-| 1 | 合病规则可达性矩阵 | PARTIAL | `docs/combined-pattern-reachability-matrix.md`、`test/engine/combined_pattern_reachability_matrix_test.dart`、`test/engine/diagnostic_engine_test.dart`、`test/engine/three_yang_clause268_gate_test.dart` | 当前有效表 12 项；参数化矩阵对12项分别覆盖结构化主路径和旧兜底路径，`threeYangBase` 保持 UNREACHABLE。旧杂病兜底小陷胸汤布尔优先级已修正；第268条已增加浮+大组合脉及专业人员确认“上关上”的严格门槛，缺失/未知不标记三阳合病。仍需补齐未满足/满足/未知/冲突四态与旧杂病入口穷举，并区分代码可达与医学适用性。 |
+| 1 | 合病规则可达性矩阵 | PARTIAL | `docs/combined-pattern-reachability-matrix.md`、`test/engine/combined_pattern_reachability_matrix_test.dart`、`test/engine/diagnostic_engine_test.dart`、`test/engine/three_yang_clause268_gate_test.dart` | 当前有效表 12 项；参数化矩阵对12项分别覆盖结构化主路径和旧兜底路径，`threeYangBase` 保持 UNREACHABLE。旧杂病兜底小陷胸汤布尔优先级已修正；第268条已把浮+大组合脉及“上关上”位置描述作为严格输入条件，缺失/未知不自动命中三阳合病。仍需补齐未满足/满足/未知/冲突四态与旧杂病入口穷举，并区分代码可达与医学适用性。 |
 | 2 | 合病调用链修复 | PARTIAL | `CombinedPatternCondition` 集中 canonical 条件键；`DiagnosticEngine` 统一最终结果传播；`ChatScreen` 与 `TcmInterviewAdapter` 调用 `getRequiredCombinedPatternFollowUpQuestions()` | 第32、33、36、146、147、163、172、256条关键前提已有门槛或回归覆盖；追问与最终检测共用证据计算；第172条有正向、阴性及未知回归；第268条新增脉象位置确认追问，三阳证据分支优先于重叠的两经追问；旧杂病胸痛/脉象条件已修复运算优先级。仍需补齐全部旧兜底组合及所有入口的一致性验证。 |
 | 3 | 脉舌交叉验证 | EXISTS（自动化范围内） | `DiagnosticRules.canonicalPulse()`；`test/engine/pulse_tongue_cross_validation_test.dart`；`test/engine/combined_pattern_negative_reachability_test.dart`、`ChatScreen._showTonguePulseDialog()` | 已区分复合脉 canonical 值、单脉与主脉+兼脉；矛盾时追加饮水、小便、四肢等追问。第256条新增单脉拒绝、滑数/数滑双顺序回归；界面禁止无主脉或与主脉重复的兼脉选择，切换/清空主脉时清理失效兼脉。仍需验证真实问诊界面完整路径、用户无法判断脉象时的输入和设备体验。 |
 | 4 | 脏腑独立证据层 | EXISTS（证据采集与展示） | `models/zangfu_evidence.dart`、`engine/zangfu_evidence_builder.dart`、`ChatScreen._showResult()`、`zangfu_evidence_builder_test.dart` | 结果页已展示原始问答、舌脉、来源及未知/未作答状态；不生成脏腑映射、证型或方剂。`organMappingStatus=MISSING` 是预期安全边界；后续只补可追溯证据，不自动诊断。 |

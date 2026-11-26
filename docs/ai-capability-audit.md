@@ -454,7 +454,7 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 研纪是中医学习辅助工具，不是临床诊断或分诊系统。
 - 不实现临床红旗 detector、临床风险分级、医学审核、医生签字或 Flutter/Native 全入口红旗拦截；不以这些事项作为 RELEASE BLOCKED 条件。
 - 保留的通用输入校验、工具参数校验、确定性业务执行状态校验，与临床红旗判断完全不同，不应混为一谈。
-- 如旧 TRACE schema 为兼容性仍有 redFlag/preflight 字段，只能标记 `NOT_APPLICABLE`；不能要求收集 detector 证据，也不能把该阶段作为模型调用 gate。
+- 如旧 TRACE schema 保留 redFlag/preflight 阶段枚举，仅用于历史记录兼容；当前生产请求不执行这些阶段，也不生成 `NOT_APPLICABLE` 事件。不得要求收集 detector 证据或将其作为模型调用 gate。
 - 简明的一般性急重症求助提示按产品定位文档执行；不建设检测器或分诊流程。
 - 本文历史章节中“红旗安全门禁”“医学词表审核”等描述均为历史设计记录，状态为 `SUPERSEDED / NOT IN SCOPE`，不得转成当前待办。
 
