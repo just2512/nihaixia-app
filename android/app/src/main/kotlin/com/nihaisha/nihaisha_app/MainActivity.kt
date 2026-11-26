@@ -408,6 +408,65 @@ class MainActivity : FlutterActivity() {
                             )
                         }
                     }
+                    "sendReasoningAttachmentMessage" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
+                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
+                        val attachmentType = call.argument<String>("attachment_type")?.trim().orEmpty()
+                        val path = call.argument<String>("path")?.trim().orEmpty()
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
+                        val text = call.argument<String>("text").orEmpty()
+                        val context = call.argument<String>("context").orEmpty()
+                        val reasoningContext = call.argument<String>("reasoning_context").orEmpty()
+                        val sessionStateContext = call.argument<String>("session_state_context").orEmpty()
+                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
+                            call.argument<Any>("session_state_conversation_id")
+                        )
+                        if (attachmentType != "image" && attachmentType != "audio") {
+                            result.error("INVALID_ATTACHMENT_TYPE", "只支持 image 或 audio 附件", null)
+                            return@handler
+                        }
+                        if (path.isEmpty()) {
+                            result.error("EMPTY_ATTACHMENT_PATH", "没有选择有效附件", null)
+                            return@handler
+                        }
+                        try {
+                            LocalAiReasoningTurnPolicy.validateRequest(requestId, conversationId, text)
+                            LocalAiReasoningTurnPolicy.validateSupplementalContext(reasoningContext)
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_REASONING_REQUEST", error.message, null)
+                            return@handler
+                        }
+                        val validatedSessionState = try {
+                            LocalAiSessionStateInputPolicy.validate(
+                                sessionStateContext,
+                                sessionStateConversationId,
+                                conversationId
+                            )
+                        } catch (error: IllegalArgumentException) {
+                            result.error("SESSION_STATE_INVALID", error.message, null)
+                            return@handler
+                        }
+                        runAiTask(result, requiresAiAccess = true) {
+                            LocalAiTraceIdPolicy.attach(
+                                sendLocalReasoningAttachmentMessage(
+                                    conversationId = conversationId,
+                                    requestId = requestId,
+                                    attachmentType = attachmentType,
+                                    path = path,
+                                    text = text,
+                                    context = context,
+                                    sessionStateContext = validatedSessionState,
+                                    reasoningContext = reasoningContext
+                                ),
+                                traceId
+                            )
+                        }
+                    }
                     "finalizeReasoningTurn" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
                         val requestId = call.argument<String>("request_id")?.trim().orEmpty()
