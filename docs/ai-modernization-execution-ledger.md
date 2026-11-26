@@ -4637,3 +4637,18 @@ PR HEAD 门禁证据：
 - **CI：** 本 section 记录提交时尚未对最终 HEAD 运行完整 CI；必须等待该分支精确 HEAD 的 Flutter full regression、Branch validation、Android arm64/JVM verification 和 Fork license，SKIPPED 不计 PASS。CI 未通过前不合并。
 - **下一切片：** 先把工具模式迁移到结构化 Request/Response（learning-only 保持空 allowlist）；App 提供不可伪造的确认 UI；通过持久化一次性 invocation 状态防双击/重复请求；授权后才调用现有 `HeadlessToolDispatcher`；实际 `AssistantToolResult` 经 `ReasoningExecutionResultAdapter` 加入下一轮 `ReasoningRequest.executionResults`，由模型解释而不覆盖原结果。失败/取消/无结果/UNKNOWN 按冻结状态保留，UNKNOWN 不重放。
 - **设备策略：** 以上协议/Adapter 可先在云端单测和 CI 完成；E4B 真机 Native 往返、GPU/CPU、进程恢复、连续多轮 TRACE 仍放到所有云端工作收尾后本地验收。
+
+
+---
+
+## 111. 2026-11-26 Core-4 持久化 One-shot Invocation Ledger
+
+- **基线与分支：** 从 Core-4 Request/Adapter 分支 `work/core4-tool-proposal-runtime-contract-20261126` 的 HEAD `de1d00d1541cc4e0eb47aec4c7d337b495f00c69` 建立独立分支 `work/core4-one-shot-invocation-ledger-20261126`。本切片将持久化 claim/terminal 状态建在既有助手会话存储之上，不引入第二套会话表、独立存储或新的授权 Gate。
+- **存储结构：** SQLite 数据库版本从 7 升为 8；既有 `assistant_messages` 增加 nullable `invocation_key`，添加 `(conversation_id, invocation_key)` 的 partial UNIQUE index（仅非 NULL key），旧库通过 `ALTER TABLE` 迁移，不删除既有对话/消息。正常用户和助手消息不设置 invocation key。
+- **隐藏事件：** invocation claim 与 terminal 以 `role='tool'` 写入既有 transcript 表；当前历史恢复路径只恢复 `user/assistant`，因此不会把内部 ledger 事件作为用户消息、Native transcript 或会话预览。tool-role 写入不覆盖 `last_message_preview`。
+- **claim 边界：** `AssistantToolInvocationLedger.tryClaim` 在任何业务执行之前持久化 CLAIMED；key 为 `{invocationId}:claim`，同一 conversation 的重复 key 被 SQLite 唯一索引阻断。重复同身份返回 alreadyClaimed/alreadyTerminal；同 invocationId 被不同 requestId/tool/capability/args 重绑返回 conflictingClaim。不同 conversation 的相同 ID 彼此隔离。
+- **真实终态：** `recordResult` 只接受已有 claim；使用真实 `AssistantToolResult` 写入 SUCCEEDED/FAILED/NO_RESULT/CANCELLED/UNKNOWN。SUCCESS 必须通过实际参数、结构化输出和来源校验；成功结果缺来源或参数不匹配降级为 UNKNOWN，不伪装成功。terminal key 为 `{invocationId}:terminal`，相同终态重复记录幂等，冲突终态拒绝。
+- **恢复策略：** `recoverUnresolvedClaims` 只应在恢复/打开会话时调用；任何有 CLAIMED 无 TERMINAL 的动作一律追加 UNKNOWN（`PROCESS_INTERRUPTED_WITHOUT_TERMINAL_RESULT`），不根据推测重放。即便进程可能死在 Dispatcher 调用前，也采取保守 UNKNOWN，以避免业务副作用已发生但回执丢失时重复执行。
+- **测试：** 新增服务级测试覆盖 claim 唯一性、请求身份重绑、conversation 隔离、终态幂等/冲突、参数和来源校验、FAILED/NO_RESULT/CANCELLED/UNKNOWN 区分、进程恢复 UNKNOWN 与拒绝重放。另加 SQLite v7→v8 schema upgrade、唯一索引、tool-role 预览隔离及连接重启测试。当前仍需以精确分支 HEAD CI 证实编译/运行。
+- **重要限制：** 本切片尚未接入 Native 工具模式生产调用、确认 UI、HeadlessToolDispatcher 或模型结果回流；它提供执行前 claim 与执行后 terminal 的持久化底座，不构成 Core-4 生产执行闭环。Dispatcher 只能在完成 requestId/capability/args/用户确认校验且 claim 已成功后调用；未知终态不重试。
+- **云端/设备边界：** SQLite 迁移、ledger lifecycle 和并发去重可以完全云端测试；E4B/GPU/进程重启后的真机执行状态、ColorOS 行为和 Find N2 实机 TRACE 留到所有云端工作结束后本地验收。
