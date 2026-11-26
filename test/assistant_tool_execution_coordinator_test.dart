@@ -8,6 +8,7 @@ import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/assistant_tool_invocation_ledger.dart';
 import 'package:nihaisha_app/services/assistant_tool_execution_coordinator.dart';
 import 'package:nihaisha_app/services/reasoning_action_proposal_adapter.dart';
+import 'package:nihaisha_app/services/reasoning_action_proposal_gate.dart';
 import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {

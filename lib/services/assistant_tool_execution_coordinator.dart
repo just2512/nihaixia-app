@@ -1,11 +1,15 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import '../models/assistant_tool_result.dart';
 import '../models/reasoning_request.dart';
 import '../models/reasoning_response.dart';
+import '../models/tool_execution_plan.dart';
 import 'assistant_tool_invocation_ledger.dart';
 import 'headless_tool_dispatcher.dart';
 import 'reasoning_action_proposal_adapter.dart';
+import 'reasoning_action_proposal_gate.dart';
 import 'reasoning_execution_result_adapter.dart';
 
 enum AssistantToolExecutionCoordinatorStatus {
