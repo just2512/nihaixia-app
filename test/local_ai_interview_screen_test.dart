@@ -6831,7 +6831,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-}
 
 testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文资产',
       (tester) async {
