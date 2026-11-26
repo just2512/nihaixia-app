@@ -57,17 +57,19 @@ ReasoningRequest request({
   List<String> known = const ['evidence-1', 'evidence-dropped'],
   List<ReasoningExecutionResult> results = const [],
   SessionStateSnapshot? session,
+  List<String> allowedCapabilities = const [],
 }) =>
     ReasoningRequest(
       requestId: 'request-123',
       sessionId: 7,
       userText: '  用户原始问题：请解释这段原文。\n不要改写  ',
-      mode: 'learning',
+      mode: allowedCapabilities.isEmpty ? 'learning' : 'tools',
       responseSchemaVersion: 1,
       sessionState: session ?? snapshot(),
       rankedEvidence: ranked,
       knownEvidenceIds: known,
       executionResults: results,
+      allowedCapabilityIds: allowedCapabilities,
     );
 
 void main() {
@@ -425,6 +427,85 @@ void main() {
       expect((results[1] as Map)['status'], 'UNKNOWN');
       expect(formatted, contains('not allowed citations'));
       expect(formatted, contains('does not grant permission'));
+    });
+
+    test('binds an immutable action allowlist to tool mode only', () {
+      final value = request(
+        allowedCapabilities: const ['dosage', 'solar_terms'],
+      );
+      expect(value.mode, 'tools');
+      expect(value.allowedCapabilityIds, ['dosage', 'solar_terms']);
+      expect(value.toMap()['allowedCapabilityIds'], ['dosage', 'solar_terms']);
+      expect(
+        () => value.allowedCapabilityIds.add('yuxiaji_omen'),
+        throwsUnsupportedError,
+      );
+
+      final formatted =
+          ReasoningRequestPromptFormatter.formatSupplementalContext(value);
+      final envelope = jsonDecode(
+        formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
+      ) as Map<String, dynamic>;
+      expect(envelope['actionCapabilityAllowlist'], ['dosage', 'solar_terms']);
+    });
+
+    test('rejects duplicate, malformed, or non-tools action allowlists', () {
+      expect(
+        () => ReasoningRequest(
+          requestId: 'bad-duplicate',
+          sessionId: 7,
+          userText: '请计算剂量',
+          mode: 'tools',
+          responseSchemaVersion: 1,
+          allowedCapabilityIds: const ['dosage', 'dosage'],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ReasoningRequest(
+          requestId: 'bad-empty-id',
+          sessionId: 7,
+          userText: '请计算剂量',
+          mode: 'tools',
+          responseSchemaVersion: 1,
+          allowedCapabilityIds: const ['dosage', ' '],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ReasoningRequest(
+          requestId: 'learning-action',
+          sessionId: 7,
+          userText: '解释方剂',
+          mode: 'learning',
+          responseSchemaVersion: 1,
+          allowedCapabilityIds: const ['dosage'],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ReasoningRequest(
+          requestId: 'consultation-action',
+          sessionId: 7,
+          userText: '我有头痛',
+          mode: 'consultation',
+          responseSchemaVersion: 1,
+          allowedCapabilityIds: const ['dosage'],
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('learning and non-tool requests expose an empty action allowlist', () {
+      final value = request();
+      final formatted =
+          ReasoningRequestPromptFormatter.formatSupplementalContext(value);
+      final envelope = jsonDecode(
+        formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
+      ) as Map<String, dynamic>;
+      expect(value.allowedCapabilityIds, isEmpty);
+      expect(envelope['actionCapabilityAllowlist'], isEmpty);
+      expect(formatted, contains('If actionCapabilityAllowlist is empty'));
     });
 
     test('rejects supplemental metadata that exceeds its explicit character bound', () {
