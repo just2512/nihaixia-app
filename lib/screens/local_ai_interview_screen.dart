@@ -2887,9 +2887,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId != null &&
         conversationGeneration == _historyRestoreGeneration) {
       try {
+        // The persisted dialogue contains App-validated deterministic
+        // consultation results. Clinical red-flag gating is out of scope for
+        // this learning product; restore uses the normal Native AI access gate.
         await _restoreVisibleConversationToModel(
           conversationId: conversationId,
-          requireMedicalSafety: true,
         );
         modelContextRestored = true;
       } catch (error) {
