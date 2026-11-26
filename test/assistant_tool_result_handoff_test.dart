@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/yijing_engine.dart';
@@ -58,14 +59,18 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
     String? metadata,
     String? invocationKey,
   }) async {
-    if (invocationKey != null) {
-      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    if (invocationKey != null &&
+        savedMessages.any((message) =>
+            message['conversationId'] == conversationId &&
+            message['invocation_key'] == invocationKey)) {
+      throw StateError('Duplicate invocation key: $invocationKey');
     }
     savedMessages.add({
       'conversationId': conversationId,
       'role': role,
       'content': content,
       'metadata': metadata,
+      'invocation_key': invocationKey,
     });
     return savedMessages.length;
   }
@@ -119,7 +124,10 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
   @override
   Future<List<Map<String, Object?>>> getAssistantMessages({
     required int conversationId,
-  }) async => const [];
+  }) async => savedMessages
+      .where((message) => message['conversationId'] == conversationId)
+      .map((message) => Map<String, Object?>.unmodifiable(message))
+      .toList(growable: false);
 
   @override
   Future<void> saveTcmInterviewTaskState({
@@ -141,22 +149,130 @@ class _RecordingAssistantService extends LocalAiService {
   List<String> restoredUserMessages = const [];
   final sentTexts = <String>[];
   final sentContexts = <String>[];
+  final _pendingReplies = <String, String>{};
   int modelCalls = 0;
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  Future<LocalAiReasoningPendingReply> _sendStructuredReply(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final separator = reasoningContext.indexOf('\n');
+    if (separator < 0) {
+      throw StateError('测试结构化请求缺少元数据 JSON');
+    }
+    final envelope = jsonDecode(
+      reasoningContext.substring(separator + 1),
+    ) as Map<String, dynamic>;
+    final mode = envelope['mode'] as String;
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final references = rankedEvidence
+        .map((item) => item['evidenceId'] as String)
+        .toList(growable: false);
+    final canAnswerWithoutEvidence = const {
+      'automatic',
+      'consultation',
+      'metaphysics',
+    }.contains(mode);
+    final isAnswer = references.isNotEmpty || canAnswerWithoutEvidence;
+    final reply = jsonEncode({
+      'schemaVersion': 1,
+      'requestId': requestId,
+      'responseKind': isAnswer ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
+      'status': isAnswer ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
+      'segments': [
+        isAnswer ? '已收到：$text' : '本轮没有足够资料支持确定回答。',
+      ],
+      'referencedEvidenceIds': references,
+      'unknowns': <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+    modelCalls++;
+    sentTexts.add(text);
+    sentContexts.add(context);
+    _pendingReplies[requestId] = reply;
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: 'cpu',
+      traceId: traceId,
+    );
+  }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructuredReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+  );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructuredReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
+
+  @override
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {
+    if (_pendingReplies.remove(requestId) == null) {
+      throw StateError('测试服务没有对应的待提交推理轮次');
+    }
+  }
+
+  @override
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {
+    if (_pendingReplies.remove(requestId) == null) {
+      throw StateError('测试服务没有对应的待拒绝推理轮次');
+    }
+  }
 
   @override
   Future<String> sendMessageWithContext(
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
+    // Legacy calls remain observable; Core-3 paths must use the structured API.
     modelCalls++;
     sentTexts.add(text);
     sentContexts.add(context);
@@ -168,15 +284,11 @@ class _RecordingAssistantService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
 }
-
 
 void main() {
   testWidgets('旧页面字符串只显示为 UNKNOWN，不作为业务来源或模型上下文', (tester) async {

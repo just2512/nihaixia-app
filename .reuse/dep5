@@ -1284,3 +1284,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 adapter and focused regression tests that project the existing Formula, Herb, Acupuncture, Acupoint and Neijing legacy text blocks into typed CandidateEvidence without changing legacy matching or presentation order; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+Files:
+ lib/services/assistant_reasoning_turn_ledger.dart
+ test/assistant_reasoning_turn_ledger_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-1 durable Native reasoning-turn lifecycle ledger and focused recovery tests. Reuses hidden tool-role transcript rows and existing invocation-key uniqueness; records PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED states, reconstructs only validated finalized turns, and never replays ambiguous inference; ownership evidence required.

@@ -1,10 +1,10 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.0  
-> **编制日期：** 2026-11-24  
-> **执行地点：** 用户本地 Windows + OPPO Find N2  
-> **当前状态：** **PREPARE / LOCAL ONLY / MISSING**  
-> **目标：** 将远程已交付代码转为可复核的真实设备验收证据。本文件是执行入口，不是实机通过报告。
+> **文档版本：** 1.1  
+> **编制日期：** 2026-11-26  
+> **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
+> **当前状态：** **LOCAL ONLY / NOT RUN / WAITING FOR MERGED MASTER CI**  
+> **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
 
 ---
 
@@ -15,8 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 编制时 master HEAD | **57f62083590c5619f84da98ff7c5b5f430efeba8** | 这是文档编制时的快照；本地构建前必须重新读取 HEAD |
-| 最近一笔应用运行时代码提交 | **57f62083590c5619f84da98ff7c5b5f430efeba8** | v1.3 单一 ai_access Native Gate + Dispatcher/Gateway 仅保留安全/来源完整性职责；PR #472/#478/#482 已合并 |
+| 构建基线 | **PR #576 合并且最终 HEAD 的 Flutter 与 Android CI 全部成功后的最新 `master`** | 本地执行前必须 `git fetch origin` 并记录 `git rev-parse origin/master`；不得使用 PR 分支旧 HEAD 或本文件历史章节中的 SHA |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -25,7 +24,7 @@
 | 模型 SHA-256 | **0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0** | 必须逐字符一致 |
 | LiteRT-LM | **0.18.0** | 以当前锁定依赖为准 |
 
-**重要：** 编制时 HEAD 不等于执行时 HEAD。取得交接后先同步最新 master，重新记录 commit、版本、CI 和 APK 元数据。不要使用旧交接文档中的 1717b36… 或 b884b0… 代替当前构建基线。
+**重要：** 本文件是唯一设备验收交接入口。旧的 `find-n2-e4b-local-handover.md` 与 PR #576 临时交接单已合并到本文件并撤销独立入口。执行时重新同步最新 `master`，记录 commit、CI、版本和 APK 元数据；不要沿用任何历史 SHA。
 
 当前主线已经按专业版架构 v1.3 完成云端落地：App 运行时只有一个 ai_access 权益，Native Gate 统一控制所有 LiteRT 模型加载和推理；HeadlessToolDispatcher 保留执行计划/能力映射/结果校验，ContextResolutionGateway 保留来源引用/锚点完整性校验，两者均不承担独立收费判断。协议 v1 历史 AI Feature 兼容映射为同一 aiAccess，协议 v2 只使用 ai_access。App 永久 Token 不等同于 Fork 源代码商业许可。上述为代码与 CI 结论，不证明 Find N2 上的 Keystore、Token 正向激活、Native Gate 实际行为或 GPU/CPU 推理已经通过。
 
@@ -228,7 +227,7 @@ GPU、CPU 必须分开建立会话与记录。每组要求：
 
 ### 5.4 TRACE
 
-需要 Debug-only TRACE 时，只能按 docs/find-n2-e4b-local-handover.md §7 的本地签名流程执行：
+需要 Debug-only TRACE 时，按本文件 §14.3 的本地签名流程执行：
 - 本机使用原 Release 签名，显式设置 localDebugUsesReleaseSigning=true；该属性不得进入 CI。
 - 安装前再次核对 Debug APK 的包名、版本码和证书 SHA-256 与已安装包一致。
 - TRACE 只记录 allowlist 元数据：trace_id、阶段、状态、实际 backend、必要的稳定 ID、耗时和错误码。
@@ -346,20 +345,92 @@ test-results.md 每一行按以下格式填写：
 
 ---
 
-## 8. 专项文档入口
+## 8. 配套专项操作规范
 
-本交接单负责执行顺序和交付证据；具体步骤及完整场景矩阵仍以以下文件为准：
+本文件是唯一设备验收交接入口；以下文件只提供对应专项的详细操作步骤，不再各自作为独立交接单：
 
-1. [Find N2 / E4B 本地验收交接总清单](find-n2-e4b-local-handover.md)
-2. [本地 Android 构建与升级检查清单](local-android-release-checklist.md)
-3. [Find N2 真机折叠屏验收方案](find-n2-real-device-acceptance.md)
-4. [Gemma 4 E4B 本地配置与边界](local-ai-e4b.md)
-5. [Find N2 本地 AI 后端验收清单](find-n2-local-ai-acceptance-checklist.md)
-6. [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md)
-7. [研纪 UI 视觉设计系统](yanji-visual-design-system.md)
-8. [研纪品牌与应用身份规范](brand-identity.md)
-9. [研纪专业版架构约束 v1.3](pro-edition-architecture-constraints.md)
-
+1. [本地 Android 构建与升级检查清单](local-android-release-checklist.md)
+2. [Find N2 真机折叠屏验收方案](find-n2-real-device-acceptance.md)
+3. [Gemma 4 E4B 本地配置与边界](local-ai-e4b.md)
+4. [Find N2 本地 AI 后端验收清单](find-n2-local-ai-acceptance-checklist.md)
+5. [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md)
+6. [研纪 UI 视觉设计系统](yanji-visual-design-system.md)
+7. [研纪品牌与应用身份规范](brand-identity.md)
+8. [研纪专业版架构约束 v1.3](pro-edition-architecture-constraints.md)
+ 
 ---
+ 
+## 14. 2026-11-26 PR #576 合并后的统一验收补充
+ 
+> 本节和本文件其他部分共同构成唯一设备交接；不再新增 PR 专属交接单。所有场景目前均为 **NOT RUN / LOCAL ONLY**，须以真实 Find N2 证据更新。
+ 
+### 14.1 云端合并与构建前置条件
+ 
+1. PR #576 已合并到 \`master\`，且合并后最终 HEAD 对应的 Flutter regression/static analysis、Android arm64 APK/Manifest/ABI、Native JVM tests 与必要的许可证工作流均为终态成功。
+2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
+3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
+4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
+5. 若上述 CI 或签名/版本门槛未满足，设备安装记为 BLOCKED，不得用卸载、清除数据或 Debug 签名绕过。
+ 
+### 14.2 普通学习助手链路补充场景
+ 
+使用合成、非敏感的学习问题与测试文件，不输入真实患者资料或其他个人敏感信息。
+ 
+| ID | 场景 | 操作 | 验收重点 | 状态 |
+|---|---|---|---|---|
+| P576-01 | 普通学习对话 | 发送一个普通中医基础知识问题 | 可以调用模型、返回并展示非空回答 | NOT_RUN |
+| P576-02A | 自动模式 | 发送普通知识问题 | 正常路由，不依赖临床检测状态 | NOT_RUN |
+| P576-02B | 问诊模式 | 发送学习性、非诊断执行的中医概念问题 | 模式入口和普通学习解释可用；App 确定性问诊规则不被模型替代 | NOT_RUN |
+| P576-02C | 学习模式 | 发送普通经典条文或本草学习问题 | 正常检索、解释与来源回链 | NOT_RUN |
+| P576-02D | 工具模式 | 请求一个无破坏性的已有工具 | 参数校验、用户确认（如适用）、真实工具执行和结果回流可关联 | NOT_RUN |
+| P576-02E | 玄学模式 | 发送传统术数文化性问题 | 模式隔离和普通解释可用，不将文化问题当成临床问题 | NOT_RUN |
+| P576-03 | initialPrompt / 情境入口 | 从知识条目或结果页点击“问 AI” | 初始上下文、source/anchor/snapshot 正确，不串项 | NOT_RUN |
+| P576-04 | 历史续聊 | 打开既有助手会话并追问上一轮内容 | 历史恢复、指代正确，不重复提交旧轮次 | NOT_RUN |
+| P576-05 | 图片附件 | 使用无个人信息的普通知识图片 | 选择、权限、读取、模型处理、展示与消息关联正常；取消/失败不伪装成功 | NOT_RUN |
+| P576-06 | 语音附件 | 使用普通短语音样本 | 录音/选择、转写或模型处理、结果展示与持久化正常；失败状态清楚 | NOT_RUN |
+| P576-07 | 工具结果回流 | 执行一个已有确定性工具 | 只有 App 实际执行并校验的结果进入解释；模型不得伪造结果 | NOT_RUN |
+| P576-08 | 会话切换 | 在两个会话间分别追问 | 消息、附件和上下文锚点不跨会话污染 | NOT_RUN |
+| P576-09 | 应用重启恢复 | 完成一轮后强制停止并重启 App | 已完成轮次可恢复；未完成轮次不冒充成功；无重复消息 | NOT_RUN |
+| P576-10 | TRACE（可选 Debug） | 显式启用本地 Debug TRACE 并执行代表场景 | trace_id、阶段、实际 backend、消息和持久化记录可关联；仅导出脱敏 allowlist 元数据 | NOT_RUN |
+ 
+本项目不执行临床红旗 detector、临床风险分类、医学审核、本人/他人/否定/历史/假设/引用等临床语义测试。此类事项不属于设备验收，不得重新列为 MISSING、BLOCKED 或发布前置条件。
+ 
+### 14.3 Debug-only TRACE 的原签名切换流程
+ 
+TRACE 只用于本机诊断；不得安装 CI Debug APK，不得上传或分发带调试能力的 APK。
+ 
+\`\`\`powershell
+$env:ORG_GRADLE_PROJECT_localDebugUsesReleaseSigning = 'true'
+$env:ORG_GRADLE_PROJECT_ciArm64Only = 'true'
+try {
+  flutter build apk --debug --no-pub --target-platform android-arm64
+  if ($LASTEXITCODE -ne 0) { throw "Local TRACE Debug build failed." }
+}
+finally {
+  Remove-Item Env:ORG_GRADLE_PROJECT_localDebugUsesReleaseSigning -ErrorAction SilentlyContinue
+  Remove-Item Env:ORG_GRADLE_PROJECT_ciArm64Only -ErrorAction SilentlyContinue
+}
+$debugApk = ".\\build\\app\\outputs\\flutter-apk\\app-debug.apk"
+apksigner verify --verbose --print-certs $debugApk
+Get-FileHash $debugApk -Algorithm SHA256
+apkanalyzer manifest application-id $debugApk
+apkanalyzer manifest version-code $debugApk
+\`\`\`
+ 
+仅当 Debug APK 的 applicationId 一致、versionCode 不低于设备当前包、签名证书 SHA-256 与设备当前包完全相同，才允许 \`adb install -r $debugApk\`。TRACE 完成后清除本地构建属性，按 §3 重建正常 Release APK，并用原签名覆盖安装恢复。原签名材料缺失时标记 BLOCKED，不安装、不卸载、不清数据。
+ 
+### 14.4 本地回传内容
+ 
+在独立的 \`output/find-n2/<run-id>/\` 目录回传：
+ 
+- 实际 master commit、App version/versionCode、applicationId、APK SHA-256、签名证书 SHA-256、ABI；
+- 设备型号、Android/ColorOS、屏幕姿态和系统字号；
+- P576-01 至 P576-10 逐项结果，及本文件第 3–7 节其他适用项目结果；
+- GPU/CPU 实际 backend、轮次结果、耗时、空回复/异常和脱敏 TRACE；
+- 升级前后用户数据保留核对；
+- 可复现缺陷的预期/实际、最小复现、脱敏日志和截图编号。
+ 
+状态按实际证据记为 PASS / FAIL / BLOCKED / UNKNOWN / NOT_RUN。未执行不得记 PASS；只提交脱敏摘要，不提交数据库原件、模型文件、密钥、真实个人资料或对话原文。
+ 
 
 **交接结论：** 当前仅完成远程仓库与规范基线核对，未连接或操作用户的 OPPO Find N2。所有本地设备结果在真实执行并提供证据前均保持 MISSING / LOCAL ONLY。

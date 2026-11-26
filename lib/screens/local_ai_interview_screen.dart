@@ -24,6 +24,7 @@ import '../services/reasoning_request_prompt_formatter.dart';
 import '../services/reasoning_action_proposal_adapter.dart';
 import '../services/reasoning_action_proposal_gate.dart';
 import '../services/assistant_tool_invocation_ledger.dart';
+import '../services/assistant_reasoning_turn_ledger.dart';
 import '../services/assistant_tool_execution_coordinator.dart';
 import '../models/reasoning_request.dart';
 import '../services/assistant_conversation_orchestrator.dart';
@@ -297,6 +298,7 @@ class _AssistantTurnResponse {
     this.nativeInferenceStatus = AiTraceStatus.succeeded,
     this.protocolValidated = true,
     this.protocolFailureCode,
+    this.reasoningRequestId,
   });
 
   final String text;
@@ -305,6 +307,7 @@ class _AssistantTurnResponse {
   final AiTraceStatus nativeInferenceStatus;
   final bool protocolValidated;
   final String? protocolFailureCode;
+  final String? reasoningRequestId;
 }
 
 /// Bounded user-authored context retained for symptom extraction and history replay.
@@ -1191,40 +1194,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final contextualEntry = widget.resolveContextualKnowledgeEntry
         ? await _resolveCurrentKnowledgeEntry()
         : null;
-    Future<String> sendWithContext(String context) async {
-      const evidencePresentationBoundary =
-          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
-          '只能依据实际提供的资料内容回答；不得声称资料已核验或模型已逐条引用，资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\n$context';
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.contextAssembly,
-        status: AiTraceStatus.succeeded,
-      );
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.modelInput,
-        status: AiTraceStatus.succeeded,
-      );
-      return traceId == null
-          ? _service.sendMessageWithContext(
-              text,
-              conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-              context: guardedContext,
-            )
-          : _service.sendMessageWithContextAndTrace(
-              text,
-              conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-              context: guardedContext,
-              traceId: traceId,
-            );
-    }
-    Future<_AssistantTurnResponse> sendStructuredLearning(
+    Future<_AssistantTurnResponse> sendStructuredAnswer(
       AssistantKnowledgeContextResult knowledge, {
+      required AssistantMode answerMode,
+      required String roleContext,
+      required bool modeNeutral,
       String? requestIdOverride,
     }) async {
       final requestId = requestIdOverride ?? _newReasoningRequestId(traceId);
@@ -1232,38 +1206,52 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         requestId: requestId,
         sessionId: conversationId,
         userText: text.trim(),
-        mode: 'learning',
+        mode: answerMode.name,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
       );
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
-      final knowledgeText = knowledge.modelContextText;
-      final roleContext = '当前角色：学习助手。\n'
-          '${AssistantMode.learning.promptHint}\n'
-          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
       final guardedContext = '$evidencePresentationBoundary\n$roleContext';
-      var nativeInvocationStarted = false;
-      var nativeReplyReceived = false;
+      final modeLabel = switch (answerMode) {
+        AssistantMode.automatic => '通用助手',
+        AssistantMode.consultation => '问诊助手',
+        AssistantMode.learning => '学习助手',
+        AssistantMode.tools => '工具助手',
+        AssistantMode.metaphysics => '玄学助手',
+      };
+      final reasoningLedger = AssistantReasoningTurnLedger(_conversationStore);
       var nativeRequestMayBePending = false;
-      var nativeFinalizeStarted = false;
       var nativeFinalizeConfirmed = false;
-      var nativeTurnRejected = false;
+      String? validatedAnswer;
+      List<String> validatedSourceIds = const [];
       try {
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.contextAssembly,
           status: AiTraceStatus.succeeded,
+          route: modeNeutral ? 'mode_neutral_reasoning_context' : 'learning_reasoning_context',
+          mode: answerMode.name,
         );
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.modelInput,
           status: AiTraceStatus.succeeded,
+          route: modeNeutral ? 'mode_neutral_reasoning_request' : 'learning_reasoning_request',
+          mode: answerMode.name,
         );
-        nativeInvocationStarted = true;
+        final startStatus = await reasoningLedger.begin(
+          conversationId: conversationId,
+          requestId: requestId,
+          mode: answerMode.name,
+          userText: text.trim(),
+        );
+        if (startStatus != AssistantReasoningTurnStartStatus.started) {
+          throw StateError('REASONING_TURN_DUPLICATE_OR_CONFLICT:$startStatus');
+        }
         nativeRequestMayBePending = true;
         final pending = traceId == null
             ? await _service.sendReasoningMessage(
@@ -1285,28 +1273,44 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 sessionStateContext: sessionStateContext,
                 sessionStateConversationId: conversationId,
               );
-        nativeReplyReceived = true;
-        final decoded = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
-          raw: pending.reply,
-          request: request,
-          knowledge: knowledge,
-        );
+        final decoded = modeNeutral
+            ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+                raw: pending.reply,
+                request: request,
+                knowledge: knowledge,
+              )
+            : ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+                raw: pending.reply,
+                request: request,
+                knowledge: knowledge,
+              );
         if (!decoded.isUsable) {
           await _service.rejectReasoningTurn(
             conversationId: conversationId,
             requestId: requestId,
           );
           nativeRequestMayBePending = false;
-          nativeTurnRejected = true;
+          final rejectionWrite = await reasoningLedger.recordTerminal(
+            conversationId: conversationId,
+            requestId: requestId,
+            status: AssistantReasoningTurnStatus.rejected,
+            failureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
+          );
+          if (rejectionWrite != AssistantReasoningTurnTerminalWriteStatus.recorded &&
+              rejectionWrite != AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+            throw StateError('REASONING_TURN_REJECTION_NOT_PERSISTED:$rejectionWrite');
+          }
           return _AssistantTurnResponse(
-            text: '本轮学习回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
-                '未写入成功历史。可重新发送问题，或继续普通对话。',
+            text: '本轮$modeLabel回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
+                '未写入成功历史。可以补充信息后重新发送。',
             knowledgeStatus: 'PROTOCOL_REJECTED',
             protocolValidated: false,
             protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
+            reasoningRequestId: requestId,
           );
         }
-        nativeFinalizeStarted = true;
+        validatedAnswer = decoded.answerText;
+        validatedSourceIds = decoded.sourceIds;
         await _service.finalizeReasoningTurn(
           conversationId: conversationId,
           requestId: requestId,
@@ -1314,47 +1318,84 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         nativeFinalizeConfirmed = true;
         nativeRequestMayBePending = false;
+        final finalizedWrite = await reasoningLedger.recordTerminal(
+          conversationId: conversationId,
+          requestId: requestId,
+          status: AssistantReasoningTurnStatus.finalized,
+          answerText: decoded.answerText,
+          sourceIds: decoded.sourceIds,
+        );
+        if (finalizedWrite != AssistantReasoningTurnTerminalWriteStatus.recorded &&
+            finalizedWrite != AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+          throw StateError('REASONING_TURN_FINALIZATION_NOT_PERSISTED:$finalizedWrite');
+        }
         return _AssistantTurnResponse(
           text: decoded.answerText,
           sourceIds: decoded.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
+          reasoningRequestId: requestId,
         );
-      } catch (error) {
-        if (nativeRequestMayBePending) {
+      } catch (error, stackTrace) {
+        if (nativeFinalizeConfirmed && validatedAnswer != null) {
+          // Native committed the validated turn. Retry only the durable SQLite
+          // acknowledgement; never invoke inference again.
+          try {
+            await reasoningLedger.recordTerminal(
+              conversationId: conversationId,
+              requestId: requestId,
+              status: AssistantReasoningTurnStatus.finalized,
+              answerText: validatedAnswer,
+              sourceIds: validatedSourceIds,
+            );
+          } catch (_) {
+            // The pending durable claim will be reconciled conservatively on
+            // the next history restore if SQLite remains unavailable.
+          }
+        } else if (nativeRequestMayBePending) {
           try {
             await _service.rejectReasoningTurn(
               conversationId: conversationId,
               requestId: requestId,
             );
-            nativeTurnRejected = true;
+            nativeRequestMayBePending = false;
+            await reasoningLedger.recordTerminal(
+              conversationId: conversationId,
+              requestId: requestId,
+              status: AssistantReasoningTurnStatus.rejected,
+              failureCode: 'NATIVE_REJECTED_AFTER_REQUEST_ERROR',
+            );
           } catch (_) {
-            // Finalize may have reached Native before its MethodChannel
-            // acknowledgement was lost. Do not guess or replay that turn.
+            // Native may have committed before its acknowledgement was lost.
+            // Preserve UNKNOWN; never replay inference.
+            try {
+              await reasoningLedger.recordTerminal(
+                conversationId: conversationId,
+                requestId: requestId,
+                status: AssistantReasoningTurnStatus.unknown,
+                failureCode: 'NATIVE_COMPLETION_ACK_UNKNOWN',
+              );
+            } catch (_) {}
           }
         }
-        final nativeStatus =
-            nativeFinalizeConfirmed || nativeTurnRejected
-                ? AiTraceStatus.succeeded
-                : nativeInvocationStarted
-                    ? AiTraceStatus.unknown
-                    : AiTraceStatus.notStarted;
-        final failureText = nativeTurnRejected
-            ? '本轮结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
-            : nativeFinalizeStarted
-                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
-                : nativeReplyReceived
-                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
-                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
-        return _AssistantTurnResponse(
-          text: failureText,
-          knowledgeStatus: 'PROTOCOL_REJECTED',
-          nativeInferenceStatus: nativeStatus,
-          protocolValidated: false,
-          protocolFailureCode: error is PlatformException
-              ? error.code
-              : error.runtimeType.toString(),
-        );
+        Error.throwWithStackTrace(error, stackTrace);
       }
+    }
+
+    Future<_AssistantTurnResponse> sendStructuredLearning(
+      AssistantKnowledgeContextResult knowledge, {
+      String? requestIdOverride,
+    }) {
+      final knowledgeText = knowledge.modelContextText;
+      final roleContext = '当前角色：学习助手。\n'
+          '${AssistantMode.learning.promptHint}\n'
+          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
+      return sendStructuredAnswer(
+        knowledge,
+        answerMode: AssistantMode.learning,
+        roleContext: roleContext,
+        modeNeutral: false,
+        requestIdOverride: requestIdOverride,
+      );
     }
 
     Future<_AssistantTurnResponse> sendStructuredTools(
@@ -1386,21 +1427,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           'ACTION_PROPOSAL 是给用户审核的候选，并非执行授权。'
           '${knowledgeText.isEmpty ? '本轮未检索到可引用的本地知识资料；不得编造出处或把未知内容说成已知。' : '以下为本轮实际提供的本地知识资料摘录；资料仅用于解释，不可替代 App 工具执行。\n$knowledgeText'}';
 
+      final reasoningLedger = AssistantReasoningTurnLedger(_conversationStore);
       var activeRequestId = requestId;
       var nativeInvocationStarted = false;
       var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
       var nativeFinalizeStarted = false;
       var nativeFinalizeConfirmed = false;
+      String? lastFinalizedAnswer;
+      List<String> lastFinalizedSourceIds = const [];
 
       Future<LocalAiReasoningPendingReply> invokeNative(
         ReasoningRequest currentRequest,
         String currentContext,
-      ) {
+      ) async {
         final supplementalContext =
             ReasoningRequestPromptFormatter.formatSupplementalContext(
           currentRequest,
         );
+        activeRequestId = currentRequest.requestId;
+        final startStatus = await reasoningLedger.begin(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+          mode: AssistantMode.tools.name,
+          userText: currentRequest.userText,
+        );
+        if (startStatus != AssistantReasoningTurnStartStatus.started) {
+          throw StateError('REASONING_TURN_DUPLICATE_OR_CONFLICT:$startStatus');
+        }
         nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
         return traceId == null
@@ -1425,8 +1479,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               );
       }
 
-      Future<void> finalizeCurrent(String answer) async {
+      Future<void> finalizeCurrent(
+        String answer, {
+        List<String> sourceIds = const [],
+      }) async {
         nativeFinalizeStarted = true;
+        lastFinalizedAnswer = answer;
+        lastFinalizedSourceIds = sourceIds;
         await _service.finalizeReasoningTurn(
           conversationId: conversationId,
           requestId: activeRequestId,
@@ -1434,6 +1493,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         nativeFinalizeConfirmed = true;
         nativeRequestMayBePending = false;
+        final write = await reasoningLedger.recordTerminal(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+          status: AssistantReasoningTurnStatus.finalized,
+          answerText: answer,
+          sourceIds: sourceIds,
+        );
+        if (write != AssistantReasoningTurnTerminalWriteStatus.recorded &&
+            write != AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+          throw StateError('REASONING_TURN_FINALIZATION_NOT_PERSISTED:$write');
+        }
       }
 
       Future<void> rejectCurrent() async {
@@ -1442,6 +1512,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           requestId: activeRequestId,
         );
         nativeRequestMayBePending = false;
+        final write = await reasoningLedger.recordTerminal(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+          status: AssistantReasoningTurnStatus.rejected,
+          failureCode: 'NATIVE_TOOL_REASONING_REJECTED',
+        );
+        if (write != AssistantReasoningTurnTerminalWriteStatus.recorded &&
+            write != AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+          throw StateError('REASONING_TURN_REJECTION_NOT_PERSISTED:$write');
+        }
+      }
+
+      Future<void> discardCurrentProposal() async {
+        await _service.rejectReasoningTurn(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+        );
+        nativeRequestMayBePending = false;
+        final write = await reasoningLedger.recordTerminal(
+          conversationId: conversationId,
+          requestId: activeRequestId,
+          status: AssistantReasoningTurnStatus.superseded,
+          failureCode: 'ACTION_PROPOSAL_TURN_SUPERSEDED_BY_APP_RESULT',
+        );
+        if (write != AssistantReasoningTurnTerminalWriteStatus.recorded &&
+            write != AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+          throw StateError('REASONING_TURN_SUPERSESSION_NOT_PERSISTED:$write');
+        }
       }
 
       String appResultText(ReasoningExecutionResult execution) {
@@ -1497,11 +1595,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
 
         if (prepared.isUsableAnswer && prepared.answerResult != null) {
-          await finalizeCurrent(prepared.answerResult!.answerText);
+          await finalizeCurrent(
+            prepared.answerResult!.answerText,
+            sourceIds: prepared.answerResult!.sourceIds,
+          );
           return _AssistantTurnResponse(
             text: prepared.answerResult!.answerText,
             sourceIds: prepared.answerResult!.sourceIds,
             knowledgeStatus: knowledge.statusLabel,
+            reasoningRequestId: activeRequestId,
           );
         }
 
@@ -1515,6 +1617,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             protocolFailureCode: prepared.decodeResult.diagnostics.isEmpty
                 ? 'REASONING_TOOL_RESPONSE_REJECTED'
                 : prepared.decodeResult.diagnostics.first,
+            reasoningRequestId: activeRequestId,
           );
         }
 
@@ -1522,20 +1625,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final tool = AssistantToolRouter.byId(preview.toolId);
         if (tool == null) {
           await rejectCurrent();
-          return const _AssistantTurnResponse(
+          return _AssistantTurnResponse(
             text: 'App 未登记该工具，动作提案已拒绝；没有执行任何工具。',
             knowledgeStatus: 'PROTOCOL_REJECTED',
             protocolValidated: false,
             protocolFailureCode: 'REASONING_ACTION_PROPOSAL_TOOL_NOT_REGISTERED',
+            reasoningRequestId: activeRequestId,
           );
         }
         if (!mounted) {
           await rejectCurrent();
-          return const _AssistantTurnResponse(
+          return _AssistantTurnResponse(
             text: '当前对话界面已关闭，动作提案已拒绝；没有执行任何工具。',
             knowledgeStatus: 'PROTOCOL_REJECTED',
             protocolValidated: false,
             protocolFailureCode: 'REASONING_ACTION_PROPOSAL_SCREEN_DISPOSED',
+            reasoningRequestId: activeRequestId,
           );
         }
 
@@ -1594,11 +1699,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // been disposed; reject the pending proposal and never dispatch.
         if (!mounted) {
           await rejectCurrent();
-          return const _AssistantTurnResponse(
+          return _AssistantTurnResponse(
             text: '当前对话界面已关闭，动作提案已拒绝；没有执行任何工具。',
             knowledgeStatus: 'PROTOCOL_REJECTED',
             protocolValidated: false,
             protocolFailureCode: 'REASONING_ACTION_PROPOSAL_SCREEN_DISPOSED',
+            reasoningRequestId: activeRequestId,
           );
         }
 
@@ -1606,9 +1712,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           const cancelled =
               '你已取消本次工具动作；App 未调用工具，未产生业务执行结果。';
           await finalizeCurrent(cancelled);
-          return const _AssistantTurnResponse(
+          return _AssistantTurnResponse(
             text: cancelled,
             knowledgeStatus: 'ACTION_CANCELLED',
+            reasoningRequestId: activeRequestId,
           );
         }
 
@@ -1651,13 +1758,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             text: appText,
             sourceIds: const [],
             knowledgeStatus: 'TOOL_EXECUTION_NOT_SUCCEEDED',
+            reasoningRequestId: activeRequestId,
           );
         }
 
         // The first Native turn contains an untrusted proposal, not an answer.
         // Reject it before creating a new, independent reasoning turn carrying
         // the verified App execution result.
-        await rejectCurrent();
+        await discardCurrentProposal();
         // The proposal turn is intentionally discarded. The next Native
         // inference is a separate request carrying only the verified result.
         nativeReplyReceived = false;
@@ -1721,8 +1829,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           executionResults: [execution],
         );
         activeRequestId = followupRequestId;
-        nativeRequestMayBePending = true;
-        nativeInvocationStarted = true;
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.contextAssembly,
@@ -1760,21 +1866,53 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             sourceIds: const [],
             knowledgeStatus: 'APP_TOOL_RESULT_ONLY',
             protocolValidated: true,
+            reasoningRequestId: activeRequestId,
           );
         }
-        await finalizeCurrent(followup.answerText);
+        await finalizeCurrent(
+          followup.answerText,
+          sourceIds: followup.sourceIds,
+        );
         return _AssistantTurnResponse(
           text: followup.answerText,
           sourceIds: followup.sourceIds,
           knowledgeStatus: resultKnowledge.statusLabel,
+          reasoningRequestId: activeRequestId,
         );
       } catch (error) {
-        if (nativeRequestMayBePending) {
+        if (nativeFinalizeConfirmed && lastFinalizedAnswer != null) {
+          try {
+            final write = await reasoningLedger.recordTerminal(
+              conversationId: conversationId,
+              requestId: activeRequestId,
+              status: AssistantReasoningTurnStatus.finalized,
+              answerText: lastFinalizedAnswer,
+              sourceIds: lastFinalizedSourceIds,
+            );
+            if (write == AssistantReasoningTurnTerminalWriteStatus.recorded ||
+                write == AssistantReasoningTurnTerminalWriteStatus.alreadyRecorded) {
+              return _AssistantTurnResponse(
+                text: lastFinalizedAnswer!,
+                sourceIds: lastFinalizedSourceIds,
+                knowledgeStatus: knowledge.statusLabel,
+                reasoningRequestId: activeRequestId,
+              );
+            }
+          } catch (_) {}
+        } else if (nativeRequestMayBePending) {
           try {
             await rejectCurrent();
           } catch (_) {
-            // The Native acknowledgement may have been lost. Do not replay
-            // inference or the business tool; the durable ledger is authoritative.
+            // Native may have committed before its acknowledgement was lost.
+            // Keep UNKNOWN and never replay inference or the business tool.
+            try {
+              await reasoningLedger.recordTerminal(
+                conversationId: conversationId,
+                requestId: activeRequestId,
+                status: AssistantReasoningTurnStatus.unknown,
+                failureCode: 'NATIVE_COMPLETION_ACK_UNKNOWN',
+              );
+            } catch (_) {}
           }
         }
         final nativeStatus = nativeFinalizeConfirmed
@@ -1796,6 +1934,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           protocolFailureCode: error is PlatformException
               ? error.code
               : error.runtimeType.toString(),
+          reasoningRequestId: activeRequestId,
         );
       }
     }
@@ -1822,39 +1961,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         if (knowledgeIntent.mode == AssistantMode.learning) {
           return sendStructuredLearning(knowledge);
         }
-        // 无命中且无失败时，不注入知识检索框架与角色 context——
-        // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
-        // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
+        // Keep ordinary conversation free of synthetic NO_RESULTS retrieval text,
+        // while still enforcing the same request/response and Native commit contract.
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
-          await _traceRecorder.record(
-            traceContext,
-            stage: AiTraceStage.contextAssembly,
-            status: AiTraceStatus.notApplicable,
-          );
-          await _traceRecorder.record(
-            traceContext,
-            stage: AiTraceStage.modelInput,
-            status: AiTraceStatus.succeeded,
-          );
-          final reply = traceId == null
-              ? await _service.sendMessage(
-                  text,
-                  conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-                )
-              : await _service.sendMessageWithTrace(
-                  text,
-                  conversationId: conversationId,
-                  sessionStateContext: sessionStateContext,
-                  sessionStateConversationId: conversationId,
-                  traceId: traceId,
-                );
-          return _AssistantTurnResponse(
-            text: reply,
-            sourceIds: knowledge.sourceIds,
-            knowledgeStatus: knowledge.statusLabel,
+          final roleContext = '当前角色：通用助手。\n'
+              '${AssistantMode.automatic.promptHint}\n'
+              '正常回答用户的一般问题；不要把普通寒暄或一般聊天强行归入中医学习。'
+              '只有识别到明确的个人症状、知识学习或工具执行意图时，才切换对应领域。';
+          return sendStructuredAnswer(
+            knowledge,
+            answerMode: AssistantMode.automatic,
+            roleContext: roleContext,
+            modeNeutral: true,
           );
         }
         final context = StringBuffer(
@@ -1867,22 +1986,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ..writeln('以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知：')
             ..write(knowledge.modelContextText);
         }
-        final reply = await sendWithContext(context.toString());
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
+        return sendStructuredAnswer(
+          knowledge,
+          answerMode: AssistantMode.automatic,
+          roleContext: context.toString(),
+          modeNeutral: true,
         );
       case AssistantMode.consultation:
-        // Consultation uses the same bundled classical-text and TCM knowledge
-        // content as learning. Source identity and retrieval audit data stay
-        // in App metadata; they are not inserted into the dialogue prompt.
+        // Consultation shares the local TCM corpus with learning, but its
+        // output remains explanatory: deterministic interview/diagnosis logic
+        // and confirmed task state stay owned by the App.
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(
+        final knowledge = await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
         final modelKnowledgeContext = knowledge.modelContextText;
         final knowledgeContext = modelKnowledgeContext.isEmpty
@@ -1890,18 +2009,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : '以下为本轮可用的本地知识资料摘录。只解释资料明确覆盖的内容；'
                 '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\n'
                 '$modelKnowledgeContext';
-        final reply = await sendWithContext(
-          '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
-              '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
-              '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
-              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
-              '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
-              '$knowledgeContext',
-        );
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
+        final roleContext =
+            '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
+            '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
+            '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
+            '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
+            '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
+            '$knowledgeContext';
+        return sendStructuredAnswer(
+          knowledge,
+          answerMode: AssistantMode.consultation,
+          roleContext: roleContext,
+          modeNeutral: true,
         );
       case AssistantMode.learning:
         if (contextualEntry != null) {
@@ -1950,8 +2069,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '八字、紫微等排盘结果必须由 App 工具生成；结果返回后，应基于完整回传字段作总结、关联解释和分层归纳。'
             '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。';
-        return _AssistantTurnResponse(
-          text: await sendWithContext(context),
+        return sendStructuredAnswer(
+          const AssistantKnowledgeContextResult(text: ''),
+          answerMode: AssistantMode.metaphysics,
+          roleContext: context,
+          modeNeutral: true,
         );
     }
   }
@@ -2008,6 +2130,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     Map<String, String> toolArguments = const {},
     String? knowledgeStatus,
     String? traceId,
+    String? reasoningRequestId,
     List<AssistantToolPlanStepMetadata> toolPlanSteps = const [],
   }) async {
     try {
@@ -2022,6 +2145,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
+        reasoningRequestId: reasoningRequestId,
         invocationOrigin: _pendingToolOrigin?.name,
         contextRef: _activeContextRef,
         toolPlanSteps: toolPlanSteps,
@@ -2046,6 +2170,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
           traceId: traceId,
+          reasoningRequestId: reasoningRequestId,
           invocationOrigin: _pendingToolOrigin?.name,
           contextRef: _activeContextRef,
           toolPlanSteps: toolPlanSteps,
@@ -6350,6 +6475,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: mergedSourceIds,
           knowledgeStatus: response.knowledgeStatus,
           traceId: traceContext.traceId,
+          reasoningRequestId: response.reasoningRequestId,
         );
   
         await _traceRecorder.record(
@@ -6382,8 +6508,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: mergedSourceIds,
       );
     } catch (error) {
+      final nativeCommitUnknown = error is PlatformException &&
+          (error.code == 'REASONING_FINALIZE_ACK_UNKNOWN' ||
+              error.code == 'REASONING_REJECT_ACK_UNKNOWN');
       if (mounted) {
-        setState(() => _error = 'AI 结果解释未完成：$error');
+        setState(() {
+          _error = nativeCommitUnknown
+              ? 'Native 提交确认状态未知：本轮未自动重放，也未写入成功历史。'
+                  '请先确认会话状态后再继续。'
+              : 'AI 结果解释未完成：$error';
+        });
       }
       await _traceRecorder.record(
         traceContext,
@@ -7307,6 +7441,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool preserveContextPrompt = false,
   }) async {
     final generation = ++_historyRestoreGeneration;
+    var reasoningRecoveryFailed = false;
+    try {
+      await AssistantReasoningTurnLedger(_conversationStore)
+          .recoverAndReconcile(conversationId: selectedId);
+    } catch (error, stack) {
+      reasoningRecoveryFailed = true;
+      debugPrint('[AssistantHistory] Native 推理请求状态恢复失败：$error\n$stack');
+    }
     final rows = await _conversationStore.getAssistantMessages(
       conversationId: selectedId,
     );
@@ -7521,8 +7663,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       // Ordinary assistant prose and parameter-clarification messages are
       // replayed. Terminal tool outcomes are replayed only when their persisted
       // status and source IDs prove a validated success.
-      final includeInModelContext =
-          isUser || !hasTerminalToolOutcome || hasVerifiedToolResult;
+      final includeInModelContext = messageMetadata.replayable &&
+          (isUser || !hasTerminalToolOutcome || hasVerifiedToolResult);
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
@@ -7750,9 +7892,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHistoryUserMessages =
           canRestoreContext ? replayableUserMessages : const [];
       _contextResolutionError = contextRestoreError;
-      _error = contextRestoreError == null && _status?.ready != true
-          ? '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。'
-          : null;
+      _error = reasoningRecoveryFailed
+          ? '历史消息已载入，但上一轮 Native 请求状态恢复失败；未自动重放。请检查后再继续。'
+          : contextRestoreError == null && _status?.ready != true
+              ? '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。'
+              : contextRestoreError;
     });
     if (_status?.ready == true) {
       await _restorePendingHistory();
@@ -9775,6 +9919,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
           sourceIds: turnResponse.sourceIds,
           knowledgeStatus: turnResponse.knowledgeStatus,
+          reasoningRequestId: turnResponse.reasoningRequestId,
         );
         await _traceRecorder.record(
           traceContext,
@@ -9806,7 +9951,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         return;
       }
-      _inputController.clear();
+      if (turnResponse.protocolValidated) {
+        _inputController.clear();
+      }
       final nativeRuntimeUnavailable =
           refreshedStatus != null && !refreshedStatus.ready;
       setState(() {
@@ -9940,10 +10087,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _confirmedDraft = null;
         }
         _sending = false;
+        final nativeCommitUnknown =
+            error.code == 'REASONING_FINALIZE_ACK_UNKNOWN' ||
+            error.code == 'REASONING_REJECT_ACK_UNKNOWN';
         final message = error.message ?? '本地推理失败';
-        _error = refreshedStatus == null
-            ? '$message；无法确认本地模型状态，请重新检查后继续。'
-            : message;
+        _error = nativeCommitUnknown
+            ? 'Native 提交确认状态未知：本轮未自动重放，也未写入成功历史。'
+                '请先确认会话状态后再继续。'
+            : refreshedStatus == null
+                ? '$message；无法确认本地模型状态，请重新检查后继续。'
+                : message;
       });
       await _traceRecorder.record(
         traceContext,

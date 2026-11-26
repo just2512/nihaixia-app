@@ -1,6 +1,6 @@
 # AI 能力静态/动态审计报告
 
-> **历史审计快照，非当前范围基线（2026-11-26 纠偏）**：本文审计日期为 2026-11-15，正文中 B / RedFlag 的 `PARTIAL / RELEASE BLOCKED`、自然语言临床 detector、医学词表/阈值/处置文案签审及发布阻断，均是当时的历史设计和审计状态，已被 2026-11-26 的产品定位纠偏取代。当前临床红旗门禁状态为 **NOT_APPLICABLE**：不建设临床 detector，不要求医学背景人员签审或留存审批记录，不阻断模型调用、业务路由或版本发布。当前准则见 `docs/ai-capability-audit.md §17.1`、`docs/ai-modernization-execution-ledger.md §119`、`docs/ai-redflag-entrypoint-audit.md` 和 `docs/ai-redflag-preflight-policy.md`。
+> **历史审计快照，非当前范围基线（2026-11-26 纠偏）**：本文审计日期为 2026-11-15，正文中 B / RedFlag 的 `PARTIAL / RELEASE BLOCKED`、自然语言临床 detector、医学词表/阈值/处置文案签审及发布阻断，均是当时的历史设计和审计状态，已被 2026-11-26 的产品定位纠偏取代。早期 B 项临床红旗门禁要求已撤出当前执行计划：不建设临床 detector，不要求医学背景人员签审或留存审批记录，不阻断模型调用、业务路由或版本发布。当前准则见 `docs/ai-capability-audit.md §17.1`、`docs/ai-modernization-execution-ledger.md §120`、`docs/ai-redflag-entrypoint-audit.md` 和 `docs/ai-redflag-preflight-policy.md`。
 
 - 审计日期：2026-11-15（PR #169/#170/#171/#172 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
@@ -15,7 +15,7 @@
 | 工作流 | 状态 | 关键结论 |
 |---|---|---|
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C 检索与引用 | PARTIAL | 83 个讲稿 sourceId 对应本地资产；#171 统一知识条目引用，#172 将古籍章节/内经条目精确直达。普通学习资料以 App 内稳定 sourceId + 可打开本地条目为验收，不要求外部纸本卷页考证；检索覆盖/相关性仍由黄金集约束 |
 | D Headless Capability | PARTIAL | 24 个定义中，23 个常规工具入口有 17 项 Headless executor、6 项 Page-only；structured_diagnosis 为独立内联确定性流程。Page-only 不自动构成待改造缺口 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
@@ -287,7 +287,7 @@ F 仍 PARTIAL。
 | ID | 状态 | 当前证据与未闭环项 |
 |---|---|---|
 | A | PARTIAL | Native teardown 串行化、SQLite 原子轮次、CI 回归已合并；Find N2 GPU/CPU 各至少 20 轮、图片/语音、Activity/进程恢复 TRACE 仍 UNKNOWN。 |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C | PARTIAL | 精确方剂匹配与黄金快照已合并；继续按 subject/object ID、类型、文本、谓词、sourceId、原始位置和来源逐条审查；不以候选数量增加为目标。 |
 | D | PARTIAL | 主线 Headless = 2、Executed = 2（`yunqi`、`almanac`）；其余 22 项 Page-only，结构化问诊保持独立内联流程。 |
 | E | PARTIAL | 清理入口、生产附件归属、SQLite 清理边界/回滚测试、模型与 TRACE 文件备份排除已合并；混合 SQLite 中 AI 行仍可能进入系统备份，旧共享图片归属未知，Android 清理后进程重启/不可恢复 TRACE 缺失。 |
@@ -411,7 +411,7 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 | 项目 | 当前状态 | 尚未关闭的工作 |
 |---|---|---|
 | A Native 多轮/生命周期 | PARTIAL / 设备 UNKNOWN | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程中断/恢复真实 TRACE |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C 检索来源 | PARTIAL | 83 个讲稿条目的人工条文映射/底本定位；12 条规则 manifest 的纸本版本与影像核验 |
 | D Headless | 2 项 Headless / 2 项 Executed | 保持现状；无确定性业务函数与行为基线前不新增 adapter |
 | E 数据清理/备份 | PARTIAL | 混合 SQLite AI 行备份边界、旧共享附件归属、外部副本、Find N2 清理后强停/重启不可恢复验收 |
@@ -474,7 +474,7 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 | 工作流 | 状态 | 当前证据与未闭环项 |
 |---|---|---|
 | A 多轮稳定性 | PARTIAL / DEVICE UNKNOWN | 生命周期、轮次持久化和恢复路径有自动化证据；Find N2 GPU/CPU、媒体、Activity recreation、进程杀死/重启后的 transcript 一致性仍无真实 TRACE |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C 检索来源 | PARTIAL / NOT VERIFIED | 83/83 Markdown assets 存在并已逐项读取；sourceId/asset 身份、query 重叠和正文命中语境已复核；83/83 bibliographic locator 仍 MISSING。12 条规则来源行中 7 条 ONLINE_TEXT_CROSS_CHECKED、3 条 CONDITIONS_CROSS_CHECKED、2 条 MISSING；纸本版次/卷页/原始影像 12/12 缺失 |
 | D Headless Capability | 2 HEADLESS / 2 EXECUTED | `yunqi`、`almanac`；不以数量为目标 |
 | E 数据保护 | PARTIAL | 数据清除链、AI-owned attachments、Native cache、TRACE 文件、SQLite AI 表事务和 backup manifest 有代码/测试；混合 SQLite 备份、旧共享图片归属、外部副本和 Find N2 清除后强停/重启仍未核验 |
@@ -548,7 +548,7 @@ PR #121 合并后的主线 `07cae681` 自动化验收：
 | 工作流 | 当前状态 | 下一项允许推进的工作 |
 |---|---|---|
 | A 多轮稳定性 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU 多轮、媒体、Activity/进程恢复真实 TRACE；不再用 CI 代替设备结果 |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C 知识来源 | PARTIAL（学习资料回链已实现；原文/规则来源分层） | 83 个讲稿 sourceId 对应本地 Markdown 资产，检索结果携带来源类别、标题、sourceId 和回链；12 个规则 conditionKey 对应 manifest | 一般学习资料不要求逐页纸本校勘；指定古籍原文和诊断规则仍需单条来源核验。12 条规则当前7条在线文本交叉核对、3条条件交叉核对、2条 MISSING |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | 冻结；没有可复现失败和真实需求，不新增 adapter |
 | E 数据保护 | PARTIAL | 明确混合数据库备份边界决策；Find N2 上验证清除后强停/重启不可恢复；旧共享附件归属不明时保留 |
@@ -717,7 +717,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | A Native 稳定性 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU 多轮、媒体和进程恢复未完成 |
-| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
+| 历史 B 项（已撤销） | 仅历史记录 | 不属于当前工作流、执行计划或发布门槛。 |
 | C 知识来源 | 当前普通学习来源口径已满足；规则来源 PARTIAL | 不重做 83 条学习讲稿溯源；规则来源缺项维持原状态 |
 | D Headless | 3 项：yunqi、almanac、bazi | 不为数量批量转换 Page Tool |
 | E 数据保护 | PARTIAL | SQLite 混合备份边界及清除后强停/重启证据未完成 |

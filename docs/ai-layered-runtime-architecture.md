@@ -505,6 +505,16 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - 后续硬门槛：工具模式接入结构化 Request/Response；App 确认 UI 独立展示并绑定原 requestId/allowlist；持久化 claim 成功后才调用现有 Dispatcher；真实 `AssistantToolResult` 经适配加入下一轮 Request 供模型解释，同时 App 保留原始执行结果/来源。Page-only、未登记能力、缺参、非法参数、拒绝、取消和 UNKNOWN 均不得伪装成功；UNKNOWN 不自动重放。
 
 
+### 5.4 Core-1 持久化 Native 推理请求生命周期（PR #575，待验收）
+
+- **请求身份与所有权：** `AssistantReasoningTurnLedger` 以 conversationId + 32 位 requestId 绑定一次 Native 结构化推理。每次 Native 推理调用前写入隐藏 `role=tool` PENDING 事件，使用既有 `invocation_key` + 部分唯一索引；不新增会话表或数据库迁移。
+- **终态：** Native finalize 确认后记录 FINALIZED 与经过 Dart 协议/证据校验的答案；Native reject 确认后记录 REJECTED；完成确认不明确或进程中断时记录/恢复为 UNKNOWN；工具动作提案在 App 执行成功后被有意丢弃的第一轮记录为 SUPERSEDED，不伪装为拒绝或成功答案。
+- **进程恢复：** 打开历史会话时执行 `recoverAndReconcile`。未决 PENDING 转为 UNKNOWN，绝不自动重放模型推理或工具；Native 已确认 FINALIZED、但 SQLite transcript 原子写入前进程退出时，从 Ledger 中的已校验答案重建 user/assistant 消息对；UNKNOWN/REJECTED 恢复为可见状态消息，SUPERSEDED 不额外生成重复对话。
+- **记忆隔离：** `reasoningRequestId` 写入 transcript 元数据用于去重和恢复。UNKNOWN/REJECTED 的原始 user 消息标记 `replayable=false`；Native transcript restore 不回放这些请求，`SessionStateSnapshotBuilder` 也不将其提升为用户会话记忆事实。隐藏 role=tool 的请求/终态记录仍不进入 Memory/RAG。
+- **边界：** 此实现恢复的是 SQLite transcript 与请求终态，不持久化 LiteRT KV Cache，也不意味着 Native Conversation 在进程重启后自动恢复；用户重新打开历史会话时才按 transcript 重建 Native context。16,000/24,000 UTF-16 字符限制均不是模型 token/input budget；自动压缩仍未实现。
+- **状态：** PR #575 依赖 PR #573 的 Core-3 结构化多模式调用分支；两者均未合并前不得计为主线完成。Flutter regression、静态分析、Android arm64/JVM 与 Fork License 必须以最终 PR HEAD 重新验收；Find N2 E4B 实机测量和 TRACE 留在全部云端工作结束后本地完成。
+
+
 ---
 
 ### Core-0：五层职责契约与当前源码映射（2026-11-26 基线）

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/assistant_reasoning_turn_ledger.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
@@ -48,62 +51,87 @@ class _HistoryResumeService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredConversationId = conversationId;
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
 
-  @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> _sendStructuredReply(
     String text, {
-    required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
+    required String requestId,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final envelopeStart = reasoningContext.lastIndexOf('\n');
+    final envelope = jsonDecode(
+      reasoningContext.substring(envelopeStart + 1),
+    ) as Map<String, dynamic>;
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .map((item) => (item as Map<String, dynamic>)['evidenceId'] as String)
+        .toList(growable: false);
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      backend: 'cpu',
+      traceId: traceId,
+      reply: jsonEncode({
+        'schemaVersion': 1,
+        'requestId': requestId,
+        'responseKind': 'ANSWER',
+        'status': 'COMPLETED',
+        'segments': ['续聊成功：$text'],
+        'referencedEvidenceIds': rankedEvidence,
+        'unknowns': <String>[],
+        'conflicts': <String>[],
+        'omittedEvidenceIds': <String>[],
+      }),
+    );
+  }
 
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
     String text, {
     required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
+    required String requestId,
     required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
+    required String reasoningContext,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
+  }) => _sendStructuredReply(
+    text,
+    requestId: requestId,
+    reasoningContext: reasoningContext,
+  );
 
   @override
-  Future<String> sendMessageWithContextAndTrace(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
     required int conversationId,
+    required String requestId,
     required String context,
+    required String reasoningContext,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
+  }) => _sendStructuredReply(
+    text,
+    requestId: requestId,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
+
+  @override
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {}
+
+  @override
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {}
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
@@ -192,8 +220,11 @@ class _MemoryConversationStore implements AssistantConversationStore {
     String? metadata,
     String? invocationKey,
   }) async {
-    if (invocationKey != null) {
-      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    if (invocationKey != null &&
+        (messages[conversationId] ?? const <Map<String, Object?>>[]).any(
+          (row) => row['invocation_key'] == invocationKey,
+        )) {
+      throw StateError('DUPLICATE_TEST_INVOCATION_KEY');
     }
     final row = <String, Object?>{
       'id': _nextMessageId++,
@@ -201,6 +232,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
       'role': role,
       'content': content,
       'metadata': metadata,
+      'invocation_key': invocationKey,
     };
     messages.putIfAbsent(conversationId, () => []).add(row);
     final conversation = conversations[conversationId]!;
@@ -592,15 +624,86 @@ void main() {
     await _pumpFrames(tester);
 
     final messages = await store.getAssistantMessages(conversationId: 1);
-    expect(messages, hasLength(4));
-    expect(messages[2]['role'], 'user');
-    expect(messages[2]['content'], '继续补充：舌苔薄白');
-    expect(messages[3]['role'], 'assistant');
-    expect(messages[3]['content'], '续聊成功：继续补充：舌苔薄白');
+    final visibleMessages = messages
+        .where((message) => message['role'] == 'user' || message['role'] == 'assistant')
+        .toList(growable: false);
+    final reasoningLedgerRows =
+        messages.where((message) => message['role'] == 'tool').toList();
+    expect(visibleMessages, hasLength(4));
+    expect(visibleMessages[2]['role'], 'user');
+    expect(visibleMessages[2]['content'], '继续补充：舌苔薄白');
+    expect(visibleMessages[3]['role'], 'assistant');
+    expect(visibleMessages[3]['content'], '续聊成功：继续补充：舌苔薄白');
+    expect(reasoningLedgerRows, hasLength(2));
+    expect(reasoningLedgerRows.first['content'], 'REASONING_TURN_PENDING');
+    expect(reasoningLedgerRows.last['content'], 'REASONING_TURN_FINALIZED');
 
     final conversations = await store.getAssistantConversations();
     expect(conversations, hasLength(2));
     expect(conversations.first['id'], 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('进程恢复将未确认推理请求标为 UNKNOWN 且不回放', (tester) async {
+    final store = _MemoryConversationStore();
+    final conversationId = await store.createAssistantConversation(
+      title: '可恢复会话',
+      mode: 'consultation',
+    );
+    await store.saveAssistantTurn(
+      conversationId: conversationId,
+      userContent: '已经完成的上一轮问题',
+      assistantContent: '已经完成的上一轮回答',
+    );
+    const requestId = 'abcdef0123456789abcdef0123456789';
+    await AssistantReasoningTurnLedger(store).begin(
+      conversationId: conversationId,
+      requestId: requestId,
+      mode: 'consultation',
+      userText: '尚未确认的请求原文',
+    );
+
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可恢复会话'));
+    await _pumpFrames(tester);
+
+    expect(find.text('尚未确认的请求原文'), findsOneWidget);
+    expect(find.textContaining('UNKNOWN'), findsOneWidget);
+    expect(service.restoredTranscript, contains('已经完成的上一轮问题'));
+    expect(service.restoredTranscript, isNot(contains('尚未确认的请求原文')));
+    expect(service.restoredUserMessages, contains('已经完成的上一轮问题'));
+    expect(service.restoredUserMessages, isNot(contains('尚未确认的请求原文')));
+
+    final rows = await store.getAssistantMessages(conversationId: conversationId);
+    final visible = rows
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .toList(growable: false);
+    expect(visible, hasLength(4));
+    final recoveredUser = visible[2];
+    final recoveredAssistant = visible[3];
+    expect(recoveredUser['content'], '尚未确认的请求原文');
+    expect(
+      AssistantMessageMetadata.decode(recoveredUser['metadata'] as String).replayable,
+      isFalse,
+    );
+    expect(
+      AssistantMessageMetadata.decode(recoveredAssistant['metadata'] as String)
+          .reasoningRequestId,
+      requestId,
+    );
     expect(tester.takeException(), isNull);
   });
 

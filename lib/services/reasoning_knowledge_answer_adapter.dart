@@ -129,10 +129,33 @@ class ReasoningKnowledgeAnswerAdapter {
                   .map((item) => '- evidenceId=${item.evidenceId}')
                   .join('\n');
 
+  /// Decodes a structured conversation answer for any non-execution mode.
+  ///
+  /// Evidence-free ANSWER is allowed only when this request supplied no ranked
+  /// evidence. Once evidence is supplied, every ANSWER must cite at least one
+  /// request-local ranked ID. Capability-bearing requests are rejected here;
+  /// tools mode must use the dedicated ACTION_PROPOSAL + consent + ledger path.
+  static ReasoningKnowledgeAnswerResult decodeConversationAnswer({
+    required String raw,
+    required ReasoningRequest request,
+    required AssistantKnowledgeContextResult knowledge,
+  }) {
+    if (request.mode == 'tools' || request.allowedCapabilityIds.isNotEmpty) {
+      return _failure('REASONING_CONVERSATION_PATH_EXECUTION_MODE_FORBIDDEN');
+    }
+    return decodeAndResolve(
+      raw: raw,
+      request: request,
+      knowledge: knowledge,
+      requireEvidenceForAnswer: request.rankedEvidence.isNotEmpty,
+    );
+  }
+
   static ReasoningKnowledgeAnswerResult decodeAndResolve({
     required String raw,
     required ReasoningRequest request,
     required AssistantKnowledgeContextResult knowledge,
+    bool requireEvidenceForAnswer = true,
   }) {
     final decoded = ReasoningResponseCodec.decode(
       raw: raw,
@@ -151,7 +174,8 @@ class ReasoningKnowledgeAnswerAdapter {
       return _failure('REASONING_KNOWLEDGE_PATH_ACTION_PROPOSAL_FORBIDDEN');
     }
 
-    if (response.responseKind == ReasoningResponseKind.answer &&
+    if (requireEvidenceForAnswer &&
+        response.responseKind == ReasoningResponseKind.answer &&
         response.referencedEvidenceIds.isEmpty) {
       return _failure('REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE');
     }
