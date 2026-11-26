@@ -310,7 +310,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - A 的 SQLite FFI 故障注入测试已合并：assistant insert 被 trigger 拒绝时，user insert 同事务回滚；Flutter 1326 passed / 15 skipped，Android arm64 CI SUCCESS。
 - E 的 PR #78 增加旧版录音精确清理：仅 temp root 下 `local_ai_<digits>.wav`，不递归、不删除未知图片/普通文件；CI 仍 IN_PROGRESS。
 - PR #76 当前 head `daf8cc732b902540089be8173e9df726075c38ae`；PR #78 当前 head `bddf71287b499edb807ec90e8c6b635d7ca76798`；两者必须以各自最新 head CI 结论为准。
-- B 的生产入口核验明确了活动问诊选项、工具路由、文本、图片、录音和症状整理路径都需要在业务分发前受门禁保护；当前仍无 detector。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 的生产入口核验明确了活动问诊选项、工具路由、文本、图片、录音和症状整理路径都需要在业务分发前受门禁保护；当前仍无 detector。
 
 
 ### 1E. PR #76 合并后增量
@@ -607,7 +607,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #163 在同一 head 890dd6b 的分支验证和 PR CI 均 SUCCESS；PR CI 覆盖 Flutter 全量回归、Android arm64 APK/Manifest/ABI、Native tests、JUnit XML 和工件上传。合并后 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 也均在 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 上终态 SUCCESS。
 - 下一 D 切片：受生债执行层和契约测试已在独立准备分支完成，但尚无 router/当前对话调用链，暂不计入 14 项 Headless。接入必须要求明确选择禄库/五斗体系，复用 App 原八字及本地两套数据，逐轮询问缺项，不沿用页面默认体系；经过来源与结果验证后才允许 AI 解释。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 仍 PARTIAL / RELEASE BLOCKED：没有生产红旗 detector 医学审核版本、审批记录、阈值/例外/处置文案及全 Flutter/Native 模型入口 fail-closed 证据前，不开放自由文本症状自动辨证。
-- 用户要求的自由文本症状描述→受约束结构化理解→只追问缺项→原规则问诊→解释真实结果闭环仍未完成；须先满足 B 门禁。不得修改原十问或辨证规则，不重复审核已医学审核的知识库。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 用户要求的自由文本症状描述→受约束结构化理解→只追问缺项→原规则问诊→解释真实结果闭环仍未完成；须先满足 B 门禁。不得修改原十问或辨证规则，不重复审核已医学审核的知识库。
 - OPPO Find N2 E4B 真机多轮/多媒体/GPU-CPU/Activity 与进程恢复/清除数据后不可恢复/端到端 TRACE 继续为 DEVICE UNKNOWN；CI 不替代真机证据。
 - C 来源 locator 仍只允许用可追溯原始材料补充；不猜测书目、底本、卷页或原文，不重复审核已有知识库。
 - 不为扩大 Headless 数量而批量迁移 Page-only，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
