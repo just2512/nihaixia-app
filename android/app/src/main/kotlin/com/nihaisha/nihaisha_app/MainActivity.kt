@@ -1308,7 +1308,23 @@ class MainActivity : FlutterActivity() {
                 error
             )
         }
-        recordUserInput("用户文字自述", pending.userText)
+        val photoAttachmentMarker = "【此前发送过照片附件】"
+        val audioAttachmentMarker = "【此前发送过录音附件】"
+        when {
+            pending.userText.startsWith(photoAttachmentMarker) -> {
+                val originalText = pending.userText.substringAfter('\n', "").trim()
+                if (originalText.isNotEmpty() && !originalText.startsWith("【App附件任务")) {
+                    recordUserInput("用户随照片输入的文字", originalText)
+                }
+            }
+            pending.userText.startsWith(audioAttachmentMarker) -> {
+                val originalText = pending.userText.substringAfter('\n', "").trim()
+                if (originalText.isNotEmpty() && !originalText.startsWith("【App附件任务")) {
+                    recordUserInput("用户随录音输入的文字", originalText)
+                }
+            }
+            else -> recordUserInput("用户文字自述", pending.userText)
+        }
         reasoningTurnCompletions.markCompleted(
             requestId,
             conversationId,
