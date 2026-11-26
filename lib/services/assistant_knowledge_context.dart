@@ -691,7 +691,8 @@ class AssistantKnowledgeContextBuilder {
     }).toList(growable: false);
 
     // Build source batches in the established user-visible legacy order:
-    // classic index, each explicitly requested Guji book, then medical cases.
+    // pre-rendered local structured entries, classic index, each explicitly
+    // requested Guji book, then explicitly requested medical cases.
     // Aggregation only namespaces IDs and preserves this caller-supplied order.
     final sourceBatches = <CandidateEvidenceBatch>[
       localExtraction.batch,
