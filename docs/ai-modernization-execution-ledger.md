@@ -4741,3 +4741,14 @@ PR HEAD 门禁证据：
 - **CI：** 本分支当前精确 HEAD 的 Flutter regression、静态分析/changed-test pairing、Android arm64/JVM 与 Fork License 均须重新运行；旧 One-shot HEAD 的通过结果不继承。任何 SKIPPED 不计 PASS。
 - **设备策略：** Find N2 实机、E4B 多轮、GPU/CPU、Activity/进程恢复及真实模型 TRACE 在所有云端工作结束后再统一本地验收。
 
+
+
+## 117. 2026-11-26 Core-4 Request/Adapter 集成到 master 与 One-shot 云端验收状态
+
+- **主线集成：** Core-4 Request-scoped capability / ACTION_PROPOSAL Adapter 已通过精确 HEAD 验收并合并：PR #558，HEAD `23e54986a7aa91d3021e19ed343ed48e196b7dc8`，merge commit `16320493dd3a5b45cd8e500a2e4287eb88fd3e1e`。该提交是后续 Core-4 开发基线；不得再以旧 Adapter 分支作为独立主线。
+- **One-shot 分支集成：** PR #559 已从依赖 #558 的堆叠 PR 重定向到 master。其原始功能 HEAD `3a09172245e37ab0cec3e153763248451115606c` 仍需以新 PR HEAD 重跑验收；原分支的 Branch validation / Fork License 成功记录不代表当前重定向 PR 已完成 Flutter 全量回归和 Android arm64/JVM 验收。
+- **下一生产接线切片：** 将 tools-mode 的结构化 Request/Response、Gate 预览/用户确认、One-shot Ledger claim、现有 HeadlessToolDispatcher、Ledger 安全终态读回及下一轮 ReasoningRequest.executionResults 连成单一请求生命周期。Dispatcher 之前必须持久化 claim；只有 Gate 授权且用户明确确认后才可 claim/执行；仅 Ledger 重新校验的 SUCCEEDED 结果可以向模型暴露 values/sourceIds；UNKNOWN 必须保持 UNKNOWN 且不自动重放。
+- **边界：** 不改唯一 Native ai_access / AiModelAccessGate，不把模型参数直接作为执行参数，不改变现有确定性工具的旧入口或排序/检索行为；新通路先限定 Gate 已登记的四个 capability。动作提案不能当作自然语言答案写入 Native 成功历史。
+- **Core-4 状态：** 仍为 PARTIAL。#558 只完成 Request/Adapter 合同，#559 只完成持久化 Ledger 与记忆隔离底座；均不代表 tools mode Native 生产发送、App 确认 UI、Dispatcher 实际调用及 ExecutionResult 往返已经闭环。
+- **Core-5 / 设备：** 云端先完成跨层测试与精确 HEAD CI；Find N2 GPU/CPU、多轮、进程恢复和真实 Native TRACE 留到全部云端工作结束后由本地执行。设备验收不阻塞云端代码实现。
+- **工作流 I：** Markdown 书架继续 DEFERRED / NOT_AUTHORIZED。
