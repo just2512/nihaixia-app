@@ -44,8 +44,14 @@ class ReasoningActionProposalAdapter {
     required Set<String> requestCapabilityAllowlist,
     List<ReasoningExecutionResult> executionResults = const [],
   }) {
-    if (requestCapabilityAllowlist.isEmpty) {
-      throw ArgumentError('REASONING_TOOL_REQUEST_CAPABILITY_ALLOWLIST_EMPTY');
+    final hasTerminalExecutionResults = executionResults.isNotEmpty &&
+        executionResults.every(
+          (item) => item.status != ReasoningExecutionStatus.notStarted,
+        );
+    if (requestCapabilityAllowlist.isEmpty && !hasTerminalExecutionResults) {
+      throw ArgumentError(
+        'REASONING_TOOL_REQUEST_CAPABILITY_ALLOWLIST_EMPTY_WITHOUT_EXECUTION_RESULT',
+      );
     }
     if (!ReasoningActionProposalGate.supportedCapabilityIds
         .containsAll(requestCapabilityAllowlist)) {
@@ -68,7 +74,12 @@ class ReasoningActionProposalAdapter {
     required ReasoningRequest request,
     required AssistantKnowledgeContextResult knowledge,
   }) {
-    if (request.mode != 'tools' || request.allowedCapabilityIds.isEmpty) {
+    final hasTerminalExecutionResults = request.executionResults.isNotEmpty &&
+        request.executionResults.every(
+          (item) => item.status != ReasoningExecutionStatus.notStarted,
+        );
+    if (request.mode != 'tools' ||
+        (request.allowedCapabilityIds.isEmpty && !hasTerminalExecutionResults)) {
       return _failure('REASONING_TOOL_REQUEST_CAPABILITY_SCOPE_MISSING');
     }
 
