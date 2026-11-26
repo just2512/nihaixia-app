@@ -395,8 +395,6 @@ class _PageToolTraceService extends _TextSendService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -525,8 +523,6 @@ class _TextSendService extends LocalAiService {
     required String requestId,
     required String context,
     required String reasoningContext,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) => _sendReasoningReply(
@@ -545,8 +541,6 @@ class _TextSendService extends LocalAiService {
     required String context,
     required String reasoningContext,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) => _sendReasoningReply(
@@ -672,8 +666,6 @@ class _TextSendService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -688,8 +680,6 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -703,8 +693,6 @@ class _TextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -717,13 +705,11 @@ class _TextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
     sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId, requireMedicalSafety: requireMedicalSafety);
+    return sendMessage(text, conversationId: conversationId);
   }
 
   @override
@@ -732,8 +718,6 @@ class _TextSendService extends LocalAiService {
     required int conversationId,
     required String context,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -860,8 +844,6 @@ class _FailingTextSendService extends _TextSendService {
     String text, {
     required int conversationId,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -1037,8 +1019,6 @@ class _PostSendStatusFailureService extends _TextSendService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -1079,8 +1059,6 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -1236,8 +1214,6 @@ class _FailOnceTextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async {
@@ -1256,8 +1232,6 @@ class _FailOnceTextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) => sendMessage(text, conversationId: conversationId);
@@ -1271,8 +1245,6 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String text, {
     required int conversationId,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) {
@@ -1286,8 +1258,6 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     required int conversationId,
     required String context,
     required String traceId,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) {
