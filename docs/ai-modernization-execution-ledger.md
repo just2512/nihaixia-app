@@ -4667,3 +4667,18 @@ PR HEAD 门禁证据：
 - **当前状态：PARTIAL / CONTRACT TESTED。** 本切片只覆盖 App-owned proposal policy 和用户确认前置条件；尚未接入生产 ReasoningResponse 调用方、确认 UI、一次性 invocation 消费及 Dispatcher 执行后的真实 ExecutionResult 回流。
 - **下一切片：** 在当前 requestId/capability 作用域下接入 App 确认 UI 与持久化 one-shot invocation ledger，再调用既有 Dispatcher；实际 AssistantToolResult 经 ReasoningExecutionResultAdapter 回流到下一轮 ReasoningRequest。UNKNOWN 不重放；learning-only 空 allowlist 继续禁止动作。Core-5 仍需完整 E2E。
 - **设备策略：** Find N2 的 E4B 真机运行、进程恢复、GPU/CPU 与多轮 TRACE 留到云端工作结束后本地验收，不阻塞本切片。
+
+
+---
+
+## 114. 2026-11-26 Core-4 Request-scoped capability 与 ACTION_PROPOSAL Adapter（重基线）
+
+- **基线：** 从已在当前 master 基线上重建的 Core-4 Gate 分支 `work/core4-action-proposal-gate-contract-20261126` HEAD `bfc692a579495504d8f53a4bcba78d25a43c22ea` 派生/重基线 `work/core4-tool-proposal-runtime-contract-20261126`。原代码分支基于旧 Gate HEAD `b4113c9f00acb5b1aee8691f83aa7f435c64d97c`；本次将代码和 adapter 文档叠加到 Gate 的新主线提交上。
+- **Request 契约：** `ReasoningRequest.allowedCapabilityIds` 是不可变列表，重复 ID、空白 ID 拒绝；仅 `mode == tools` 可以非空。learning、consultation、automatic 等其他模式携带非空 allowlist 在构造时 fail-closed。该集合由 App 请求构造，不由模型文本推断。
+- **模型输入：** `ReasoningRequestPromptFormatter` 输出 `actionCapabilityAllowlist`；空集合时明确禁止 ACTION_PROPOSAL，非空集合只代表当前请求可提出的能力范围，不代表用户授权、付款/权限授予或执行结果。原始用户文本和来源正文传输边界不变。
+- **Adapter：** `ReasoningActionProposalAdapter.createRequest` 只接受 Gate 已登记的四个 plan-eligible capability；Response codec 使用同一请求 allowlist。ACTION_PROPOSAL 经 Gate 检查 requestId、能力和 typed arguments；不允许携带被丢弃的 evidence 引用，不向确认 UI 暴露模型生成的 action narrative，只提供 App-owned immutable preview。显式确认后再次校验当前 requestId/allowlist。
+- **执行边界：** 本分支仍是 Request/Adapter contract，不包含 Native 工具模式生产调用、确认 UI、持久化 one-shot invocation ledger、Dispatcher 调用或真实 ExecutionResult round-trip；不更改唯一 Native `ai_access` / `AiModelAccessGate`。Core-4 仍为 PARTIAL。
+- **测试：** `test/reasoning_action_proposal_adapter_test.dart` 覆盖 capability 集合不可变、空/不支持能力拒绝、非 tools 模式阻断、proposal 预览无执行计划、显式用户确认、requestId/allowlist 重验、proposal evidence 引用隔离及 narrative 不暴露；更新 `reasoning_request_prompt_formatter_test.dart` 覆盖 allowlist 序列化与模式限制。
+- **CI：** 原代码 HEAD `0d353506baf6132e7dfb53c29fa6f68409ebc72f` 的 push 定向测试、静态分析和许可证历史结果不继承到新 HEAD；重基线后必须等待本分支精确 HEAD 的 Branch validation、PR 全量 Flutter regression、Android arm64/JVM 和 Fork license。SKIPPED 不计 PASS。
+- **下一切片：** 持久化 one-shot invocation 状态必须在任何 Dispatcher 调用前 claim；用户确认后仅一次调用；实际 `AssistantToolResult` 加入下一轮 `ReasoningRequest.executionResults` 供语言模型解释。终态 UNKNOWN 不重放；学习模式空 allowlist 继续禁止动作。
+- **设备策略：** E4B 真机 Native 往返、GPU/CPU、进程恢复、多轮 TRACE 仍放到所有云端工作完成后本地验收。

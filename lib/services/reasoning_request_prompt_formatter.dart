@@ -54,6 +54,8 @@ class ReasoningRequestPromptFormatter {
           'Every referencedEvidenceId must be present in rankedEvidence.',
           'knownEvidenceIds may validate omissions but must never be cited unless also ranked.',
           'ACTION_PROPOSAL is an untrusted proposal; it is not authorization or execution.',
+          'If actionCapabilityAllowlist is empty, never return ACTION_PROPOSAL.',
+          'A proposal may name only one capability in actionCapabilityAllowlist; the App still requires explicit confirmation.',
           'Do not claim SUCCEEDED for any action unless the App supplied a SUCCEEDED execution result.',
           'Use INSUFFICIENT_EVIDENCE when the supplied evidence cannot support the answer.',
         ],
@@ -66,6 +68,7 @@ class ReasoningRequestPromptFormatter {
           .map((item) => {'evidenceId': item.evidenceId})
           .toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
+      'actionCapabilityAllowlist': request.allowedCapabilityIds,
       'executionResults':
           request.executionResults.map((item) => item.toMap()).toList(),
       'boundaries': const [
@@ -75,6 +78,7 @@ class ReasoningRequestPromptFormatter {
         'knownEvidenceIds may include dropped candidates; they are not allowed citations.',
         'sourceId is an App lookup pointer, not a verification or authority claim.',
         'executionResults are App-projected results; preserve UNKNOWN and never claim an unverified action succeeded.',
+        'actionCapabilityAllowlist is the exact App-owned capability set for this request; it is not user consent.',
         'This contract does not grant permission or authorize tool execution.',
       ],
     };
