@@ -4606,3 +4606,19 @@ PR HEAD 门禁证据：
 - Core-5：仍缺少从结构化推理输入、实际工具执行、真实 ExecutionResult 回流、来源核验到最终展示/持久化的完整 E2E。合同单测/投影适配器不等同端到端完成。
 - 工作流 I：用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED，不启动。
 - 设备策略：Find N2 安装升级、GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和 TRACE 仍统一留到云端工作结束后本地验收，不阻塞 Core-4 云端实施。
+
+
+---
+
+## 109. 2026-11-26 Core-4 ACTION_PROPOSAL App-owned Gate 契约切片
+
+- **基线与分支：** 从当前 master `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0` 建立独立分支 `work/core4-action-proposal-gate-contract-20261126`；代码提交 `077e7a34323f07d1781a111a5698309d64eb614c`，许可证段落修正提交 `48cc44d0bd0710363334b64a4a01e91e7ce80c8e`。与该基线比较 ahead 2 / behind 0，改动仅涉及 Gate、配套测试、Fork inventory 与 REUSE。
+- **新增实现：** `ReasoningActionProposalGate` 只处理 Core-3 输出的未可信 `ACTION_PROPOSAL`，不执行工具。准备阶段校验 responseKind/status、32 位十六进制 requestId 与当前请求绑定、App 本轮 capability allowlist、四个既有 plan-eligible Headless capability、Router/Dispatcher capability 对应关系和具体参数约束；成功只返回不可变确认预览，不返回 ToolExecutionPlan。
+- **参数边界：** dosage 复用 `DosageToolService.validateArguments`；solar_terms 只接受 App 节气白名单字段和值；yuxiaji_omen、sanshan_lingqian 不允许模型提供本地时间/抽签序号等 App 自主生成参数。Page-only、未登记能力、额外参数、缺参/非法值均 fail-closed。
+- **确认边界：** 用户确认后再次校验 requestId 与完整 capability allowlist 未变化；只有显式 `confirmedByUser == true` 才构造单步 `ToolExecutionPlan`。拒绝、请求变化或参数不合规则不产生可执行计划。Gate 不调用 `HeadlessToolDispatcher`，不改变唯一 `ai_access` / `AiModelAccessGate`。
+- **测试：** 新增 `test/reasoning_action_proposal_gate_test.dart`，覆盖四能力登记关系、确认前无执行计划、显式确认后才生成计划、用户拒绝、requestId 绑定、非法 proposalId、响应类型/状态、请求 allowlist、Page-only 能力、dosage 参数、solar term 值、App 自主生成参数及确认期间 allowlist 变化等。
+- **精确 HEAD 云端验收：** `48cc44d0bd0710363334b64a4a01e91e7ce80c8e` 的 Branch validation run `45718821917` SUCCESS：Headless import graph、Static analysis、changed tests、Find N2 arm64 verification APK 均 SUCCESS；Fork license run `45718821920` SUCCESS。push 事件未运行全量 Flutter regression 与 Android 完整 unit-test jobs（SKIPPED），不能计为 PASS；PR 事件需要继续完成全量验证。
+- **当前状态：PARTIAL / CONTRACT TESTED。** 本切片覆盖 App-owned proposal policy 和用户确认前置条件；尚未接入生产 ReasoningResponse 调用方、确认 UI、执行计划去重/一次性消费及 Dispatcher 执行后的真实 ExecutionResult 回流。不能宣称 ACTION_PROPOSAL 生产闭环或 Core-4 完成。
+- **下一切片：** 在当前 requestId/capability 作用域下接入 App 确认 UI 与一次性 invocation 状态，再调用既有 Dispatcher；把实际 AssistantToolResult 经 `ReasoningExecutionResultAdapter` 回流到后续 ReasoningRequest。失败与 UNKNOWN 必须保持原状态，UNKNOWN 不重放；learning-only 空 allowlist 继续禁止动作。Core-5 仍需覆盖提案、拒绝、执行成功/失败/UNKNOWN、结果解释与来源回填的端到端测试。
+- **设备策略：** Find N2 的 E4B 真机运行、进程恢复、GPU/CPU 与多轮 TRACE 留到云端工作完成后本地验收，不阻塞本切片。
+
