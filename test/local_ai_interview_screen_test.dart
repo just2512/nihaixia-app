@@ -1372,6 +1372,7 @@ class _FailOnceTextSendService extends _TextSendService {
 }
 
 class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
+  final attemptedTraceIds = <String>[];
   @override
   Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
@@ -1386,7 +1387,8 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) {
-    // The inherited fake records each actual Native invocation exactly once.
+    attemptedTraceIds.add(traceId);
+    // The inherited fake records successful Native replies; this list records attempts.
     return super.sendReasoningMessageWithTrace(
       text,
       conversationId: conversationId,
@@ -3058,7 +3060,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 1);
-      expect(service.sentTraceIds, [failedTraceId]);
+      expect(service.attemptedTraceIds, [failedTraceId]);
       final failedEvents =
           traceEvents.where((event) => event.traceId == failedTraceId).toList();
       expect(
@@ -3091,7 +3093,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 2);
-      expect(service.sentTraceIds, [failedTraceId, retryTraceId]);
+      expect(service.attemptedTraceIds, [failedTraceId, retryTraceId]);
       final retryEvents =
           traceEvents.where((event) => event.traceId == retryTraceId).toList();
       expect(
