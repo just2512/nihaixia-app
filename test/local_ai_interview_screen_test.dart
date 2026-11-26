@@ -3907,9 +3907,6 @@ void main() {
     expect(copiedTexts.single, contains('柴胡24g'));
 
     await tapAction('AI解读辨证结果');
-    final resultInterpretationEvents = traceEvents
-        .where((event) => event.traceId == traceId)
-        .toList(growable: false);
     expect(service.sentTexts.last, contains('完整解释'));
     expect(service.sentTexts.last, contains('少阳证'));
     expect(service.sentTexts.last, contains('本地知识库实际检索到的条目说明诊断依据'));
