@@ -58,6 +58,7 @@ class AssistantKnowledgeEvidenceReference {
 /// Excerpts and local backlink paths remain in their existing bounded owners.
 class AssistantKnowledgeCandidateSnapshot {
   AssistantKnowledgeCandidateSnapshot({
+    required this.evidenceId,
     required this.sourceId,
     required this.origin,
     required this.materialKind,
