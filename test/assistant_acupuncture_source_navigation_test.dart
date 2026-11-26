@@ -268,8 +268,14 @@ void main() {
         );
         expect(assistant.contextRef['snapshotId'], hasLength(64));
         expect(assistant.contextRef['sourceId'], 'acupuncture:01:1');
-        expect(assistant.initialPrompt, contains('冠心病'));
-        expect(assistant.initialPrompt, contains('不得提供个人诊断'));
+        // The detail record is now resolved behind the assistant boundary;
+        // only a short intent is prefilled, never the full serialized prescription.
+        expect(assistant.initialPrompt, isNull);
+        expect(assistant.initialUserMessage, isNotNull);
+        expect(assistant.initialUserMessage, contains('当前针灸条目'));
+        expect(assistant.initialUserMessage, isNot(contains('acupuncture:')));
+        expect(assistant.autoSendInitialMessage, isTrue);
+        expect(assistant.resolveContextualKnowledgeEntry, isTrue);
         expect(tester.takeException(), isNull);
 
         Navigator.of(
