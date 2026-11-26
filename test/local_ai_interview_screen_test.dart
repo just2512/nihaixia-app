@@ -1207,7 +1207,7 @@ class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
             onPressed: () async {
               final summary = await Navigator.of(context).push<String>(
                 MaterialPageRoute(
-                  builder: (_) => LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: widget.service),
+                  builder: (_) => LocalAiInterviewScreen(conversationStore: _store, service: widget.service),
                 ),
               );
               if (!mounted || summary == null) return;
@@ -1354,8 +1354,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-            conversationStore: _store,
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: service,
             audioRecorder: recorder,
             recordingFileInspector: _ValidRecordingFileInspector(),
@@ -1404,7 +1403,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
@@ -1437,7 +1436,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service),
+          home: LocalAiInterviewScreen(conversationStore: _store, service: service),
         ),
       );
       await tester.pumpAndSettle();
@@ -1548,8 +1547,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -1677,8 +1675,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -1748,8 +1745,7 @@ void main() {
     _store.failNextMessageBatch = true;
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: _TextSendService(),
           imagePicker: _EmptyLocalAiImagePicker(),
           traceRecorder: recorder,
@@ -1808,8 +1804,7 @@ void main() {
     _store.failNextTaskStateSave = true;
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: _TextSendService(),
           imagePicker: _EmptyLocalAiImagePicker(),
           traceRecorder: recorder,
@@ -1873,8 +1868,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: _TextSendService(),
           imagePicker: _EmptyLocalAiImagePicker(),
           traceRecorder: recorder,
@@ -1953,8 +1947,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -1994,8 +1987,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -2065,8 +2057,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -2202,7 +2193,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+        home: LocalAiInterviewScreen(conversationStore: _store, 
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -2240,7 +2231,7 @@ void main() {
       final service = _SourceTruncatedSymptomsService();
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '我较早的头痛描述');
@@ -2267,7 +2258,7 @@ void main() {
       final service = _SourceTruncatedEmptySymptomsService();
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '此前描述过的症状');
@@ -2291,7 +2282,7 @@ void main() {
       const userText = '上一轮问诊内容';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -2346,7 +2337,7 @@ void main() {
       const userText = '本轮不再保留的内容';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -2385,7 +2376,7 @@ void main() {
       const userText = '重置失败时应保留的对话';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -2416,7 +2407,7 @@ void main() {
       const userText = '释放失败时应保留的对话';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -2447,7 +2438,7 @@ void main() {
       const userText = '原生会话失效后不应继续显示的历史';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
@@ -2478,7 +2469,7 @@ void main() {
       const userText = '模型释放后不应继续显示的历史';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
@@ -2508,7 +2499,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
           ),
@@ -2581,7 +2572,7 @@ void main() {
         const replyText = '本轮回复：$userText';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -2629,7 +2620,7 @@ void main() {
         const userText = '推理失败后需要保留供重试的输入';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -2675,7 +2666,7 @@ void main() {
         const oldText = '此前会话中的旧输入';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -2737,7 +2728,7 @@ void main() {
         const oldText = '失败前的历史会话';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -2899,8 +2890,7 @@ void main() {
     await store.saveAssistantMessage(conversationId: secondId, role: 'user', content: 'SECOND_HISTORY_MARKER');
 
     await tester.pumpWidget(MaterialApp(
-      home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-        conversationStore: store,
+      home: LocalAiInterviewScreen(conversationStore: store,
         service: _TextSendService(),
       ),
     ));
@@ -2943,8 +2933,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-            conversationStore: _store,
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: service,
             traceRecorder: traceRecorder,
           ),
@@ -3042,7 +3031,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: _UnexpectedStatusFailureService(),
           ),
         ),
@@ -3068,7 +3057,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+            home: LocalAiInterviewScreen(conversationStore: _store, 
               service: service,
               imagePicker: picker,
             ),
@@ -3142,7 +3131,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3181,7 +3170,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3220,7 +3209,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, 
+            home: LocalAiInterviewScreen(conversationStore: _store, 
               service: service,
               imagePicker: picker,
             ),
@@ -3267,7 +3256,7 @@ void main() {
         final service = _HashVerificationFailureService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3303,7 +3292,7 @@ void main() {
         final service = _DeferredModelSetupService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3341,7 +3330,7 @@ void main() {
         final service = _DeferredModelSetupService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3383,7 +3372,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3425,7 +3414,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -3471,7 +3460,7 @@ void main() {
 
   testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: _TextSendService())),
+      MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: _TextSendService())),
     );
     await tester.pumpAndSettle();
 
@@ -3488,8 +3477,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          initialPrompt: prompt,
+        home: LocalAiInterviewScreen(initialPrompt: prompt,
           conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
@@ -3802,8 +3790,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: store,
           imagePicker: _EmptyLocalAiImagePicker(),
           traceRecorder: traceRecorder,
@@ -3979,8 +3966,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           traceRecorder: recorder,
         ),
@@ -4085,8 +4071,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           traceRecorder: recorder,
           testToolRouteBuilder: (_, __) {
@@ -4164,8 +4149,7 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -4286,8 +4270,7 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -4398,8 +4381,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -4494,8 +4476,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           traceRecorder: recorder,
           testHeadlessToolExecutor: (arguments) => AssistantToolResult(
@@ -4567,8 +4548,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: _FailingTextSendService(),
           traceRecorder: recorder,
         ),
@@ -4614,8 +4594,7 @@ void main() {
     ]);
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           traceRecorder: recorder,
         ),
@@ -4674,8 +4653,7 @@ void main() {
     final service = _PageToolTraceService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _store,
+        home: LocalAiInterviewScreen(conversationStore: _store,
           service: service,
           traceRecorder: recorder,
           testToolRouteBuilder: (tool, arguments) => Builder(
@@ -4787,8 +4765,7 @@ void main() {
     var pageResultReturned = 0;
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           traceRecorder: recorder,
           testToolRouteBuilder: (tool, arguments) => Builder(
@@ -4884,8 +4861,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
           traceRecorder: recorder,
         ),
@@ -4941,8 +4917,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
           traceRecorder: recorder,
         ),
@@ -4983,8 +4958,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
         ),
       ),
@@ -5026,8 +5000,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
           traceRecorder: recorder,
           testHeadlessToolExecutor: (arguments) async => AssistantToolResult(
@@ -5086,8 +5059,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
           traceRecorder: recorder,
         ),
@@ -5131,8 +5103,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          service: service,
+        home: LocalAiInterviewScreen(service: service,
           conversationStore: _store,
           traceRecorder: recorder,
         ),
@@ -5183,8 +5154,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           traceRecorder: recorder,
           testToolRouteBuilder: (_, __) {
@@ -5291,8 +5261,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -5391,8 +5360,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -5481,8 +5449,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testHeadlessToolExecutor: (arguments) async {
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
@@ -5527,8 +5494,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testHeadlessToolExecutor: (arguments) async {
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
@@ -5595,8 +5561,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -5661,8 +5626,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: _MemoryConversationStore(),
+        home: LocalAiInterviewScreen(conversationStore: _MemoryConversationStore(),
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -5748,8 +5712,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -5844,8 +5807,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -6203,8 +6165,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
@@ -6343,8 +6304,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
@@ -6453,8 +6413,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -6571,8 +6530,7 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -6658,8 +6616,7 @@ void main() {
     var executionCount = 0;
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testHeadlessToolExecutor: (_) {
             executionCount += 1;
@@ -6710,8 +6667,7 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
@@ -6883,8 +6839,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          conversationStore: store,
+        home: LocalAiInterviewScreen(conversationStore: store,
           service: service,
           traceRecorder: recorder,
           testToolRouteBuilder: (_, __) {
