@@ -66,8 +66,9 @@ class _HistoryResumeService extends LocalAiService {
     required String reasoningContext,
     String? traceId,
   }) async {
+    final envelopeStart = reasoningContext.lastIndexOf('\n');
     final envelope = jsonDecode(
-      reasoningContext.split('\\n').skip(1).join('\\n'),
+      reasoningContext.substring(envelopeStart + 1),
     ) as Map<String, dynamic>;
     final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
         .map((item) => (item as Map<String, dynamic>)['evidenceId'] as String)
