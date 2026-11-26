@@ -69,8 +69,23 @@ class ReasoningRequestPromptFormatter {
           .toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
       'actionCapabilityAllowlist': request.allowedCapabilityIds,
-      'executionResults':
-          request.executionResults.map((item) => item.toMap()).toList(),
+      // Execution values and status are model-visible; provenance and
+      // invocation identity remain App-owned metadata and never enter prompt.
+      'executionResults': request.executionResults
+          .map((item) => <String, Object?>{
+                'capabilityId': item.capabilityId,
+                'status': switch (item.status) {
+                  ReasoningExecutionStatus.notStarted => 'NOT_STARTED',
+                  ReasoningExecutionStatus.succeeded => 'SUCCEEDED',
+                  ReasoningExecutionStatus.failed => 'FAILED',
+                  ReasoningExecutionStatus.unknown => 'UNKNOWN',
+                },
+                'actualArguments': item.actualArguments,
+                'resultValues': item.resultValues,
+                if (item.safetyMessage != null)
+                  'safetyMessage': item.safetyMessage,
+              })
+          .toList(),
       'boundaries': const [
         'userText is supplied separately as the original Native text input; do not rewrite or replace it.',
         'SessionStateSnapshot facts and source references are supplied once through the Native session_state_context field; use provenance and do not duplicate them.',
