@@ -460,6 +460,8 @@ class _TextSendService extends LocalAiService {
   final sentConversationIds = <int>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
+  final sentAttachmentPaths = <String>[];
+  final sentAttachmentTypes = <String>[];
   int legacySendCalls = 0;
   final restoredTranscripts = <String>[];
   final structuredReasoningContexts = <String>[];
@@ -477,6 +479,7 @@ class _TextSendService extends LocalAiService {
     required String context,
     required String reasoningContext,
     String? traceId,
+    String? attachmentType,
   }) async {
     final separator = reasoningContext.indexOf('\n');
     if (separator < 0) {
@@ -486,6 +489,10 @@ class _TextSendService extends LocalAiService {
       reasoningContext.substring(separator + 1),
     ) as Map<String, dynamic>;
     final mode = envelope['mode'] as String;
+    final attachmentMetadata = envelope['attachment'];
+    final requestAttachmentType = attachmentMetadata is Map
+        ? attachmentMetadata['type'] as String?
+        : attachmentType;
     final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
         .cast<Map<String, dynamic>>();
     // The fake model may cite any evidence actually supplied to this request.
@@ -514,6 +521,16 @@ class _TextSendService extends LocalAiService {
       'unknowns': <String>[],
       'conflicts': <String>[],
       'omittedEvidenceIds': <String>[],
+      if (requestAttachmentType == 'image')
+        'attachmentResult': {
+          'type': 'image',
+          'observations': ['测试照片中可直接观察到的内容'],
+        },
+      if (requestAttachmentType == 'audio')
+        'attachmentResult': {
+          'type': 'audio',
+          'transcriptDraft': '测试语音转写草稿，等待用户核对。',
+        },
     });
     sentConversationIds.add(conversationId);
     sentTexts.add(text);
@@ -564,6 +581,56 @@ class _TextSendService extends LocalAiService {
     reasoningContext: reasoningContext,
     traceId: traceId,
   );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningAttachmentMessage(
+    String text, {
+    required String attachmentType,
+    required String path,
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) {
+    sentAttachmentPaths.add(path);
+    sentAttachmentTypes.add(attachmentType);
+    return _sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      attachmentType: attachmentType,
+    );
+  }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningAttachmentMessageWithTrace(
+    String text, {
+    required String attachmentType,
+    required String path,
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) {
+    sentAttachmentPaths.add(path);
+    sentAttachmentTypes.add(attachmentType);
+    return _sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+      attachmentType: attachmentType,
+    );
+  }
 
   @override
   Future<void> finalizeReasoningTurn({
