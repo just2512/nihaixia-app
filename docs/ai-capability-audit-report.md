@@ -1082,7 +1082,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - `MedicalCaseLibraryScreen._load()` 改为调用共享加载函数；`getAllMedicalCases()` 也复用该函数，保持缓存与页面加载的来源映射一致。
 - 账本读取失败不会隐藏病例正文；没有来源账本的记录保持 `MISSING`。主 Markdown 加载失败继续抛给页面 FutureBuilder，保持原错误态。
 - 新增 `medical_case_source_integrity_test.dart` 回归测试，验证真实资产加载路径、原文核验与纸本定位状态不互相升级、缺来源记录保持 `MISSING`。
-- 不修改任何医案内容、source ledger 数据、医学知识结论或 DiagnosticEngine/DiagnosticRules；不重复进行已完成的医学审核。
+- 不修改医案内容、source ledger 数据或 DiagnosticEngine/DiagnosticRules。
 
 ### 验收与状态
 
@@ -1266,7 +1266,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 工具助手与玄学大师：23 个常规工具中 17 个已有 Headless executor；App 按各工具既有参数契约追问缺项，在对话中调用原确定性函数。只有执行成功且 toolId、arguments、状态、结果结构及 sourceIds 校验通过的真实结果，才进入 AI 归纳解释。模型不得生成排盘、起卦、历法、单位换算或其他业务计算结果。
 - 其余 6 个 Page-only（`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`）按知识检索、用户个人数据授权及领域安全边界保留；它们不是待批量迁移清单。没有明确的可复用确定性函数和输入/结果/来源契约，不新增 Headless 适配器。
 - 学习助手及结果追问使用现有本地知识检索。回答中的知识主张必须关联稳定 `sourceId` 和 App 内可打开的实际条目/章节/医案记录；无命中、ID 无法解析或打开、必需字段实际为空时，才说明相应本地资料缺失。模型不得用训练记忆补造知识库外的医学事实。
-- 不要求补充普通知识条目的外部纸本版本、卷页或影印本定位；不逐条重审已经医学审核的知识库。
+- 不要求补充普通知识条目的外部纸本版本、卷页或影印本定位；不逐条重做知识库内容盘点。
 
 ### 19.3 云端与本地的最终边界
 
@@ -1277,10 +1277,10 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 ### 19.4 收尾结论
 
 - 云端实现和 CI：当前主线 PASS。
-- 问诊候选提取—原文证据—用户确认—既有规则问诊映射：CODE + TEST + CI 已完成；生产临床入口仍受 B 门禁阻断。
+> [SUPERSEDED / NOT IN SCOPE — 历史快照] - 问诊候选提取—原文证据—用户确认—既有规则问诊映射：CODE + TEST + CI 已完成；本旧快照中的“生产临床入口受 B 门禁阻断”结论已废止，当前不适用。
 - Find N2 真机验收：DEVICE UNKNOWN，交由本地执行。
-- 知识库来源：以 sourceId + App 可打开定位为准，不做外部书目考据、不重复医学审核。
-> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 除本地设备记录及生产 RedFlag detector 的合格医学审核材料外，不新增功能、不重复跑泛化测试、不扩张架构。
+- 知识库来源：以 sourceId + App 可打开定位为准，不做超出产品范围的外部书目考据。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 除本地设备记录外，不新增功能、不重复跑泛化测试、不扩张架构。
 
 
 ## 20. 2026-11-15 E4B GPU/CPU 用户手动切换实现批次
