@@ -1262,7 +1262,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
-    final contextualAnalysisContext = widget.initialContextPrompt?.trim() ?? '';
+    final contextualAnalysisContext =
+        AiContextRef.matchesSameAnchor(widget.contextRef, _activeContextRef)
+            ? widget.initialContextPrompt?.trim() ?? ''
+            : '';
     final sessionStateSnapshot =
         await _buildSessionStateSnapshot(conversationId);
     final sessionStateContext = SessionStateSnapshotPromptFormatter.format(
