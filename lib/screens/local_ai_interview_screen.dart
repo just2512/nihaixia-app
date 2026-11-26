@@ -399,8 +399,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       widget.conversationStore ?? DatabaseHelper.instance;
 
   // One conversation trace can pass through _send -> routing -> tool execution.
-  // Reuse the originating input's assessment decision across those boundaries:
-  // record a non-required stage once, and never rerun a configured detector.
+  // Keep the originating trace context explicit across those boundaries so
+  // events from one request do not leak into another conversation.
   @override
   void initState() {
     super.initState();
