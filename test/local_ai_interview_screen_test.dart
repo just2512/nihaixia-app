@@ -844,6 +844,7 @@ class _StructuredToolProposalService extends _TextSendService {
     required String context,
     required String reasoningContext,
     String? traceId,
+    String? attachmentType,
   }) async {
     final separator = reasoningContext.indexOf('\n');
     if (separator < 0) throw StateError('missing reasoning envelope');
@@ -934,6 +935,7 @@ class _FailingTextSendService extends _TextSendService {
     required String context,
     required String reasoningContext,
     String? traceId,
+    String? attachmentType,
   }) async {
     sentTexts.add(text);
     throw PlatformException(
@@ -1206,6 +1208,7 @@ class _PostSendNotReadyStatusService extends _TextSendService {
     required String context,
     required String reasoningContext,
     String? traceId,
+    String? attachmentType,
   }) async {
     if (text == triggerText) {
       if (failOnTrigger) {
@@ -1378,6 +1381,7 @@ class _FailOnceTextSendService extends _TextSendService {
     required String context,
     required String reasoningContext,
     String? traceId,
+    String? attachmentType,
   }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
