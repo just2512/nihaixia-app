@@ -96,6 +96,7 @@ void main() {
     test('trace schema exposes required stages and NOT_APPLICABLE status', () {
       expect(AiTraceStatus.notApplicable.wireValue, 'NOT_APPLICABLE');
       expect(AiTraceStage.input.wireValue, 'INPUT');
+      // Legacy wire compatibility only; production learning flows no longer emit this stage.
       expect(AiTraceStage.redFlag.wireValue, 'RED_FLAG');
       expect(AiTraceStage.route.wireValue, 'ROUTE');
       expect(AiTraceStage.entityResolution.wireValue, 'ENTITY_RESOLUTION');
