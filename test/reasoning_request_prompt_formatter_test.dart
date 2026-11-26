@@ -425,6 +425,11 @@ void main() {
       final results = envelope['executionResults'] as List;
       expect((results[0] as Map)['status'], 'SUCCEEDED');
       expect((results[1] as Map)['status'], 'UNKNOWN');
+      expect((results[0] as Map).containsKey('invocationId'), isFalse);
+      expect((results[0] as Map).containsKey('sourceIds'), isFalse);
+      expect((results[0] as Map).containsKey('failureCode'), isFalse);
+      expect(formatted, isNot(contains('invoke-1')));
+      expect(formatted, isNot(contains('formula-engine:v1')));
       expect(formatted, contains('not allowed citations'));
       expect(formatted, contains('does not grant permission'));
     });
