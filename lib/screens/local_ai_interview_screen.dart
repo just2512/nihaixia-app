@@ -1924,7 +1924,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             reasoningRequestId: activeRequestId,
             toolId: preview.toolId,
             toolStatus: executionStatus,
-            toolArguments: execution?.actualArguments ?? preview.arguments,
+            toolArguments: execution?.actualArguments ?? const {},
           );
         }
 
