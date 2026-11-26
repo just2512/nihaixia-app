@@ -1481,7 +1481,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       };
       final roleContext = '当前角色：工具助手。\\n'
           '${AssistantMode.tools.promptHint}\n'
-          attachmentInstructions
+          '$attachmentInstructions'
           '只在用户明确要求执行 App 已登记的工具任务时提出一个动作提案；普通解释、比较、学习或闲聊应直接回答或澄清。'
           '模型只负责理解任务和提出参数候选，不运行计算、不生成业务结果、不声称动作已执行。'
           '本轮允许的 capability 只有：'
