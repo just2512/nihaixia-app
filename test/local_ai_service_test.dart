@@ -600,7 +600,7 @@ void main() {
       });
     });
 
-    test('clinical request marker is forwarded to the native text boundary', () async {
+    test('ordinary text calls do not carry retired clinical-gate metadata', () async {
       const traceId = '0123456789abcdef0123456789abcdef';
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -612,16 +612,13 @@ void main() {
         '最近不舒服，帮我诊断一下什么问题？', conversationId: 42,
         context: '当前角色：问诊助手',
         traceId: traceId,
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛\n那它的原因呢',
-        redFlagContextTruncated: true,
       );
 
       expect(received?.method, 'sendMessage');
       expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
+      expect(received?.arguments.containsKey('require_red_flag'), isFalse);
+      expect(received?.arguments.containsKey('red_flag_context'), isFalse);
+      expect(received?.arguments.containsKey('red_flag_context_truncated'), isFalse);
       expect(received?.arguments['trace_id'], traceId);
     });
 
@@ -726,7 +723,7 @@ void main() {
       });
     });
 
-    test('clinical history restoration carries the native safety requirement', () async {
+    test('history restoration synchronizes transcript without a clinical-gate contract', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
         received = call;
@@ -737,16 +734,13 @@ void main() {
         conversationId: 42,
         transcript: '用户：我最近胸痛\n助手：这是用户未确认的旧回复',
         userMessages: const ['我最近胸痛'],
-        requireMedicalSafety: true,
-        redFlagContext: '我最近胸痛',
-        redFlagContextTruncated: true,
       );
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments['conversation_id'], 42);
-      expect(received?.arguments['require_red_flag'], isTrue);
-      expect(received?.arguments['red_flag_context'], '我最近胸痛');
-      expect(received?.arguments['red_flag_context_truncated'], isTrue);
+      expect(received?.arguments.containsKey('require_red_flag'), isFalse);
+      expect(received?.arguments.containsKey('red_flag_context'), isFalse);
+      expect(received?.arguments.containsKey('red_flag_context_truncated'), isFalse);
     });
 
     test('resetConversation invokes native reset and returns fresh status', () async {
@@ -1144,7 +1138,7 @@ void main() {
   "aggravating_factors": ["吃得过饱"],
   "relieving_factors": ["散步后稍缓解"],
   "associated_symptoms": ["嗳气"],
-  "red_flags": [],
+  "notable_reported_features": [],
   "unknowns": ["是否与某种食物有关"],
   "diagnosis": "不应接受"
 }
@@ -1493,7 +1487,7 @@ void main() {
       expect(received[1].arguments['trace_id'], traceId);
     });
 
-    test('medical attachments carry the native safety requirement', () async {
+    test('image and audio calls keep their normal attachment contract', () async {
       const traceId = '0123456789abcdef0123456789abcdef';
       final received = <MethodCall>[];
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -1504,18 +1498,16 @@ void main() {
       await LocalAiService().sendImageWithTrace(
         '/app/cache/medical-image.jpg', conversationId: 42,
         traceId: traceId,
-        requireMedicalSafety: true,
       );
       await LocalAiService().sendAudioWithTrace(
         '/app/cache/medical-audio.wav', conversationId: 42,
         traceId: traceId,
-        requireMedicalSafety: true,
       );
 
       expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
       expect(received.every((call) => call.arguments['conversation_id'] == 42), isTrue);
-      expect(received.every((call) => call.arguments['require_red_flag'] == true),
-          isTrue);
+      expect(received.every((call) => !call.arguments.containsKey('require_red_flag')), isTrue);
+      expect(received.every((call) => !call.arguments.containsKey('red_flag_context')), isTrue);
     });
 
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {

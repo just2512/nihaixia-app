@@ -41,8 +41,8 @@
 
 | 工作流 | 主责范围 | 禁止并行覆盖 |
 |---|---|---|
-| A 多轮稳定性 | Native Kotlin Engine/Conversation 生命周期、请求状态、fallback、重试、历史回放；相关 Kotlin/Flutter 测试 | B 不得直接修改 A 的 Native 生命周期实现；需要 Native 红旗边界时先定义接口 |
-| B 红旗安全 | Dart 红旗策略、语义分类、Flutter 全入口接入和 Dart 测试；Native 接口只提交契约 | 不得与 A 同时编辑 `MainActivity.kt`；医学词表/阈值/文案未经医学审核不得正式启用 |
+| A 多轮稳定性 | Native Kotlin Engine/Conversation 生命周期、请求状态、fallback、重试、历史回放；相关 Kotlin/Flutter 测试 | B 不得直接修改 A 的 Native 生命周期实现；Native AI 访问授权沿用 AiModelAccessGate，不另建临床门禁接口 |
+| B 问诊学习与结果解释 | 问诊学习交互、用户原话与模型解释边界、规则结果/来源回链、历史与附件上下文回归 | 不建设临床 RedFlag detector；不增加医学审批门槛；Native AI 访问授权继续由 AiModelAccessGate 负责 |
 | C 检索基线 | ClassicSearch、KnowledgeContext、黄金测试夹具/快照 | 黄金快照锁定前不得抽适配器、改变检索算法或引入 FTS5 |
 | D Capability | ToolRouter 目录审计、Page/Headless/Executed 分类；单能力适配器 | 对应能力的当前行为和来源基线未锁定前不得抽取适配器 |
 | E 数据保护 | Android Manifest/XML、AI 数据清除、附件/缓存生命周期及相关测试 | 备份策略与清除全部 AI 数据分开提交；数据库加密另行决策 |
@@ -55,19 +55,19 @@
 
 ### 可并行
 
-- A 多轮生命周期审计/实现，与 B 红旗纯 Dart 策略、C 检索行为基线、E 数据清点/备份审计并行。
+- A 多轮生命周期审计/实现，与 B 问诊学习/结果解释回归、C 检索行为基线、E 数据清点/备份审计并行。
 - D 工具目录只读盘点可与 A/B/C/E 并行。
 - F TRACE 字段/隐私方案设计可并行；跨层接入需按文件所有权排期。
 - G 文档版本检查可独立执行。
 
 ### 必须串行的依赖
 
-- B 接入 Native 模型边界前，先与 A 冻结 Native 红旗调用契约，避免双分支改同一 Kotlin 文件。
+- B 如需 Native 模型访问改动，先确认不重复实现 AiModelAccessGate，并遵守 A 对 MainActivity.kt 的文件所有权，避免双分支冲突。
 - C 先运行并保存真实黄金快照，再允许检索适配器或算法改动。
 - D 先证明业务函数现状和行为基线，再抽 Headless Capability。
 - E 清除全部 AI 数据前，先盘点数据库表、附件原件、缩略图、临时文件、缓存和引用关系。
 - E 备份策略 PR 必须验证 Android merged manifest 与构建；全应用禁用备份的产品影响必须记录。
-- 所有涉及医疗安全门禁的正式放行，必须等待医学审核记录与全入口负向测试。
+- 所有模型/工具调用必须满足 App 自身的访问授权、用户确认、typed 参数校验和确定性结果校验；临床 detector 或医学审批不属于本项目发布门槛。
 - Find N2 GPU/CPU、图片/语音、进程恢复等实机验收只能由真实设备运行产生，不能由 CI 代替。
 
 ## 5. 小批量集成门槛
@@ -121,7 +121,7 @@ CI 失败处理：
 
 1. 修复/定位当前主线阻断性 CI 回归，建立可复现基线。
 2. A：多轮执行状态安全、fallback transcript 回放、二次异常保留、请求未知状态禁止盲目重放。
-3. B：纯 Dart 红旗 preflight 与语义测试；医学审核未完成前保持 REVIEW_REQUIRED，不发布未经审核词表。
+3. B：完善问诊学习与结果解释；测试用户原话、已确认/未知字段、规则结果、来源回链和历史/附件恢复，不引入临床 detector 或医学审批。
 4. E：验证 Android merged manifest/build；盘点并实现清除全部 AI 数据及附件缓存，重启后不可恢复。
 5. C：生成并提交真实检索黄金快照，验证 query/hits/order/source/context；在此之前禁止重构检索。
 6. D：完成 Page/Headless/Executed 盘点，再按证据抽取最小适配器。

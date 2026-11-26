@@ -42,9 +42,6 @@ class MainActivity : FlutterActivity() {
         getSharedPreferences(LOCAL_AI_BACKEND_PREFERENCES, MODE_PRIVATE)
     }
 
-    /** Legacy test/host injection seam; simulated TCM learning does not depend on it. */
-    @Volatile
-    internal var nativeRedFlagDetector: NativeRedFlagDetector? = null
     private val aiTasks by lazy {
         LocalAiActivityTaskLifecycle(
             executor = LocalAiProcessExecutor.executor,
@@ -277,10 +274,7 @@ class MainActivity : FlutterActivity() {
                         } else if (candidates.isEmpty() || candidates.length > 6000) {
                             result.error("INVALID_INTENT_CANDIDATES", "意图识别候选内容为空或超出长度限制", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text)
-                            ) {
+                            runAiTask(result, requiresAiAccess = true) {
                                 LocalAiTraceIdPolicy.attach(
                                     resolveAssistantIntent(text, candidates),
                                     traceId
@@ -302,10 +296,7 @@ class MainActivity : FlutterActivity() {
                         } else if (missingFields.isEmpty() || missingFields.length > 300) {
                             result.error("INVALID_BAZI_SLOT_FIELDS", "八字待补参数集合为空或超出长度限制", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.TOOL_ARGUMENTS, text)
-                            ) {
+                            runAiTask(result, requiresAiAccess = true) {
                                 LocalAiTraceIdPolicy.attach(
                                     extractBaziSlots(text, missingFields),
                                     traceId
@@ -326,11 +317,7 @@ class MainActivity : FlutterActivity() {
                         if (path.isEmpty()) {
                             result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.IMAGE_ATTACHMENT, prompt),
-                                required = call.argument<Boolean>("require_red_flag") == true
-                            ) {
+                            runAiTask(result, requiresAiAccess = true) {
                                 LocalAiTraceIdPolicy.attach(sendLocalImage(conversationId, path, prompt), traceId)
                             }
                         }
@@ -348,11 +335,7 @@ class MainActivity : FlutterActivity() {
                         if (path.isEmpty()) {
                             result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.AUDIO_ATTACHMENT, prompt),
-                                required = call.argument<Boolean>("require_red_flag") == true
-                            ) {
+                            runAiTask(result, requiresAiAccess = true) {
                                 LocalAiTraceIdPolicy.attach(sendLocalAudio(conversationId, path, prompt), traceId)
                             }
                         }
@@ -372,153 +355,10 @@ class MainActivity : FlutterActivity() {
                         val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
                             call.argument<Any>("session_state_conversation_id")
                         )
-                        val requireMedicalSafety =
-                            call.argument<Boolean>("require_red_flag") == true
-                        val redFlagContext =
-                            call.argument<String>("red_flag_context")?.trim().orEmpty()
-                        val redFlagContextTruncated =
-                            call.argument<Boolean>("red_flag_context_truncated") == true ||
-                                redFlagContext.length > 10_000
-                        if (text.isEmpty()) {
-                            result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
-                        } else {
-                            val validatedSessionState = try {
-                                LocalAiSessionStateInputPolicy.validate(
-                                    sessionStateContext,
-                                    sessionStateConversationId,
-                                    conversationId
-                                )
-                            } catch (error: IllegalArgumentException) {
-                                result.error(
-                                    "SESSION_STATE_INVALID",
-                                    error.message,
-                                    null
-                                )
-                                return@handler
-                            }
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(
-                                    NativeRedFlagInputSource.CURRENT_TEXT,
-                                    redFlagContext.ifEmpty { text },
-                                    sourceTruncated = redFlagContextTruncated
-                                ),
-                                required = requireMedicalSafety
-                            ) {
-                                LocalAiTraceIdPolicy.attach(
-                                    sendLocalMessage(
-                                        conversationId,
-                                        text,
-                                        context,
-                                        validatedSessionState
-                                    ),
-                                    traceId
-                                )
-                            }
-                        }
-                    }
-                    "sendReasoningMessage" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val text = call.argument<String>("text").orEmpty()
-                        val context = call.argument<String>("context").orEmpty()
-                        val reasoningContext = call.argument<String>("reasoning_context").orEmpty()
-                        val sessionStateContext =
-                            call.argument<String>("session_state_context").orEmpty()
-                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
-                            call.argument<Any>("session_state_conversation_id")
-                        )
-                        val requireMedicalSafety =
-                            call.argument<Boolean>("require_red_flag") == true
-                        val redFlagContext =
-                            call.argument<String>("red_flag_context")?.trim().orEmpty()
-                        val redFlagContextTruncated =
-                            call.argument<Boolean>("red_flag_context_truncated") == true ||
-                                redFlagContext.length > 10_000
-                        try {
-                            LocalAiReasoningTurnPolicy.validateRequest(requestId, conversationId, text)
-                            LocalAiReasoningTurnPolicy.validateSupplementalContext(reasoningContext)
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_REASONING_REQUEST", error.message, null)
-                            return@handler
-                        }
-                        val validatedSessionState = try {
-                            LocalAiSessionStateInputPolicy.validate(
-                                sessionStateContext,
-                                sessionStateConversationId,
-                                conversationId
-                            )
-                        } catch (error: IllegalArgumentException) {
-                            result.error("SESSION_STATE_INVALID", error.message, null)
-                            return@handler
-                        }
-                        runAiTaskAfterNativeRedFlag(
-                            result,
-                            NativeRedFlagInput(
-                                NativeRedFlagInputSource.CURRENT_TEXT,
-                                redFlagContext.ifEmpty { text },
-                                sourceTruncated = redFlagContextTruncated
-                            ),
-                            required = requireMedicalSafety
-                        ) {
-                            LocalAiTraceIdPolicy.attach(
-                                sendLocalReasoningMessage(
-                                    conversationId = conversationId,
-                                    requestId = requestId,
-                                    text = text,
-                                    context = context,
-                                    sessionStateContext = validatedSessionState,
-                                    reasoningContext = reasoningContext
-                                ),
-                                traceId
-                            )
-                        }
-                    }
-                    "finalizeReasoningTurn" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
-                        val answerText = call.argument<String>("answer_text").orEmpty()
-                        runAiTask(result, requiresAiAccess = true) {
-                            finalizeReasoningTurn(conversationId, requestId, answerText)
-                        }
-                    }
-                    "rejectReasoningTurn" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
-                        runAiTask(result, requiresAiAccess = true) {
-                            rejectReasoningTurn(conversationId, requestId)
-                        }
-                    }
-                    "restoreConversation" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val transcript = call.argument<String>("transcript")?.trim().orEmpty()
-                        val userMessages = call.argument<List<String>>("userMessages") ?: emptyList()
-                        val redFlagContext =
-                            call.argument<String>("red_flag_context")?.trim().orEmpty()
-                        val redFlagContextForAssessment =
-                            redFlagContext.ifEmpty { userMessages.joinToString("\n") }
-                        val redFlagContextTruncated =
-                            call.argument<Boolean>("red_flag_context_truncated") == true ||
-                                LocalAiTranscriptRestorePolicy.hasOmittedUserMessages(userMessages) ||
-                                redFlagContextForAssessment.length > 10_000
                         if (transcript.isEmpty()) {
                             result.error("EMPTY_HISTORY", "历史对话为空", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(
-                                    NativeRedFlagInputSource.HISTORY_RESTORE,
-                                    redFlagContextForAssessment,
-                                    sourceTruncated = redFlagContextTruncated
-                                ),
-                                required = call.argument<Boolean>("require_red_flag") == true
-                            ) { restoreLocalConversation(conversationId, transcript, userMessages) }
+                            runAiTask(result, requiresAiAccess = true) { restoreLocalConversation(conversationId, transcript, userMessages) }
                         }
                     }
                     "resetConversation" -> {
@@ -538,45 +378,6 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
-    }
-
-    /**
-     * Native MethodChannel boundary for all model-facing calls.
-     *
-     * A missing or unreviewed detector must not become implicit CLEAR. The
-     * Flutter seam blocks first; this native boundary prevents MethodChannel
-     * bypasses and remains closed until a reviewed detector is injected.
-     */
-    private fun runAiTaskAfterNativeRedFlag(
-        result: MethodChannel.Result,
-        input: NativeRedFlagInput,
-        required: Boolean = false,
-        task: () -> Any?
-    ) {
-        if (!required) {
-            if (nativeRedFlagDetector == null) {
-                android.util.Log.d(
-                    "NativeRedFlagGate",
-                    "REDFLAG_GATE_NOT_APPLICABLE: non-clinical request"
-                )
-            }
-            runAiTask(result, requiresAiAccess = true, task = task)
-            return
-        }
-
-        // Required clinical paths never fall through when the detector is
-        // absent, unreviewed, incomplete, or unable to assess the source.
-        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
-            .runBefore(input) {
-                runAiTask(result, requiresAiAccess = true, task = task)
-            }
-        if (!execution.executed) {
-            result.error(
-                "REDFLAG_${execution.verdict.status.name}",
-                "普通模型调用未通过安全评估：${execution.verdict.reason}",
-                null
-            )
-        }
     }
 
     private fun runAiTask(
@@ -2003,7 +1804,7 @@ class MainActivity : FlutterActivity() {
         }
         if (sourceEntries.isEmpty()) {
             return mapOf(
-                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[],"candidate_answers":[]}""",
+                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"notable_reported_features":[],"unknowns":[],"candidate_answers":[]}""",
                 "sourceTruncated" to sourceWasTruncated,
                 "backend" to activeBackend
             )
@@ -2037,14 +1838,14 @@ class MainActivity : FlutterActivity() {
               "aggravating_factors": string[],
               "relieving_factors": string[],
               "associated_symptoms": string[],
-              "red_flags": string[],
+              "notable_reported_features": string[],
               "unknowns": string[],
               "candidate_answers": [{"question_id":string,"answer":string,"evidence":string}]
             }
             candidate_answers 只可使用下面 App 提供的题目 ID 和原有选项；answer 必须逐字等于该题某个既有选项，evidence 必须是用户原文中连续、可回查的片段。
             只有用户明确提供的信息足以唯一支持某个既有选项时才提出候选；语义含糊、选项不匹配或缺少逐字证据时不要输出该题候选。不得把未提及的信息推断成“没有此症状”。
             candidate_answers 不包含舌脉、诊断、证型、方剂或剂量；模型不得替代规则引擎作结论。
-            red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
+            notable_reported_features 只记录用户明确说出的其他自述表现，不作风险分级或临床判断。
             unknowns 记录仍需向用户核实的信息。
             以下内容是应用单独保存的用户原始文字输入和待核对语音识别草稿。
             不得使用照片、舌象观察或模型此前的回复；这些内容没有提供给你。

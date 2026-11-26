@@ -1,6 +1,8 @@
+> **当前范围校准（2026-11-26）：** 本文早期 S2 / B 红旗安全门禁、临床 detector、医学审批和 RELEASE BLOCKED 状态均已退役，仅作历史快照。当前项目不建设临床分诊或医疗风险评估系统；不要求医学人员审批词表、阈值或处置文案。当前有效工程要求是 App AI 访问授权、参数/权限校验、确定性业务结果、来源回链与执行状态可靠性。
+
 # AI、问诊与全应用功能能力盘点
 
-当前复核基线：`master` @ `1370855b3f6a94f4a9cf0bcb235478f753348443`（2026-11-15）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2O 当前主线复核”覆盖旧快照。
+当前复核基线：`master` @ `1370855b3f6a94f4a9cf0bcb235478f753348443`（2026-11-15）。下方按日期记录的能力快照仅用于历史追溯；当前产品范围以本文末尾“2Q 当前适用范围纠正”覆盖旧快照。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
 ## 1. 12 项计划落地矩阵
@@ -155,7 +157,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 | 阶段 | 当前状态 | 最新源码证据与判断 |
 |---|---|---|
 | S1 输入 | PARTIAL | 文字/图片/音频通过统一 LocalAiInterviewScreen 和 MainActivity MethodChannel 接入；详情页可传 initialPrompt。见 `local_ai_interview_screen.dart:119-168,245-259`、`MainActivity.kt:82-126`。附件输入主要是音频转写/图片可见特征描述，不等于完整的跨模态任务规划。 |
-| S2 安全前置 | PARTIAL / RELEASE BLOCKED | PR #169 已将 fail-closed RedFlagGate/Preflight 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界；缺 detector、UNKNOWN、超时或来源审核/覆盖不完整时不放行。自然语言/视觉/语音医学 detector 与医学审核仍 MISSING；Gate 接线不代表 detector 准确率。 |
+| S2 工程访问与执行前置 | PARTIAL（按普通 App 权限/参数/执行契约核验） | 保留 AiModelAccessGate、工具权限、typed 参数校验和确定性业务执行校验；临床 RedFlagGate / 医学审核方案已 SUPERSEDED / NOT IN SCOPE。 |
 | S3 意图理解 | PARTIAL | 当前 Orchestrator 是固定 cue/alias/actionWords 匹配；没有模型语义规划。见 `assistant_conversation_orchestrator.dart:24-31,32-119,121-203,206-340`。参数提取目前仅对 yunqi 日期做正则处理，见 102-119 行。 |
 | S4 任务规划 | MISSING（通用任务）；问诊专用状态 EXISTS | 有 `TcmInterviewTaskState` 和 `TcmInterviewConversationController`，但仅服务规则问诊；未发现通用 TaskPlan/ActiveTaskFrame。见 `tcm_interview_task_state.dart:41-83`、`tcm_interview_conversation_controller.dart:9-105`、`database_helper.dart:176-184`。 |
 | S5 业务调用 | PARTIAL | ToolRouter 24 项注册，其中 structured_diagnosis 在对话页内联执行；其余 23 项均注册为 Widget builder。见 `assistant_tool_router.dart:155-435,489-526`。目前没有统一 Headless execute 接口。 |
@@ -621,25 +623,29 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #165 增加 `ShoushengDebtToolExecutor`：复用原八字排盘、受生债计算和本地禄库/五斗资料，要求用户明确体系、日期与时间；缺参不执行，校验后才把真实数据和来源交给 E4B。
 - PR #166 增加 `SanshanLingqianToolExecutor`：复用本地 92 签数据，签号由 App 本地随机生成；只对明确抽签意图在对话内执行，目录浏览仍使用原页面；模型不能指定签号或伪造签文。
 - Page-only 不批量迁移：知识/文档入口复用现有知识检索解释能力；个人历史/保存记录需用户选择与授权；玉匣灵兆是易与医疗症状混淆的民俗占断，缺乏安全、明确的对话执行契约。
-- B 仍 `PARTIAL / RELEASE BLOCKED`；自由文本问诊在生产红旗门禁闭合前不得开放。A/E/F 真机验收、C 来源定位和 E 数据清除/恢复证据继续按各自缺口管理。已审核知识库不重复审核。
+- 旧 B 红旗门禁状态现为 SUPERSEDED / NOT IN SCOPE；自由文本学习流程不以临床 detector 或医学审批为准入条件。A/E/F 真机验收、C 来源定位和 E 数据清除/恢复证据继续按各自缺口管理。
 
 
-## 2O. 2026-11-15 PR #169/#170/#171/#172 合并后的能力清单
+## 2O. 2026-11-15 PR #169/#170/#171/#172 合并后的历史能力快照
+
+> 本节中有关 PR #169 红旗门禁、医学审核缺失、自由文本问诊 RELEASE BLOCKED 的内容是当时的历史状态。2026-11-26 已按产品定位退役，不再适用，详见 §2Q。
 
 - 当前主线：`master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`。
 - `AssistantToolRouter` 共 24 个定义：23 个常规工具入口 + 1 个 `structured_diagnosis` 内联问诊控制器。
 - 23 个常规工具中 17 项具备 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`、`saved_charts`。
 - 6 项仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。这不是要求批量迁移的任务清单：前三项的知识问答已通过现有知识检索和引用完成；个人历史需明确选择授权；重症和民俗资料应保留领域边界。
 - `structured_diagnosis` 继续由既有 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless。页面导航不等于 Executed Capability。
-- PR #169 已把 fail-closed RedFlagGate/Preflight 接到助手 Flutter 临床入口及 Android Native 模型边界；但自然语言/视觉/语音医学 detector、医学审核和审批证据仍 MISSING，B = `PARTIAL / RELEASE BLOCKED`。
+- [历史状态，已退役] PR #169 曾把 fail-closed RedFlagGate/Preflight 接到助手 Flutter/Android Native 入口；自然语言/视觉/语音医学 detector 与医学审批缺失曾被记为 RELEASE BLOCKED。该门禁已于 2026-11-26 从当前产品范围和生产链路移除。
 - PR #170 已让保存命盘在用户明确选择后于助手对话中复用既有八字/紫微计算能力；未选择记录前不暴露出生资料，不自动选择单条记录。
 - PR #171 统一知识回答的本地条目引用尾注；PR #172 修复古籍章节和内经条目的精确直达，引用必须能通过稳定 sourceId 回查具体 App 记录。普通学习资料不要求外部纸本卷页考证。
-- 自由文本问诊仍未闭环：控制器尚未按 AI 提取并经用户确认的字段跳过已回答项、只追问缺项；受生产 RedFlag detector 缺失约束，不能开放自动辨证。
+- [历史状态，已退役] 该快照曾将自由文本问诊绑定临床 RedFlag detector 准入；当前不再以临床 detector 或医学审批决定学习问诊是否开放。
 - Find N2 的 GPU/CPU、多轮媒体、进程恢复、数据清除后不可恢复和端到端 TRACE 必须由实体设备完成；CI APK、模拟器/Native 单测不代替真机验收。
 - 不修改 DiagnosticEngine/DiagnosticRules/十问/剂量/排盘算法；不重审已审核知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
 
 
-## 2P. 2026-11-15 PR #178/#179 后当前能力清单
+## 2P. 2026-11-15 PR #178/#179 后的历史能力快照
+
+> 本节后续补写的 RedFlag detector 医学审核、RELEASE BLOCKED 和“等待生产 detector 审核材料”均为已退役历史状态，当前不适用，详见 §2Q。
 
 - 当前复核主线：`master @ 2989aa9231c715b6215eda9bfa99f9e984aed715`。PR #178 的代码合并基线为 `5b2c3d8738128a5965e54f807719eb2d6fe16635`；其 post-merge Flutter tests `43685797528` 与 Quality Gate `43685797546` 均 SUCCESS。PR #179 合并后的当前主线 Flutter tests `43689074134` 与 Quality Gate `43689074197` 均 SUCCESS。
 - `AssistantToolRouter`：24 个定义，其中 23 个常规工具入口 + 1 个 `structured_diagnosis` 内联问诊控制器。23 个常规工具中 17 项具备 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`、`saved_charts`。
@@ -650,7 +656,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #178 已增加受约束的自然语言候选槽位提取：模型只从 App 给定的现有十问题目 ID/选项中提出候选，并附用户原话连续证据；Dart 验证 ID、选项白名单、唯一性和原文证据。
 - 用户逐项确认/取消；只有确认答案进入现有 `TcmInterviewConversationController`。控制器将已确认答案交给既有 `DiagnosticEngine`，跳过已有答案并继续追问未答项目；待确认候选可随问诊任务快照恢复。
 - AI 不生成诊断、证型、方剂或剂量，不改 `DiagnosticRules`、十问和引擎。只有 App 规则执行并校验后的真实结果才能交给 AI 解读。
-- 生产 RedFlag detector 尚无医学审核版本/覆盖证明/处置文案，Flutter 和 Native Gate 继续 fail-closed；因此自然语言临床入口保持 `PARTIAL / RELEASE BLOCKED`。测试夹具不是生产 detector，不得放行。此处需要的是 detector 自身的安全审核材料，不是重复审核已有知识库。
+- [历史状态，已退役] 当时曾要求生产 RedFlag detector 的医学审核版本/覆盖证明/处置文案，并据此设置 Flutter/Native fail-closed。该临床门禁已从当前产品范围和生产链路移除，不再需要 detector 审核材料。
 
 ### 工具、玄学和学习助手
 
@@ -661,4 +667,11 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 ### 本地设备与收尾
 
 - Find N2 GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除 AI 数据后的重启复查及 TRACE 均为本地实机验收；云端 CI 只证明构建和自动化，不替代设备证据。清单详见执行台账 §46.3。
-- 本轮无新增运行时代码任务；只有在本地真机或生产 RedFlag detector 审核材料提供后，才根据具体失败证据继续修复。不得重复运行无明确目标的泛化测试或扩张架构。
+- [历史状态，已退役] 此处曾把生产 RedFlag detector 审核材料列为恢复工作的前提；当前后续工作只按真实学习交互、App 权限/参数校验、确定性规则、来源与设备验收证据推进。
+
+
+## 2Q. 2026-11-26 当前适用范围纠正
+
+- 临床 RedFlagGate/Preflight、临床 detector、医学背景审核、阈值/文案签批和 RELEASE BLOCKED 均为历史方案，不属于当前能力缺口。
+- 自由文本的学习理解、问诊澄清与结构化规则问诊按产品定位推进；AI 不把自述文本直接升级为 App 已确认的业务事实，规则结论仍由 App 确定性模块产生。
+- 普通 AI 调用继续经过 App 的访问授权；工具调用继续经过权限和 typed 参数校验；执行结果继续校验状态和来源。这些是通用工程安全，不应改称临床红旗门禁。

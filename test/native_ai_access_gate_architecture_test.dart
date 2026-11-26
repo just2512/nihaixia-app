@@ -46,8 +46,7 @@ void main() {
       final body = handler.substring(match.start, end);
       if (maintenanceOnly.contains(name)) continue;
       expect(
-        body.contains('requiresAiAccess = true') ||
-            body.contains('runAiTaskAfterNativeRedFlag'),
+        body.contains('requiresAiAccess = true'),
         isTrue,
         reason: 'Native AI handler "$name" must require ai_access',
       );

@@ -184,7 +184,6 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTraceIdPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiWavPolicy.kt
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundary.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicy.kt
  android/app/src/main/res/drawable/ic_launcher_foreground.xml
  android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
@@ -211,7 +210,6 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTraceIdPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiWavPolicyTest.kt
- android/app/src/test/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundaryTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicyTest.kt
  build-apk.sh
  docs/2026-11-04-unified-assistant-acceptance-audit.md
@@ -326,8 +324,6 @@ Files:
  lib/services/local_ai_data_clear_coordinator.dart
  lib/services/local_ai_service.dart
  lib/services/meihua_tool_executor.dart
- lib/services/red_flag_gate.dart
- lib/services/red_flag_preflight.dart
  lib/services/sanshan_lingqian_result_context_executor.dart
  lib/services/sanshan_lingqian_tool_executor.dart
  lib/services/saved_chart_tool_executor.dart
@@ -468,8 +464,6 @@ Files:
  test/phase2_core_detail_editorial_layout_test.dart
  test/phase2_remaining_half_fold_routes_test.dart
  test/readme_version_consistency_test.dart
- test/red_flag_gate_test.dart
- test/red_flag_preflight_test.dart
  test/repository_version_consistency_test.dart
  test/sanshan_lingqian_contextual_result_entry_test.dart
  test/sanshan_lingqian_tool_executor_test.dart
@@ -484,7 +478,6 @@ Files:
  test/solar_term_contextual_result_entry_test.dart
  test/solar_term_tool_executor_test.dart
  test/support/in_memory_assistant_conversation_store.dart
- test/support/test_only_red_flag_gate.dart
  test/tcm_interview_adapter_test.dart
  test/tcm_interview_message_test.dart
  test/tcm_interview_task_state_test.dart
@@ -1284,3 +1277,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 App execution coordinator and contract tests. It revalidates consent and request scope, writes a durable one-shot claim before Headless dispatch, persists terminal state, and returns only validated ledger read-back; duplicate/interrupted/unknown invocations never replay; ownership evidence required.
+
+
+Files:
+ test/ai_product_scope_contract_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored product-boundary regression tests ensuring the learning assistant does not reintroduce clinical red-flag gates or medical approval prerequisites; ownership evidence required.

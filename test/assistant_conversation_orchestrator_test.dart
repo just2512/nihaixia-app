@@ -38,44 +38,6 @@ void main() {
           reason: '只有症状叙述而没有诊断请求时先理解/澄清，不擅自进入规则辨证');
     });
 
-    test('问诊是模拟学习流程，不依赖临床分诊检测器', () {
-      bool requires(
-        String query, {
-        AssistantMode mode = AssistantMode.automatic,
-        bool attachment = false,
-        bool activeTask = false,
-      }) =>
-          AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
-            query: query,
-            selectedMode: mode,
-            hasAttachment: attachment,
-            structuredInterviewActive: activeTask,
-          );
-
-      for (final query in [
-        '最近不舒服，帮我诊断一下什么问题？',
-        '我最近胸痛',
-        '我父亲最近胸痛',
-        '孩子最近发热',
-        '我有呼吸困难，帮我起卦',
-        '喘不上气',
-        '突发偏瘫',
-        '意识障碍',
-        '大量出血',
-        '自伤风险',
-        '解释胸痛的中医理论',
-      ]) {
-        expect(requires(query), isFalse, reason: query);
-      }
-
-      expect(
-        requires('最近有点说不清楚的怪感觉', mode: AssistantMode.consultation),
-        isFalse,
-      );
-      expect(requires('', mode: AssistantMode.consultation, attachment: true), isFalse);
-      expect(requires('', mode: AssistantMode.learning, attachment: true), isFalse);
-      expect(requires('', activeTask: true), isFalse);
-    });
 
     test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
       expect(

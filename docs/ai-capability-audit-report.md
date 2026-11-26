@@ -1,3 +1,5 @@
+> **范围覆盖声明（2026-11-26）：** 本报告早期章节中的临床 RedFlag detector、医学审核、全入口临床拦截、REVIEW_REQUIRED 和 RELEASE BLOCKED 均为历史设想，已由当前产品定位取代。不得将这些旧状态理解为当前缺口、开发任务或发布条件。当前 B 工作流为问诊学习与结果解释；一般急重症求助提醒保留，不构建临床分诊系统。
+
 # AI 能力静态/动态审计报告
 
 - 审计日期：2026-11-15（PR #169/#170/#171/#172 集成后增量复核）
@@ -13,7 +15,7 @@
 | 工作流 | 状态 | 关键结论 |
 |---|---|---|
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | PR #169 已把 fail-closed Gate 接入助手 Flutter 临床相关入口和 Android Native 模型边界；自然语言/视觉/语音医学 detector 与医学审核仍缺失，不能开放自由文本自动辨证 |
+| B 问诊学习与结果解释 | 按产品定位验收 | 不建设临床 RedFlag detector、医学审批或临床门禁；旧 B 状态统一 SUPERSEDED / NOT IN SCOPE |
 | C 检索与引用 | PARTIAL | 83 个讲稿 sourceId 对应本地资产；#171 统一知识条目引用，#172 将古籍章节/内经条目精确直达。普通学习资料以 App 内稳定 sourceId + 可打开本地条目为验收，不要求外部纸本卷页考证；检索覆盖/相关性仍由黄金集约束 |
 | D Headless Capability | PARTIAL | 24 个定义中，23 个常规工具入口有 17 项 Headless executor、6 项 Page-only；structured_diagnosis 为独立内联确定性流程。Page-only 不自动构成待改造缺口 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
@@ -1266,10 +1268,10 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 ### 19.4 收尾结论
 
 - 云端实现和 CI：当前主线 PASS。
-- 问诊候选提取—原文证据—用户确认—既有规则问诊映射：CODE + TEST + CI 已完成；生产临床入口仍受 B 门禁阻断。
+- 问诊候选提取—原文证据—用户确认—既有规则问诊映射：CODE + TEST + CI 已完成；不再受临床 RedFlag 门禁阻断。
 - Find N2 真机验收：DEVICE UNKNOWN，交由本地执行。
 - 知识库来源：以 sourceId + App 可打开定位为准，不做外部书目考据、不重复医学审核。
-- 除本地设备记录及生产 RedFlag detector 的合格医学审核材料外，不新增功能、不重复跑泛化测试、不扩张架构。
+- 除本地设备记录外，不新增临床 detector、医学审批流程或风险分级系统；不重复跑泛化测试、不扩张架构。
 
 
 ## 20. 2026-11-15 E4B GPU/CPU 用户手动切换实现批次
@@ -1289,3 +1291,14 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 对已有且可打开的条目，不补充外部纸本版本/卷页，不把外部元数据未核验标成知识库 MISSING，不重复审核已审核知识库。
 - 只有本地条目不存在、检索未命中/失败、sourceId 无法解析/打开，或回答所需内容在该条目中确实为空时，才说明对应本地资料缺失。
 - C 保持 PARTIAL 的理由只限于黄金集揭示的真实召回覆盖、相关性、排序、上下文与引用链路问题；不再把旧 bibliographic locator 缺项算进剩余工作。
+
+## 22. 2026-11-26 当前范围最终纠正：临床红旗门禁不在产品范围
+
+本报告在 2026-11-23 之后仍保留大量旧 RedFlag 审计快照。为避免后续开发误将历史设想恢复为当前要求，现作最终状态解释：
+
+- 当前产品定位以 docs/product-positioning-and-boundaries.md 为准：研纪是中医学习辅助工具，不是医疗诊断/临床分诊系统。
+- 不建设临床红旗 detector、风险分级、临床阈值/例外规则或急救处置文案，不要求医学背景人员审核或签批。
+- 不把医学审核缺失、detector 缺失、REVIEW_REQUIRED 或红旗全入口覆盖率设为版本发布阻断条件。
+- 当前代码已从 Flutter 助手、LocalAiService 和 Android Native 模型调用中移除临床 RedFlag gate；正常 App AI 访问仍受 AiModelAccessGate、权限、typed 参数、确定性业务函数和结果校验约束。
+- 仅保留一般性急重症求助提醒；该提醒不参与风险分类，不阻断模型调用。
+- 本报告此前有关 PR #169、RedFlagGate/Preflight、医学审核缺失、B = PARTIAL / RELEASE BLOCKED 的章节全部是历史审计记录，当前状态为 SUPERSEDED / NOT IN SCOPE。
