@@ -261,6 +261,30 @@ void main() {
   });
 
 
+  test('non-replayable interrupted request is visible history but not a session memory fact', () {
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': '上一轮执行状态未知的原始请求',
+          'metadata': const AssistantMessageMetadata(
+            mode: 'consultation',
+            replayable: false,
+            reasoningRequestId: '0123456789abcdef0123456789abcdef',
+          ).encode(),
+        },
+      ],
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.facts, isEmpty);
+    expect(result.omittedUserMessageCount, 1);
+    expect(result.diagnostics, contains('USER_ORIGINAL_MESSAGES_OMITTED:1'));
+  });
+
   test('assistant-only display rows do not create restored memory facts', () {
     final result = SessionStateSnapshotBuilder.build(
       sessionId: 7,

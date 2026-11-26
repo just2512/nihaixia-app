@@ -4766,3 +4766,16 @@ PR HEAD 门禁证据：
 - **缺口：** 24,000 UTF-16 字符补充上下文上限不是 token budget；自动压缩和全部跨进程恢复仍未闭合；Core-2 排序策略仍需稳定的候选快照对照；Core-3 其他模式未全部迁移；Core-4 tools-mode 生产生命周期需以精确 HEAD 合并验收；Core-5 跨层 E2E/Find N2 TRACE 未完成。
 - **状态：** Core-0 文档契约/源码映射完成本轮冻结；Core-1/2/3/4/5 仍按各自实际代码及验收证据保持 PARTIAL/UNKNOWN。工作流 I（Markdown 书架）继续 DEFERRED / NOT_AUTHORIZED；Find N2 设备验收留到云端任务收尾后本地执行。
 - **变更范围：** 仅更新本架构文档和执行台账；不改变生产代码、SQLite schema、Native ai_access/AiModelAccessGate、检索排序行为或既有 E4B GPU/CPU fallback。
+
+
+## 119. 2026-11-26 Core-1 Native 推理请求持久化与跨进程 transcript 恢复（PR #575）
+
+- **依赖基线：** PR #573 feat(ai): route plain-text modes through structured reasoning，HEAD 1802c8cedac70ff784beeb6a10d84e30a7c0e785，base d7fe128537cbdea2707538e7b31dd910b3d3610a。该 PR 将普通文本模式迁移到结构化 ReasoningRequest/Response 路径；Fork License run 45826959106 SUCCESS；Flutter run 45826958929 截至本节记录仍 IN_PROGRESS，Flutter regression job 139933472835 IN_PROGRESS，PR 事件 Branch validation job 139933475936 SKIPPED（不计 PASS）。未合并、未计入 master。
+- **Core-1 实现：** PR #575，分支 work/core1-persisted-reasoning-turn-ledger-core3-20261126，HEAD 33372ced20d0a97b02e216a3a903c549177565cb，暂以 #573 分支为 base（#573 合并后再重定向 master）。新增 AssistantReasoningTurnLedger，复用现有 assistant_messages.invocation_key 与隐藏 role=tool 事件，不新增表/迁移。
+- **请求生命周期：** 每次结构化 Native 推理调用前持久化 PENDING；Native finalize 后保存 FINALIZED + 已校验答案/sourceIds；Native reject 后保存 REJECTED；Native 完成确认不明或进程中断时保存/恢复 UNKNOWN；工具动作提案在 App 执行后被主动丢弃的第一轮标记 SUPERSEDED，避免误报为成功/失败或重复显示。
+- **恢复一致性：** 历史会话打开时 recoverAndReconcile 将未决 PENDING 转为 UNKNOWN；FINALIZED 但缺少 transcript pair 时按 Ledger 中已校验答案重建原子 user/assistant 对；UNKNOWN/REJECTED 生成可见但 non-replayable 的状态消息；SUPERSEDED 不额外生成对话。transcript 元数据持久化 reasoningRequestId，用于恢复去重。
+- **Memory 隔离：** replayable=false 的中断请求不会进入 Native transcript replay，也不会被 SessionStateSnapshotBuilder 提升为 USER_ORIGINAL 记忆事实；隐藏 role=tool 请求/终态不进入会话记忆或 RAG。既有完整成功轮次上限、SessionState provenance 和 conversation owner 校验保持不变。
+- **工具模式覆盖：** tools mode 的动作提案请求、确认后结果解释请求均各自绑定独立 requestId；正常丢弃的提案 turn 标记 SUPERSEDED，后续解释 turn 单独 FINALIZED；真实业务执行仍由既有 AssistantToolInvocationLedger/Dispatcher 负责，ReasoningTurnLedger 不替代执行 ledger。
+- **云端未闭合项：** PR #575 尚无 master-base 精确 HEAD CI（当前 stacked base 不触发默认 PR 门禁）；待 #573 合并后将 PR #575 base 调整到 master 并运行完整 Flutter regression/analyze、Android arm64/JVM、Fork License。当前实现只恢复 SQLite transcript 与请求终态，不持久化 LiteRT KV Cache；E4B token/input budget、自动压缩仍 UNKNOWN/NOT IMPLEMENTED。
+- **设备策略：** Find N2 的 GPU/CPU、多轮、Activity/进程恢复、Token 实测和真实 TRACE 仍留在全部云端工作完成后本地验收；设备不阻塞 Core-1/2/3/4/5 云端代码推进。
+- **工作流 I：** Markdown 书架保持 DEFERRED / NOT AUTHORIZED，不进入本轮改造。

@@ -76,6 +76,15 @@ class SessionStateSnapshotBuilder {
         .toList(growable: false);
     final eligibleUserMessages = <_SessionMessage>[];
     for (final message in userMessages) {
+      // A durable UNKNOWN/REJECTED reasoning request is visible history, but
+      // not a completed conversational fact. Keep it out of session memory
+      // until the user explicitly sends it again.
+      if (message.metadata != null &&
+          !AssistantMessageMetadata.decode(message.metadata!).replayable) {
+        partial = true;
+        omittedUserMessageCount++;
+        continue;
+      }
       if (message.content.length > maxUserMessageCharacters) {
         partial = true;
         omittedUserMessageCount++;

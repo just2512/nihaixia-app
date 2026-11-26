@@ -83,6 +83,7 @@ class AssistantMessageMetadata {
     this.toolArguments = const {},
     this.knowledgeStatus,
     this.traceId,
+    this.reasoningRequestId,
     this.invocationOrigin,
     this.contextRef = const {},
     this.toolPlanSteps = const [],
@@ -103,6 +104,8 @@ class AssistantMessageMetadata {
   final String? knowledgeStatus;
   /// Opaque per-turn correlation ID; never user content.
   final String? traceId;
+  /// Durable identity linking transcript rows to a structured reasoning turn.
+  final String? reasoningRequestId;
   /// Explicit source of a pending tool plan; null means MISSING, never inferred.
   final String? invocationOrigin;
   /// Immutable contextual anchor carried by every message in the anchored turn.
@@ -123,6 +126,7 @@ class AssistantMessageMetadata {
         if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
         if (knowledgeStatus != null) 'knowledgeStatus': knowledgeStatus,
         if (traceId != null) 'trace_id': traceId,
+        if (reasoningRequestId != null) 'reasoningRequestId': reasoningRequestId,
         if (invocationOrigin != null) 'invocationOrigin': invocationOrigin,
         if (contextRef.isNotEmpty) 'contextRef': contextRef,
         if (toolPlanSteps.isNotEmpty)
@@ -151,6 +155,7 @@ class AssistantMessageMetadata {
               : const [],
           knowledgeStatus: readString('knowledgeStatus'),
           traceId: readString('trace_id'),
+          reasoningRequestId: readString('reasoningRequestId'),
           invocationOrigin: readString('invocationOrigin'),
           toolPlanSteps: decoded['toolPlanSteps'] is List
               ? (decoded['toolPlanSteps'] as List)

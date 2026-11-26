@@ -16,6 +16,7 @@ void main() {
       toolArguments: {'date': '2026-11-06'},
       knowledgeStatus: 'RETRIEVED',
       traceId: '0123456789abcdef0123456789abcdef',
+      reasoningRequestId: 'abcdef0123456789abcdef0123456789',
       invocationOrigin: 'aiDispatch',
       contextRef: const {
         'kind': 'classic',
@@ -39,6 +40,7 @@ void main() {
     expect(restored.toolArguments, {'date': '2026-11-06'});
     expect(restored.knowledgeStatus, 'RETRIEVED');
     expect(restored.traceId, '0123456789abcdef0123456789abcdef');
+    expect(restored.reasoningRequestId, 'abcdef0123456789abcdef0123456789');
     expect(restored.invocationOrigin, 'aiDispatch');
     expect(restored.contextRef, {
       'kind': 'classic',

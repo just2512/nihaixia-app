@@ -3677,13 +3677,18 @@ void main() {
       final rows = await _store.getAssistantMessages(
         conversationId: conversationId,
       );
-      if (rows.length >= 4) break;
+      final visibleRows = rows
+          .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+          .toList(growable: false);
+      if (visibleRows.length >= 4) break;
       await tester.pump(const Duration(milliseconds: 20));
     }
 
-    final rows = await _store.getAssistantMessages(
+    final rows = (await _store.getAssistantMessages(
       conversationId: conversationId,
-    );
+    ))
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .toList(growable: false);
     expect(rows, hasLength(4));
     expect(service.sentTexts, [followUp]);
     expect(service.intentQueries, isEmpty,
@@ -4111,9 +4116,12 @@ void main() {
 
     final conversations = await _store.getAssistantConversations();
     expect(conversations, hasLength(1));
-    final messages = await _store.getAssistantMessages(
+    final messages = (await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
-    );
+    ))
+        .where((message) =>
+            message['role'] == 'user' || message['role'] == 'assistant')
+        .toList(growable: false);
     expect(messages, hasLength(3));
     final resultMessage = messages.firstWhere(
       (message) =>
@@ -4824,9 +4832,12 @@ void main() {
     expect(service.restoredTranscripts, hasLength(1));
     final conversations = await _store.getAssistantConversations();
     expect(conversations, hasLength(1));
-    final messages = await _store.getAssistantMessages(
+    final messages = (await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
-    );
+    ))
+        .where((message) =>
+            message['role'] == 'user' || message['role'] == 'assistant')
+        .toList(growable: false);
     expect(messages, hasLength(4));
     final pageResultMessage = messages.firstWhere(
       (message) =>
@@ -5008,9 +5019,12 @@ void main() {
     final conversations = await _store.getAssistantConversations();
     expect(conversations, hasLength(1));
     final conversationId = conversations.single['id'] as int;
-    final messages = await _store.getAssistantMessages(
+    final messages = (await _store.getAssistantMessages(
       conversationId: conversationId,
-    );
+    ))
+        .where((message) =>
+            message['role'] == 'user' || message['role'] == 'assistant')
+        .toList(growable: false);
     expect(messages, hasLength(2));
     final userMetadata = AssistantMessageMetadata.decode(
       messages[0]['metadata'] as String,
@@ -6103,7 +6117,12 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
     expect(executionCalls, 0, reason: '解析出 ACTION_PROPOSAL 不能直接调用工具');
-    expect(store._messages.values.single.where((row) => row['invocation_key'] != null), isEmpty);
+    expect(store._messages.values.single.where((row) {
+          final key = row['invocation_key'];
+          return key is String &&
+              !key.startsWith('reasoning:') &&
+              (key.endsWith(':claim') || key.endsWith(':terminal'));
+        }), isEmpty);
 
     await tester.tap(find.text('确认执行'));
     await tester.pumpAndSettle();
@@ -6160,7 +6179,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final ledgerRows = store._messages.values.single
-        .where((row) => row['invocation_key'] != null)
+        .where((row) {
+          final key = row['invocation_key'];
+          return key is String &&
+              !key.startsWith('reasoning:') &&
+              (key.endsWith(':claim') || key.endsWith(':terminal'));
+        })
         .toList(growable: false);
     expect(ledgerRows, hasLength(2));
     expect(ledgerRows.map((row) => row['content']), containsAll([
@@ -6225,7 +6249,12 @@ void main() {
     expect(service.sentTexts, hasLength(1));
     expect(service.finalizedReasoningAnswers.single, contains('已取消本次工具动作'));
     expect(service.rejectedReasoningRequestIds, isEmpty);
-    expect(store._messages.values.single.where((row) => row['invocation_key'] != null), isEmpty);
+    expect(store._messages.values.single.where((row) {
+          final key = row['invocation_key'];
+          return key is String &&
+              !key.startsWith('reasoning:') &&
+              (key.endsWith(':claim') || key.endsWith(':terminal'));
+        }), isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -6305,7 +6334,12 @@ void main() {
     expect(executionCalls, 0);
     expect(service.rejectedReasoningRequestIds, hasLength(1));
     expect(
-      store._messages.values.single.where((row) => row['invocation_key'] != null),
+      store._messages.values.single.where((row) {
+          final key = row['invocation_key'];
+          return key is String &&
+              !key.startsWith('reasoning:') &&
+              (key.endsWith(':claim') || key.endsWith(':terminal'));
+        }),
       isEmpty,
     );
     expect(tester.takeException(), isNull);
