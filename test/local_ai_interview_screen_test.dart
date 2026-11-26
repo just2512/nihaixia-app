@@ -5946,6 +5946,7 @@ void main() {
         home: LocalAiInterviewScreen(
           redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           initialMode: AssistantMode.tools,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           conversationStore: store,
           service: service,
           testHeadlessToolExecutor: (arguments) async {
@@ -6041,6 +6042,7 @@ void main() {
         home: LocalAiInterviewScreen(
           redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           initialMode: AssistantMode.tools,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           conversationStore: store,
           service: service,
           testHeadlessToolExecutor: (arguments) async {
