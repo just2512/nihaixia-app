@@ -223,6 +223,44 @@ void main() {
 
     final rawContext = snapshot['context']! as Map<String, Object?>;
     final sources = (rawContext['sources']! as List).cast<Map>();
+    final rawCore2 = snapshot['core2']! as Map<String, Object?>;
+    final rawCandidateRows =
+        (rawCore2['candidateDecisionRows']! as List).cast<Map>();
+    const candidateFields = [
+      'ordinal',
+      'sourceId',
+      'query',
+      'retrievalMethod',
+      'disposition',
+      'reasonCode',
+      'orderIndex',
+    ];
+    final candidateRows = rawCandidateRows
+        .map((row) => {
+              for (final field in candidateFields) field: row[field],
+            })
+        .toList(growable: false);
+    final candidateSourceIds =
+        candidateRows.map((row) => row['sourceId'] as String).toSet();
+    final contextSourceIds =
+        (rawContext['sourceIds']! as List).cast<String>();
+    final core2 = {
+      'knownCandidateCount': rawCore2['knownCandidateCount'],
+      'candidateDecisionRows': candidateRows,
+      'strategyId': rawCore2['strategyId'],
+      'strategyVersion': rawCore2['strategyVersion'],
+      'status': rawCore2['status'],
+      'orderedCandidateOrdinals': rawCore2['orderedCandidateOrdinals'],
+      'presentedCandidateOrdinals': rawCore2['presentedCandidateOrdinals'],
+      'candidatePipelineRankedSourceIds':
+          rawCore2['candidatePipelineRankedSourceIds'],
+      'contextSourceIds': contextSourceIds,
+      'legacyBaseContextSourceIds': contextSourceIds
+          .where((sourceId) => !candidateSourceIds.contains(sourceId))
+          .toList(growable: false),
+      'budget': rawCore2['budget'],
+      'diagnostics': rawCore2['diagnostics'],
+    };
     return {
       'schemaVersion': 2,
       'request': snapshot['request'],
@@ -230,6 +268,7 @@ void main() {
       'sourceManifest': snapshot['sourceManifest'],
       'queryProvenance': snapshot['queryProvenance'],
       'classicQueries': queries,
+      'core2': core2,
       'context': {
         'status': rawContext['status'],
         'sourceIds': rawContext['sourceIds'],
@@ -309,10 +348,12 @@ void main() {
         reason: '排名引用不等于模型上下文中的全部资料来源');
 
 
-    final expectedFile = File('test/fixtures/ai_retrieval_golden_metadata.json');
+    final expectedFile =
+        File('test/fixtures/ai_retrieval_golden_metadata.json.gz.base64');
     expect(expectedFile.existsSync(), isTrue,
         reason: '检索行为基线必须有可审查、可版本控制的固定夹具');
-    final expected = jsonDecode(expectedFile.readAsStringSync());
+    final compressed = base64.decode(expectedFile.readAsStringSync().trim());
+    final expected = jsonDecode(utf8.decode(GZipCodec().decode(compressed)));
     expect(
       jsonEncode(summarize(first)),
       jsonEncode(expected),
