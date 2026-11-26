@@ -34,12 +34,15 @@ AssistantKnowledgeContextResult knowledge({
       sources: sources ?? [source('source-1')],
     );
 
-ReasoningRequest request(AssistantKnowledgeContextResult context) =>
+ReasoningRequest request(
+  AssistantKnowledgeContextResult context, {
+  String mode = 'learning',
+}) =>
     ReasoningKnowledgeAnswerAdapter.createRequest(
       requestId: 'request-1',
       sessionId: 7,
       userText: '用户原始问题',
-      mode: 'learning',
+      mode: mode,
       sessionState: SessionStateSnapshot(
         sessionId: 7,
         revision: 'rev-1',
@@ -214,6 +217,35 @@ void main() {
         result.failureCode,
         'REASONING_CONVERSATION_PATH_EXECUTION_MODE_FORBIDDEN',
       );
+    });
+
+    test('mode-neutral conversation path rejects action proposals in every non-tool mode', () {
+      final context = knowledge(
+        ranked: const [],
+        known: const [],
+        sources: const [],
+      );
+      final actionProposal = payload(
+        responseKind: 'ACTION_PROPOSAL',
+        references: const [],
+        omittedEvidenceIds: const [],
+        proposal: {
+          'proposalId': 'proposal-1',
+          'capabilityId': 'dosage',
+          'arguments': {'value': '1.5', 'unit': '两'},
+        },
+      );
+
+      for (final mode in ['automatic', 'consultation', 'metaphysics']) {
+        final result = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+          raw: actionProposal,
+          request: request(context, mode: mode),
+          knowledge: context,
+        );
+        expect(result.isUsable, isFalse, reason: '$mode must never execute tools');
+        expect(result.answerText, isEmpty);
+        expect(result.sourceIds, isEmpty);
+      }
     });
 
     test('creates an exact one-entry context and resolves its request-local citation', () async {
