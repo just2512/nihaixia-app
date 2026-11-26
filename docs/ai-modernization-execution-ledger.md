@@ -4766,3 +4766,15 @@ PR HEAD 门禁证据：
 - **缺口：** 24,000 UTF-16 字符补充上下文上限不是 token budget；自动压缩和全部跨进程恢复仍未闭合；Core-2 排序策略仍需稳定的候选快照对照；Core-3 其他模式未全部迁移；Core-4 tools-mode 生产生命周期需以精确 HEAD 合并验收；Core-5 跨层 E2E/Find N2 TRACE 未完成。
 - **状态：** Core-0 文档契约/源码映射完成本轮冻结；Core-1/2/3/4/5 仍按各自实际代码及验收证据保持 PARTIAL/UNKNOWN。工作流 I（Markdown 书架）继续 DEFERRED / NOT_AUTHORIZED；Find N2 设备验收留到云端任务收尾后本地执行。
 - **变更范围：** 仅更新本架构文档和执行台账；不改变生产代码、SQLite schema、Native ai_access/AiModelAccessGate、检索排序行为或既有 E4B GPU/CPU fallback。
+
+
+## 119. 2026-11-26 产品定位纠偏：撤销全模式临床红旗门禁与医学签审要求
+
+- **产品定位：** 研纪是中医学习辅助工具，不是医疗诊断软件、临床分诊系统或医疗决策系统。以 `docs/product-positioning-and-boundaries.md`、`docs/ai-redflag-entrypoint-audit.md` 和 `docs/ai-redflag-preflight-policy.md` 的当前正文为准。
+- **要求撤销：** 不建设临床红旗 detector、医学风险分级、临床阈值、医学词表规则集、临床处置文案审核和医生签字流程；不要求医学背景人员审核并留存版本/日期/审批记录；不建立本人/他人/知识/假设/引用/既往史/否定/时间维度的临床门禁矩阵；不以 detector 缺失、审核缺失或覆盖率不足阻断任一模式的模型调用、普通业务路由或发布。
+- **代码调整：** Flutter 助手页删除 RedFlagGate/RedFlagPreflight 注入与调用，移除临床安全预检参数；LocalAiService 不再向 Native 发送 `require_red_flag`、`red_flag_context`；Android MainActivity 的模型调用恢复为统一 AI access gate，不再套临床 detector；删除未启用的 Dart gate、Native boundary 与医学签审专用测试夹具。
+- **产品提醒：** 固定、简明的一般性急重症求助提醒保留，只提示及时寻求现实世界帮助；不判断风险等级、不提供急救操作或个体化医疗处置，不阻断正常学习功能。
+- **继续保留：** 输入/附件结构校验、模式与工具职责、参数/权限校验、App 确定性规则执行、结果/来源/协议校验、历史会话归属和恢复状态、用户原始表达保真、未知状态不伪装成功。这些是通用工程正确性，不属于临床门禁。
+- **TRACE 兼容：** 如旧数据结构仍出现 `redFlag` / `preflight`，只允许历史兼容并标记 `NOT_APPLICABLE`；不再要求 detector 证据，不将其作为模型 gate 或 RELEASE BLOCKED 条件。
+- **历史记录口径：** 第 119 节是当前有效范围。较早章节中有关临床红旗、医学签审、医生审批和 REVIEW_REQUIRED 的设计/待办，只保留为历史决策轨迹，全部标记为 `SUPERSEDED / NOT IN SCOPE`；不得复活为现行验收要求。
+- **验收状态：** 代码与文档修改已提交到独立分支；本记录不预先宣称 CI 或测试 PASS。必须以该分支最终 HEAD 的 Flutter regression、静态分析、Android arm64/JVM 和许可证检查结果为准；设备验证按原有本地验收流程记录。
