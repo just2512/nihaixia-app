@@ -77,6 +77,7 @@ class AssistantKnowledgeCandidateSnapshot {
     this.chapterPath,
   }) : queryReasons = List.unmodifiable(queryReasons);
 
+  final String evidenceId;
   final String sourceId;
   final CandidateEvidenceOrigin origin;
   final String materialKind;
@@ -234,6 +235,7 @@ class AssistantKnowledgeContextBuilder {
       );
     }
     return AssistantKnowledgeCandidateSnapshot(
+      evidenceId: candidate.evidenceId,
       sourceId: candidate.sourceId,
       origin: candidate.origin,
       materialKind: candidate.materialKind,
