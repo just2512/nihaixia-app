@@ -38,7 +38,6 @@ void main() {
           reason: '只有症状叙述而没有诊断请求时先理解/澄清，不擅自进入规则辨证');
     });
 
-    
     test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
       expect(
         AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
@@ -739,7 +738,6 @@ void main() {
       expect(decision.clarification, contains('梅花易数'));
     });
 
-
     test('排盘澄清后仅回答工具名称即可进入对应排盘工具', () {
       final first = AssistantConversationOrchestrator.resolve(
         query: '帮我排个盘',
@@ -792,7 +790,6 @@ void main() {
       );
       expect(decision.tool?.id, 'dosage');
     });
-
 
     test('只有存在待选工具澄清状态时，短工具别名才允许启动页面', () {
       final ordinaryMention = AssistantConversationOrchestrator.resolve(
@@ -1462,7 +1459,6 @@ void main() {
     expect(narrativeOnly.tool, isNull,
         reason: '只分享梦境不等于请求启动解梦工具');
   });
-
 
   test('受生债只提取有明确证据的公历日期、钟表时间和查询体系', () {
     final tool = AssistantToolRouter.shoushengDebt;
