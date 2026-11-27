@@ -25,6 +25,7 @@ class ReasoningResponseCodec {
   static const Set<String> _allowedKeys = {
     ..._requiredKeys,
     'actionProposal',
+    'attachmentResult',
   };
 
   static ReasoningResponseDecodeResult decode({
@@ -33,6 +34,7 @@ class ReasoningResponseCodec {
     required Set<String> rankedEvidenceIds,
     required Set<String> knownEvidenceIds,
     Set<String> allowedCapabilityIds = const {},
+    String? expectedAttachmentType,
   }) {
     if (raw.trim().isEmpty) {
       return _failure(ReasoningResponseStatus.empty, 'EMPTY_MODEL_RESPONSE');
@@ -170,6 +172,17 @@ class ReasoningResponseCodec {
       );
     }
 
+    final rawAttachmentResult = payload['attachmentResult'];
+    ReasoningAttachmentResult? attachmentResult;
+    if (expectedAttachmentType != null) {
+      attachmentResult = _parseAttachmentResult(rawAttachmentResult);
+      if (attachmentResult == null || attachmentResult.attachmentType != expectedAttachmentType) {
+        return _failure(ReasoningResponseStatus.parseFailed, 'REASONING_RESPONSE_ATTACHMENT_RESULT_INVALID_OR_MISMATCHED');
+      }
+    } else if (payload.containsKey('attachmentResult')) {
+      return _failure(ReasoningResponseStatus.parseFailed, 'REASONING_RESPONSE_UNEXPECTED_ATTACHMENT_RESULT');
+    }
+
     final rawProposal = payload['actionProposal'];
     BusinessActionProposal? proposal;
     if (responseKind == ReasoningResponseKind.actionProposal) {
@@ -203,6 +216,7 @@ class ReasoningResponseCodec {
       conflicts: conflicts,
       omittedEvidenceIds: omittedEvidenceIds,
       actionProposal: proposal,
+      attachmentResult: attachmentResult,
     );
     return ReasoningResponseDecodeResult(
       status: declaredStatus,
@@ -268,6 +282,24 @@ class ReasoningResponseCodec {
       capabilityId: capabilityId,
       arguments: arguments,
     );
+  }
+
+  static ReasoningAttachmentResult? _parseAttachmentResult(Object? value) {
+    if (value is! Map || value.keys.any((key) => key is! String)) return null;
+    final type = _nonEmptyString(value['type']);
+    if (type == 'image') {
+      if (value.length != 2 || !value.containsKey('observations')) return null;
+      final observations = _stringList(value['observations']);
+      if (observations == null || observations.isEmpty || !_allUnique(observations) || observations.any((item) => item.length > 500)) return null;
+      return ReasoningAttachmentResult(attachmentType: type!, observations: observations);
+    }
+    if (type == 'audio') {
+      if (value.length != 2 || !value.containsKey('transcriptDraft')) return null;
+      final draft = _nonEmptyString(value['transcriptDraft']);
+      if (draft == null || draft.length > 8000) return null;
+      return ReasoningAttachmentResult(attachmentType: type!, transcriptDraft: draft);
+    }
+    return null;
   }
 
   static List<String>? _stringList(Object? value) {

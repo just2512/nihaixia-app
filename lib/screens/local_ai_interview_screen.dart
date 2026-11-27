@@ -1183,7 +1183,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AssistantMode mode,
     required AiTraceContext traceContext,
     String? retrievalQuery,
+    String? attachmentPath,
+    ReasoningAttachmentType? attachmentType,
   }) async {
+    if ((attachmentPath == null) != (attachmentType == null)) {
+      throw ArgumentError('REASONING_ATTACHMENT_PATH_TYPE_MISMATCH');
+    }
+    final attachmentPromptGenerated = attachmentType != null && text.trim().isEmpty;
+    final requestUserText = attachmentPromptGenerated
+        ? attachmentType == ReasoningAttachmentType.image
+            ? '【App附件任务（用户未提供文字）】请描述照片中可直接观察到的信息。'
+            : '【App附件任务（用户未提供文字）】请逐句转写录音内容。'
+        : text.trim();
     final traceId = traceContext.traceId;
     final sessionStateSnapshot =
         await _buildSessionStateSnapshot(conversationId);
@@ -1205,17 +1216,30 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final request = ReasoningKnowledgeAnswerAdapter.createRequest(
         requestId: requestId,
         sessionId: conversationId,
-        userText: text.trim(),
+        userText: requestUserText,
         mode: answerMode.name,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
+        attachmentType: attachmentType,
+        attachmentPromptGenerated: attachmentPromptGenerated,
       );
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\n$roleContext';
+      final attachmentInstructions = switch (attachmentType) {
+        ReasoningAttachmentType.image =>
+          '本轮提供的是照片。attachmentResult.observations 只写图像中直接可观察到的舌体形态、舌色、舌苔分布和图像质量；不得由照片作现代医学诊断、中医证型辨证或推荐方剂、药物、剂量。',
+        ReasoningAttachmentType.audio =>
+          '本轮提供的是语音。必须先将语音逐句转写到 attachmentResult.transcriptDraft，保留原始措辞，听不清处标记为“听不清”；该草稿未经用户核对，不是用户确认事实。segments 只放转写之外的解释；不作现代医学诊断、六经辨证结论或方药剂量建议。',
+        null => '',
+      };
+      final guardedContext = [
+        evidencePresentationBoundary,
+        if (attachmentInstructions.isNotEmpty) attachmentInstructions,
+        roleContext,
+      ].join('\n');
       final modeLabel = switch (answerMode) {
         AssistantMode.automatic => '通用助手',
         AssistantMode.consultation => '问诊助手',
@@ -1247,32 +1271,63 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           conversationId: conversationId,
           requestId: requestId,
           mode: answerMode.name,
-          userText: text.trim(),
+          userText: requestUserText,
         );
         if (startStatus != AssistantReasoningTurnStartStatus.started) {
           throw StateError('REASONING_TURN_DUPLICATE_OR_CONFLICT:$startStatus');
         }
         nativeRequestMayBePending = true;
-        final pending = traceId == null
-            ? await _service.sendReasoningMessage(
-                text.trim(),
-                conversationId: conversationId,
-                requestId: requestId,
-                context: guardedContext,
-                reasoningContext: supplementalContext,
-                sessionStateContext: sessionStateContext,
-                sessionStateConversationId: conversationId,
-              )
-            : await _service.sendReasoningMessageWithTrace(
-                text.trim(),
-                conversationId: conversationId,
-                requestId: requestId,
-                context: guardedContext,
-                reasoningContext: supplementalContext,
-                traceId: traceId,
-                sessionStateContext: sessionStateContext,
-                sessionStateConversationId: conversationId,
-              );
+        Future<LocalAiReasoningPendingReply> invokeReasoning() {
+          if (attachmentPath != null) {
+            final selectedAttachmentType = attachmentType!.name;
+            return traceId == null
+                ? _service.sendReasoningAttachmentMessage(
+                    requestUserText,
+                    attachmentType: selectedAttachmentType,
+                    path: attachmentPath,
+                    conversationId: conversationId,
+                    requestId: requestId,
+                    context: guardedContext,
+                    reasoningContext: supplementalContext,
+                    sessionStateContext: sessionStateContext,
+                    sessionStateConversationId: conversationId,
+                  )
+                : _service.sendReasoningAttachmentMessageWithTrace(
+                    requestUserText,
+                    attachmentType: selectedAttachmentType,
+                    path: attachmentPath,
+                    conversationId: conversationId,
+                    requestId: requestId,
+                    context: guardedContext,
+                    reasoningContext: supplementalContext,
+                    traceId: traceId,
+                    sessionStateContext: sessionStateContext,
+                    sessionStateConversationId: conversationId,
+                  );
+          }
+          return traceId == null
+              ? _service.sendReasoningMessage(
+                  requestUserText,
+                  conversationId: conversationId,
+                  requestId: requestId,
+                  context: guardedContext,
+                  reasoningContext: supplementalContext,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                )
+              : _service.sendReasoningMessageWithTrace(
+                  requestUserText,
+                  conversationId: conversationId,
+                  requestId: requestId,
+                  context: guardedContext,
+                  reasoningContext: supplementalContext,
+                  traceId: traceId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                );
+        }
+
+        final pending = await invokeReasoning();
         final decoded = modeNeutral
             ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
                 raw: pending.reply,
@@ -1404,18 +1459,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final requestId = _newReasoningRequestId(traceId);
       final capabilityAllowlist =
           ReasoningActionProposalGate.supportedCapabilityIds;
+      final attachmentPromptGenerated = attachmentType != null && text.trim().isEmpty;
       final request = ReasoningActionProposalAdapter.createRequest(
         requestId: requestId,
         sessionId: conversationId,
-        userText: text.trim(),
+        userText: requestUserText,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
         requestCapabilityAllowlist: capabilityAllowlist,
+        attachmentType: attachmentType,
+        attachmentPromptGenerated: attachmentPromptGenerated,
       );
 
       final knowledgeText = knowledge.modelContextText;
+      final attachmentInstructions = switch (attachmentType) {
+        ReasoningAttachmentType.image =>
+          '当前有照片附件。只描述可直接观察到的舌体形态、舌色、舌苔分布和图像质量；不得从照片推断疾病或证型，不推荐方药或剂量。\n',
+        ReasoningAttachmentType.audio =>
+          '当前有录音附件。必须逐句转写到 attachmentResult.transcriptDraft，保留原话并将听不清处标记为“听不清”；草稿未核对前不是用户事实。\n',
+        null => '',
+      };
       final roleContext = '当前角色：工具助手。\n'
           '${AssistantMode.tools.promptHint}\n'
+          '$attachmentInstructions'
           '只在用户明确要求执行 App 已登记的工具任务时提出一个动作提案；普通解释、比较、学习或闲聊应直接回答或澄清。'
           '模型只负责理解任务和提出参数候选，不运行计算、不生成业务结果、不声称动作已执行。'
           '本轮允许的 capability 只有：'
@@ -1457,6 +1523,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
+        if (currentRequest.attachmentType != null) {
+          if (attachmentPath == null) {
+            throw StateError('REASONING_TOOL_ATTACHMENT_PATH_MISSING');
+          }
+          final selectedAttachmentType = currentRequest.attachmentType!.name;
+          return traceId == null
+              ? _service.sendReasoningAttachmentMessage(
+                  currentRequest.userText,
+                  attachmentType: selectedAttachmentType,
+                  path: attachmentPath,
+                  conversationId: conversationId,
+                  requestId: currentRequest.requestId,
+                  context: currentContext,
+                  reasoningContext: supplementalContext,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                )
+              : _service.sendReasoningAttachmentMessageWithTrace(
+                  currentRequest.userText,
+                  attachmentType: selectedAttachmentType,
+                  path: attachmentPath,
+                  conversationId: conversationId,
+                  requestId: currentRequest.requestId,
+                  context: currentContext,
+                  reasoningContext: supplementalContext,
+                  traceId: traceId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                );
+        }
         return traceId == null
             ? _service.sendReasoningMessage(
                 currentRequest.userText,
@@ -1997,12 +2093,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // output remains explanatory: deterministic interview/diagnosis logic
         // and confirmed task state stay owned by the App.
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge = await _retrieveKnowledgeWithTrace(
-          query,
-          traceContext: traceContext,
-          includeMedicalCases:
-              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
-        );
+        final knowledge = attachmentType != null
+            ? const AssistantKnowledgeContextResult(text: '')
+            : await _retrieveKnowledgeWithTrace(
+                query,
+                traceContext: traceContext,
+                includeMedicalCases:
+                    AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+              );
         final modelKnowledgeContext = knowledge.modelContextText;
         final knowledgeContext = modelKnowledgeContext.isEmpty
             ? '本轮没有提供可用的本地知识资料；不得编造原文、出处或诊断依据。'
@@ -9840,42 +9938,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var persistenceStarted = false;
     var persistenceRecorded = false;
     try {
-      final turnResponse = audioPath != null
-          ? _AssistantTurnResponse(
-              text: traceId == null
-                  ? await _service.sendAudio(
-                      audioPath,
-                      conversationId: conversationId,
-                      prompt: text,
-                    )
-                  : await _service.sendAudioWithTrace(
-                      audioPath,
-                      conversationId: conversationId,
-                      prompt: text,
-                      traceId: traceId,
-                    ),
-            )
-          : imagePath != null
-              ? _AssistantTurnResponse(
-                  text: traceId == null
-                      ? await _service.sendImage(
-                          imagePath,
-                          conversationId: conversationId,
-                          prompt: text,
-                        )
-                      : await _service.sendImageWithTrace(
-                          imagePath,
-                          conversationId: conversationId,
-                          prompt: text,
-                          traceId: traceId,
-                        ),
-                )
-              : await _sendTextWithKnowledgeContext(
-                  text,
-                  conversationId: conversationId,
-                  mode: effectiveMode,
-                  traceContext: traceContext,
-                );
+      final turnResponse = await _sendTextWithKnowledgeContext(
+        text,
+        conversationId: conversationId,
+        mode: effectiveMode,
+        traceContext: traceContext,
+        attachmentPath: audioPath ?? imagePath,
+        attachmentType: audioPath != null
+            ? ReasoningAttachmentType.audio
+            : imagePath != null
+                ? ReasoningAttachmentType.image
+                : null,
+      );
       final reply = turnResponse.text;
       nativeInferenceCompleted =
           turnResponse.nativeInferenceStatus == AiTraceStatus.succeeded;

@@ -198,6 +198,141 @@ class LocalAiService {
     }
   }
 
+  Future<LocalAiReasoningPendingReply> sendReasoningAttachmentMessage(
+    String text, {
+    required String attachmentType,
+    required String path,
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) =>
+      _sendReasoningAttachmentMessage(
+        text,
+        attachmentType: attachmentType,
+        path: path,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
+      );
+
+  Future<LocalAiReasoningPendingReply> sendReasoningAttachmentMessageWithTrace(
+    String text, {
+    required String attachmentType,
+    required String path,
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) =>
+      _sendReasoningAttachmentMessage(
+        text,
+        attachmentType: attachmentType,
+        path: path,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        traceId: traceId,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
+      );
+
+  Future<LocalAiReasoningPendingReply> _sendReasoningAttachmentMessage(
+    String text, {
+    required String attachmentType,
+    required String path,
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    if (attachmentType != 'image' && attachmentType != 'audio') {
+      throw ArgumentError.value(
+        attachmentType,
+        'attachmentType',
+        '只支持 image 或 audio',
+      );
+    }
+    final normalizedPath = path.trim();
+    if (normalizedPath.isEmpty) {
+      throw ArgumentError.value(path, 'path', '附件路径不能为空');
+    }
+    final normalizedText = text.trim();
+    if (normalizedText.isEmpty) {
+      throw PlatformException(
+        code: 'EMPTY_MESSAGE',
+        message: '附件请求必须有明确任务文本',
+      );
+    }
+    if (!RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(requestId)) {
+      throw ArgumentError.value(
+        requestId,
+        'requestId',
+        'REASONING_REQUEST_ID_INVALID',
+      );
+    }
+    if (reasoningContext.length > 24000) {
+      throw ArgumentError.value(
+        reasoningContext.length,
+        'reasoningContext',
+        'REASONING_REQUEST_SUPPLEMENTAL_CONTEXT_EXCEEDS_CHARACTER_BOUND',
+      );
+    }
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'sendReasoningAttachmentMessage',
+      {
+        'attachment_type': attachmentType,
+        'path': normalizedPath,
+        'conversation_id': _requireConversationId(conversationId),
+        'request_id': requestId,
+        'text': normalizedText,
+        'context': context,
+        'reasoning_context': reasoningContext,
+        if (sessionStateContext?.trim().isNotEmpty == true) ...{
+          'session_state_context': sessionStateContext!.trim(),
+          'session_state_conversation_id': _requireConversationId(
+            sessionStateConversationId ?? conversationId,
+          ),
+        },
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    if (data?['request_id'] != requestId) {
+      throw PlatformException(
+        code: 'REASONING_PENDING_REQUEST_ID_MISMATCH',
+        message: 'Native 返回的附件请求标识与本轮不一致',
+      );
+    }
+    final reply = data?['reply'];
+    final backend = data?['backend'];
+    if (reply is! String || reply.trim().isEmpty || backend is! String) {
+      throw PlatformException(
+        code: 'EMPTY_REASONING_PENDING_REPLY',
+        message: 'Native 没有返回完整的结构化附件待校验结果',
+      );
+    }
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: backend,
+      traceId: normalizedTraceId,
+    );
+  }
+
   Future<void> finalizeReasoningTurn({
     required int conversationId,
     required String requestId,

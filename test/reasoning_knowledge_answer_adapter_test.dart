@@ -37,6 +37,8 @@ AssistantKnowledgeContextResult knowledge({
 ReasoningRequest request(
   AssistantKnowledgeContextResult context, {
   String mode = 'learning',
+  ReasoningAttachmentType? attachmentType,
+  bool attachmentPromptGenerated = false,
 }) =>
     ReasoningKnowledgeAnswerAdapter.createRequest(
       requestId: 'request-1',
@@ -52,6 +54,8 @@ ReasoningRequest request(
         diagnostics: const ['SESSION_STATE_UNKNOWN'],
       ),
       knowledge: context,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
 
 String payload({
@@ -62,6 +66,7 @@ String payload({
   List<String> segments = const ['基于本地证据的解释'],
   List<String> omittedEvidenceIds = const ['dropped-1'],
   Object? proposal,
+  Object? attachmentResult,
 }) =>
     jsonEncode({
       'schemaVersion': 1,
@@ -74,12 +79,67 @@ String payload({
       'conflicts': ['两处资料表述不同'],
       'omittedEvidenceIds': omittedEvidenceIds,
       if (proposal != null) 'actionProposal': proposal,
+      if (attachmentResult != null) 'attachmentResult': attachmentResult,
     });
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ReasoningKnowledgeAnswerAdapter', () {
+
+    test('image attachment observations are rendered as direct visual facts', () {
+      final context = knowledge(ranked: const [], known: const [], sources: const []);
+      final imageRequest = request(
+        context,
+        mode: 'consultation',
+        attachmentType: ReasoningAttachmentType.image,
+        attachmentPromptGenerated: true,
+      );
+      final decoded = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          references: const [],
+          omittedEvidenceIds: const [],
+          attachmentResult: {
+            'type': 'image',
+            'observations': ['照片可见舌体偏淡红', '舌苔分布不均匀'],
+          },
+        ),
+        request: imageRequest,
+        knowledge: context,
+      );
+
+      expect(decoded.isUsable, isTrue);
+      expect(decoded.answerText, contains('照片可直接观察到的内容'));
+      expect(decoded.answerText, contains('照片可见舌体偏淡红'));
+      expect(imageRequest.attachmentPromptGenerated, isTrue);
+    });
+
+    test('audio transcript is displayed as an unconfirmed draft', () {
+      final context = knowledge(ranked: const [], known: const [], sources: const []);
+      final audioRequest = request(
+        context,
+        mode: 'consultation',
+        attachmentType: ReasoningAttachmentType.audio,
+        attachmentPromptGenerated: true,
+      );
+      final decoded = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          references: const [],
+          omittedEvidenceIds: const [],
+          attachmentResult: {
+            'type': 'audio',
+            'transcriptDraft': '这两天睡得不太好。',
+          },
+        ),
+        request: audioRequest,
+        knowledge: context,
+      );
+
+      expect(decoded.isUsable, isTrue);
+      expect(decoded.answerText, contains('语音转写草稿（尚待用户核对'));
+      expect(decoded.answerText, contains('这两天睡得不太好。'));
+      expect(audioRequest.attachmentType, ReasoningAttachmentType.audio);
+    });
 
     test('mode-neutral answer accepts no-evidence responses only when no ranked evidence was supplied', () {
       final emptyKnowledge = knowledge(

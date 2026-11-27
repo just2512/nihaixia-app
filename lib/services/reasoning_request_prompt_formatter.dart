@@ -38,16 +38,29 @@ class ReasoningRequestPromptFormatter {
       'sessionId': request.sessionId,
       'mode': request.mode,
       'responseSchemaVersion': request.responseSchemaVersion,
+      if (request.attachmentType != null) 'attachment': {
+        'type': request.attachmentType!.name,
+        'userTextOrigin': request.attachmentPromptGenerated ? 'APP_ATTACHMENT_PROMPT' : 'USER_ORIGINAL',
+        'responseShape': request.attachmentType == ReasoningAttachmentType.image
+            ? {'type': 'image', 'observations': ['直接可观察到的描述']}
+            : {'type': 'audio', 'transcriptDraft': '完整转写草稿'},
+      },
       'responseContract': {
         'schemaVersion': request.responseSchemaVersion,
-        'requiredFields': const [
+        'requiredFields': [
           'schemaVersion', 'requestId', 'responseKind', 'status', 'segments',
           'referencedEvidenceIds', 'unknowns', 'conflicts', 'omittedEvidenceIds',
+          if (request.attachmentType != null) 'attachmentResult',
         ],
         'responseKinds': const [
           'ANSWER', 'CLARIFICATION', 'ACTION_PROPOSAL', 'REFUSAL', 'INSUFFICIENT_EVIDENCE',
         ],
         'modelStatuses': const ['COMPLETED', 'INSUFFICIENT_EVIDENCE'],
+        'attachmentResultRules': request.attachmentType == ReasoningAttachmentType.image
+            ? 'Required: image observations must contain directly visible details; do not infer a diagnosis.'
+            : request.attachmentType == ReasoningAttachmentType.audio
+                ? 'Required: audio transcriptDraft must be non-empty and remains an unconfirmed draft, never user fact.'
+                : null,
         'rules': const [
           'Return exactly one JSON object; do not wrap it in Markdown fences.',
           'requestId must exactly equal this requestId.',

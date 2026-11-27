@@ -58,6 +58,8 @@ ReasoningRequest request({
   List<ReasoningExecutionResult> results = const [],
   SessionStateSnapshot? session,
   List<String> allowedCapabilities = const [],
+  ReasoningAttachmentType? attachmentType,
+  bool attachmentPromptGenerated = false,
 }) =>
     ReasoningRequest(
       requestId: 'request-123',
@@ -70,6 +72,8 @@ ReasoningRequest request({
       knownEvidenceIds: known,
       executionResults: results,
       allowedCapabilityIds: allowedCapabilities,
+      attachmentType: attachmentType,
+      attachmentPromptGenerated: attachmentPromptGenerated,
     );
 
 void main() {
@@ -540,6 +544,43 @@ void main() {
       expect(contract['responseKinds'], contains('ACTION_PROPOSAL'));
       expect(contract['modelStatuses'], ['COMPLETED', 'INSUFFICIENT_EVIDENCE']);
       expect(contract['rules'], contains('ACTION_PROPOSAL is an untrusted proposal; it is not authorization or execution.'));
+    });
+
+    test('declares image attachment provenance and requires typed observations', () {
+      final value = request(
+        attachmentType: ReasoningAttachmentType.image,
+        attachmentPromptGenerated: true,
+      );
+      final formatted = ReasoningRequestPromptFormatter.formatSupplementalContext(value);
+      final envelope = jsonDecode(
+        formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
+      ) as Map<String, dynamic>;
+      final attachment = envelope['attachment'] as Map<String, dynamic>;
+      final contract = envelope['responseContract'] as Map<String, dynamic>;
+
+      expect(attachment['type'], 'image');
+      expect(attachment['userTextOrigin'], 'APP_ATTACHMENT_PROMPT');
+      expect(attachment['responseShape'], containsPair('type', 'image'));
+      expect(contract['requiredFields'], contains('attachmentResult'));
+      expect(contract['attachmentResultRules'], contains('directly visible details'));
+    });
+
+    test('declares audio transcript as an unconfirmed draft', () {
+      final value = request(
+        attachmentType: ReasoningAttachmentType.audio,
+      );
+      final formatted = ReasoningRequestPromptFormatter.formatSupplementalContext(value);
+      final envelope = jsonDecode(
+        formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
+      ) as Map<String, dynamic>;
+      final attachment = envelope['attachment'] as Map<String, dynamic>;
+      final contract = envelope['responseContract'] as Map<String, dynamic>;
+
+      expect(attachment['type'], 'audio');
+      expect(attachment['userTextOrigin'], 'USER_ORIGINAL');
+      expect(attachment['responseShape'], containsPair('type', 'audio'));
+      expect(contract['requiredFields'], contains('attachmentResult'));
+      expect(contract['attachmentResultRules'], contains('unconfirmed draft'));
     });
 
     test('marks absent session state as UNKNOWN without inventing facts', () {

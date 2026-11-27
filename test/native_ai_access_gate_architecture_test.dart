@@ -37,6 +37,7 @@ void main() {
       'releaseModel',
       'clearRuntimeCache',
     };
+    const legacyMediaClosed = {'sendImage', 'sendAudio'};
     for (var index = 0; index < branches.length; index++) {
       final match = branches[index];
       final name = match.group(1)!;
@@ -45,10 +46,24 @@ void main() {
           : handler.length;
       final body = handler.substring(match.start, end);
       if (maintenanceOnly.contains(name)) continue;
+      if (legacyMediaClosed.contains(name)) {
+        // These compatibility endpoints must fail closed before any model
+        // inference. Only the new typed attachment entrypoint can reach AI.
+        expect(
+          body,
+          contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'),
+          reason: 'Legacy Native media handler "$name" must fail closed',
+        );
+        expect(
+          body,
+          isNot(contains('runAiTask(')),
+          reason: 'Legacy Native media handler "$name" must not call the model',
+        );
+        continue;
+      }
       expect(
-        body.contains('requiresAiAccess = true') ||
-            body.contains('runAiTaskAfterNativeRedFlag'),
-        isTrue,
+        body,
+        contains('requiresAiAccess = true'),
         reason: 'Native AI handler "$name" must require ai_access',
       );
     }
