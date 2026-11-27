@@ -15,7 +15,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `1d79bc2f628fde789c5b5602cee889f844972c23` | 当前 master HEAD（仅文档同步）。同一 SHA 的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669` |
+| 本轮最新主线/文档核验基线 | `f34b12573e16a790032a1450afb245d67891d680` | 当前 master HEAD（PR #599，文档同步；未改运行时代码）。同一 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前 Native/AI 运行时代码基线仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前仓库 `master` HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`，对应 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 三项主线 Push CI 均 SUCCESS，三项均指向同一 SHA。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；PR #594 的 Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。本轮只校准五层架构、执行台账、Native 多轮审计与唯一 Find N2 本地交接文档中的当前基线和证据边界，不改运行时代码、业务规则、模型行为或权限边界。Native KV Cache token 数及模型声明最大上下文长度已有只读观测；App 可用 Token/input budget 仍未配置，不能将观测值写成预算。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理和 TRACE 仍按唯一本地清单取得设备证据；未实测场景不计 PASS。
+**核验基线说明：** 当前 `master` 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，7 个变更文件全部位于 `docs/`，相对运行时代码基线仅增加文档提交；未改 Dart/Kotlin/Native 运行时代码）。该 SHA 对应 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前运行时代码基线为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598），五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。本轮交接同步不改变运行时、业务规则、模型行为或权限边界。Native KV Cache token 数与模型声明最大上下文长度仅为只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，App 可用 Token/input budget、输出预留、动态预算裁剪和自动压缩均未配置。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理与 TRACE 仍为 LOCAL ONLY / MISSING / UNKNOWN；本地执行前必须重新读取届时最新 `origin/master` SHA、CI、APK 和签名信息，不能沿用本表 SHA 直接构建。
 
 ## 2. 状态定义
 
@@ -4978,3 +4978,17 @@ PR HEAD 门禁证据：
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不属于当前五层核心收尾阻塞项。
 - **本地交接：** 仅保留 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接入口。折叠屏、品牌、AI TRACE、GPU/CPU 文件作为专项操作规范，不得单独维护交接状态或新增 PR 专属交接文档；所有本地进度只更新唯一交接单 §7.1。
 - **记忆层后续边界：** 在获得真实 Find N2 token/context/长会话测量前，不增加臆测的 App 输入 Token 限值、动态压缩、自动摘要或 KV Cache 持久化逻辑。缺少设备数据属于 UNKNOWN / DEVICE ONLY，不允许为追求全部 PASS 而降低验收门槛。
+
+
+## 132. 2026-11-27 PR #599 合并后最新主线、五层云端状态与统一设备交接复核
+
+- **最新 master 文档基线：** `f34b12573e16a790032a1450afb245d67891d680`。PR #599 只修改 7 份文档，未修改 Dart、Kotlin、Native 运行时代码、业务规则、模型行为、数据库或权限边界。
+- **运行时代码基线：** 仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；AI 五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。当前 App 版本仍为 `2.0.0+8048`。
+- **最新 master 精确 SHA CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 为 SKIPPED，不计作 PASS。
+- **Core-0～Core-5 云端状态：** Core-0 契约/源码映射冻结；Core-1 transcript、SessionState owner/provenance、临时 RAG/多模态/推理上下文隔离、请求终态 Ledger 与 UNKNOWN 不重放已具备云端代码和自动化证据；Core-2 当前约定的 CandidateEvidence、多源聚合、独立 RankedEvidenceSet/KEEP-DROP 与黄金行为回归已完成；Core-3 主文本/媒体结构化协议已接线，旧自由文本包装 API 和 Native 不可达媒体 helper 已退役，8 个真实 Native 模型入口均要求唯一 Native Gate；Core-4 仅开放四项已审计 capability；Core-5 已有 20 轮知识追问及单次工具闭环的 Flutter 应用层 E2E。Core-5 fake Native/executor 不证明真实 E4B 输出质量或设备行为。
+- **Core-1 Token 边界：** `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 仅是只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。不臆测 App 可用输入预算、输出预留、动态阈值、自动压缩或 KV Cache 持久化。
+- **唯一设备交接入口：** `docs/local-real-device-acceptance-handoff.md`。§7.1 当前仍是“待本地首次执行填写”，本轮未取得 Find N2 实测记录；GPU/CPU 多轮、真实 E4B/媒体输出、Activity/process restart、覆盖升级、数据清理、Keystore/授权及完整 TRACE 均继续 MISSING / UNKNOWN / LOCAL ONLY。必须由本地执行者按设备实况在 §7.1 追加日期、设备/系统、实际构建 SHA/APK 版本、场景状态、证据目录、缺口和下一步。
+- **文档数量与归并口径：** 当前 docs 下只有 `docs/local-real-device-acceptance-handoff.md` 一份活动 handoff/handover 文件。另有 6 份名称包含 acceptance 的历史审计/历史结果或专项操作规范，保留其操作步骤，不作为独立进度入口；所有本地进度仍只回填上述唯一交接单 §7.1。
+- **工作流 H：** 本轮约定的 Core-0～Core-5 云端代码、自动化、文档与 CI 范围已完成当前批次收口；总体状态保持 PARTIAL，剩余为只能由 Find N2 产生的设备证据，不构成云端阻塞。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不作为本轮收尾条件。
+- **下一步：** 云端不再为了形式拆层新增服务、Agent、数据库、第二套授权 Gate、Embedding、向量数据库或 Reranker；不扩展四项 ACTION_PROPOSAL 白名单。设备验收统一留到最后，本地执行前刷新最新 master 并按唯一交接单运行；任何未实际执行项继续 MISSING / UNKNOWN。
