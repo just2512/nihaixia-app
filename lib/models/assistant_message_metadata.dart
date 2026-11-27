@@ -178,18 +178,19 @@ class AssistantMessageMetadata {
     final legacy = <String, String>{};
     for (final part in raw.split(';')) {
       final separator = part.indexOf('=');
-      if (separator <= 0) continue;
-      legacy[part.substring(0, separator).trim()] =
-          part.substring(separator + 1).trim();
+      if (separator <= 0) return false;
+      final key = part.substring(0, separator).trim();
+      final value = part.substring(separator + 1).trim();
+      if (!recognizedKeys.contains(key) || legacy.containsKey(key)) {
+        return false;
+      }
+      if (key == 'replayable' && value != 'true' && value != 'false') {
+        return false;
+      }
+      legacy[key] = value;
     }
-    if (legacy.containsKey('schemaVersion') ||
-        !legacy.keys.any(recognizedKeys.contains)) {
-      return false;
-    }
-
-    final replayable = legacy['replayable'];
-    if (replayable == null) return true;
-    return replayable == 'true';
+    if (legacy.isEmpty) return false;
+    return legacy['replayable'] != 'false';
   }
 
   factory AssistantMessageMetadata.decode(String raw) {
