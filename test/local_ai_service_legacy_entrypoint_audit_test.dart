@@ -63,15 +63,30 @@ void main() {
       final native = await File(
         'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
       ).readAsString();
-      final legacyTextStart = native.indexOf('"sendMessage" ->');
+      final legacyImageStart = native.indexOf('"sendImage" ->');
+      final legacyAudioStart = native.indexOf('"sendAudio" ->', legacyImageStart);
+      final legacyTextStart = native.indexOf('"sendMessage" ->', legacyAudioStart);
       final reasoningTextStart = native.indexOf('"sendReasoningMessage" ->', legacyTextStart);
-      expect(legacyTextStart, greaterThanOrEqualTo(0));
+      expect(legacyImageStart, greaterThanOrEqualTo(0));
+      expect(legacyAudioStart, greaterThan(legacyImageStart));
+      expect(legacyTextStart, greaterThan(legacyAudioStart));
       expect(reasoningTextStart, greaterThan(legacyTextStart));
+
+      final legacyImageHandler = native.substring(legacyImageStart, legacyAudioStart);
+      final legacyAudioHandler = native.substring(legacyAudioStart, legacyTextStart);
       final legacyTextHandler = native.substring(legacyTextStart, reasoningTextStart);
+      expect(legacyImageHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
+      expect(legacyImageHandler, isNot(contains('runAiTask')));
+      expect(legacyImageHandler, isNot(contains('sendLocalImage(')));
+      expect(legacyAudioHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
+      expect(legacyAudioHandler, isNot(contains('runAiTask')));
+      expect(legacyAudioHandler, isNot(contains('sendLocalAudio(')));
       expect(legacyTextHandler, contains('STRUCTURED_REASONING_PROTOCOL_REQUIRED'));
       expect(legacyTextHandler, isNot(contains('runAiTask')));
       expect(legacyTextHandler, isNot(contains('sendLocalMessage(')));
       expect(native, isNot(contains('private fun sendLocalMessage(')));
+      expect(native, isNot(contains('private fun sendLocalImage(')));
+      expect(native, isNot(contains('private fun sendLocalAudio(')));
 
       legacyCallSites.sort();
       rawChannelSites.sort();
