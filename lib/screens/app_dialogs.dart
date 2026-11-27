@@ -285,14 +285,10 @@ Future<void> showAboutPage(BuildContext context) async {
             const Text('主要功能', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '• 六经规则问诊、证候信息整理与补问
-'
-              '• 经方、本草、针灸、经典与医案资料库
-'
-              '• 本地知识检索、收藏和医案复盘
-'
-              '• 本地 AI 辅助理解、学习追问与结果解释
-'
+              '• 六经规则问诊、证候信息整理与补问\n'
+              '• 经方、本草、针灸、经典与医案资料库\n'
+              '• 本地知识检索、收藏和医案复盘\n'
+              '• 本地 AI 辅助理解、学习追问与结果解释\n'
               '• 易经、八字、紫微等传统文化工具（非医疗用途）',
             ),
             const SizedBox(height: 16),
@@ -311,7 +307,7 @@ Future<void> showAboutPage(BuildContext context) async {
             const Text('开源致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\\n'
+              '感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
               '感谢原始开源项目作者 jangviktor-web 提供代码基础，也感谢 Flutter 及其他开源组件作者、维护者和社区贡献者。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
