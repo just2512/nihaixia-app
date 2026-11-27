@@ -349,3 +349,53 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 - `test/headless_tool_plan_result_handler_test.dart` 覆盖逐步骤来源隔离、前序非成功步骤后后续未执行、UNKNOWN 不触发聚合解读、错误结果被抑制。
 - 以上是已存在的代码和自动化测试覆盖，不等于本轮重新执行所有测试，也不等于 Find N2 真机执行。真实设备取消、进程恢复、TRACE 和跨轮结果回流继续 UNKNOWN / LOCAL FINAL ACCEPTANCE。
 - **结论：** Core-4 已具备受限的确定性执行底座，但提案协议、能力级 schema、App 授权确认及 `ExecutionResult` 真实回流未闭环，状态 PARTIAL。继续复用当前 Router / Builder / Dispatcher，不为追求架构完整度重建通用执行平台。
+
+
+---
+
+## 13. 2026-11-27 Core-4 生产动作提案闭环复核（master `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`）
+
+> 本节为当前主线状态；第 1–12 节保留为历史审计与演进记录。此前“尚未接入 ACTION_PROPOSAL、没有 App 确认、ReasoningExecutionResult 尚未回流”的结论，已被 PR #561/#566 的后续合并取代。
+
+### 13.1 当前已接通的生产链
+
+- **PR #561** 已合并，merge commit `9ec0f2886b6bcecd3d447e859c3adf3e4aac09cf`：新增 UI 无关的 `AssistantToolExecutionCoordinator`，在执行前重新校验会话与 request 身份、执行授权；先写入持久 one-shot claim，再调用既有 `HeadlessToolDispatcher`；业务结果写入 Ledger 后必须重新读回，Reasoning 层只获得读回后投影的 `ReasoningExecutionResult`。
+- **PR #566** 已合并，merge commit `7ccb6f0ab6931df503524cdcc2b0a9620b4d7601`：将 tools-mode 的结构化 `ACTION_PROPOSAL` 接入生产 UI；模型只生成候选提案，不执行工具、不返回业务结果；Dart 按严格响应协议、requestId、请求级 capability allowlist、工具注册、plan-eligible 能力及参数校验提案。
+- **App 显式确认：** UI 展示工具名称、描述和将提交的参数；用户点击“确认执行”才继续。取消/关闭不写 claim、不调用 executor；页面在确认期间销毁也会拒绝提案。
+- **Gate 二次验证：** `ReasoningActionProposalGate` 在用户确认后再次核验 requestId、完整请求 allowlist、proposalId、capabilityId/toolId 映射、Headless executor 注册和能力专属参数。Gate 只有在确认成立时才生成可执行计划。
+- **当前计划粒度：** Core-4 生产 Gate 当前只生成单步 ToolExecutionPlan；底层 Dispatcher 能执行计划，不代表 AI 获得多步自动编排权限。
+- **持久化与防重放：** `AssistantToolInvocationLedger` 使用 `conversation_id + invocation_key` 的 SQLite 唯一约束保存 CLAIMED/TERMINAL 隐藏事件；claim 在 executor 之前写入。重复、冲突、终态已存在或 claim 写入状态无法确认时均不再次 dispatch。异常、进程中断、终态无法读回或结果身份/参数/来源验证失败均保留 UNKNOWN，不自动重放。
+- **结果回流：** Coordinator 从当前会话 Ledger 重新读取终态，`ReasoningExecutionResultAdapter` 再验证 toolId、实际参数和来源。只有经过验证的 SUCCEEDED 结果才进入新的只读解释回合；新回合使用新 requestId、`executionResults`，且 `allowedCapabilityIds=[]`，不能从解释回合提出第二次动作。原始 ACTION_PROPOSAL 回合不会被当成成功答案保留。
+- **可追溯入口：** 已持久化的 invocation 记录以 App source link 暴露；隐藏 Ledger 事件仍保持 role=tool，不作为普通用户记忆或模型 transcript。
+
+### 13.2 当前允许 AI 提案的能力范围
+
+`ReasoningActionProposalGate` 当前只映射以下四项 capability：
+
+| capabilityId / toolId | 当前输入边界 |
+|---|---|
+| `dosage` | 必须通过既有 `DosageToolService.validateArguments` 专项校验 |
+| `solar_terms` | 只允许 `term` 字段，取值必须命中 App 的节气枚举 |
+| `yuxiaji_omen` | 模型不得提交参数；由 App 本地时间与数据生成 |
+| `sanshan_lingqian` | 模型不得提交参数；签文由 App 生成 |
+
+Headless Dispatcher 注册的 18 个本地确定性执行器与 AI ACTION_PROPOSAL 可用白名单是不同集合。其余已注册 Headless 工具、Page-only 页面和 inline 问诊能力不会因为“存在 executor / 页面入口”而自动进入模型提案范围；当前也不支持由模型自动生成多步计划。
+
+### 13.3 当前测试锚点与残余边界
+
+- `test/reasoning_action_proposal_gate_test.dart`：requestId、请求 allowlist、工具/能力映射、plan-eligible 和能力参数边界。
+- `test/reasoning_action_proposal_adapter_test.dart`：结构化响应解析、候选提案和 App 侧请求范围。
+- `test/assistant_tool_invocation_ledger_test.dart` 与 `test/assistant_tool_invocation_ledger_storage_test.dart`：claim-before-dispatch、唯一 claim、冲突/重复、终态持久化、结果校验与 UNKNOWN 恢复。
+- `test/reasoning_execution_result_adapter_test.dart`：toolId、实际参数、sourceIds 和非成功状态投影。
+- `test/local_ai_interview_screen_test.dart`：取消不执行、显式确认后恰好执行一次、持久化读回、结果只读解释与空 allowlist；另有 Core-5 20 轮记忆隔离/工具闭环回归。
+- PR #561 精确 HEAD：Flutter tests run `45800558059` SUCCESS；Fork License run `45800558077` SUCCESS。
+- PR #566 精确 HEAD：Flutter tests run `45806442100` SUCCESS；Fork License run `45806442126` SUCCESS。当前 master 后续又经过完整 Flutter/Android 测试；这里仍不把 CI 等同于真实 Find N2 执行证据。
+
+**仍未完成的能力，不应伪装为 Core-4 已全域完成：**
+
+1. 全部 18 个 Headless executor 尚未统一成完整版本化、强类型 capability schema；当前 proposal Gate 仅对四项白名单能力提供专项校验，参数形状仍以字符串 map 为主。
+2. 当前生产 Gate 为单步确认执行；未开放多步模型计划、工具间参数传递或自动重试。
+3. 通用副作用等级、执行中取消/超时、每项工具的幂等及补偿语义仍需逐项按真实能力定义；UNKNOWN 继续禁止自动重放。
+4. SQLite transcript 恢复和 Ledger 状态恢复已有自动化覆盖，但真实 Android Activity/process restart、设备实机多轮与 TRACE 仍为 LOCAL ONLY / NOT RUN。
+
+**当前判定：** Core-4 的四项受限 ACTION_PROPOSAL 生产闭环已接通；“18 项 Headless executor 全部可被模型计划调用”并未实现，也不应作为目标。本节不授权扩大能力白名单，不修改任何业务计算或问诊规则。
