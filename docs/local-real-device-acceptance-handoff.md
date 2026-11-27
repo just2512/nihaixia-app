@@ -696,6 +696,7 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 ## 19. 2026-11-27 Core-1 Native 历史恢复确定性重建与实机待验项
 
 - **云端代码变化：** 跨进程历史恢复从“将整段 transcript 作为一条 user prompt 再调用模型确认”改为 typed completed turns。Native 直接按 USER/MODEL 角色经 `ConversationConfig.initialMessages` 重建上下文；恢复过程不发起 E4B 推理、不产生合成 assistant 消息，也不触发 GPU/CPU fallback。
+- **云端恢复创建路径优化：** 后续 Core-1 小批次将已校验快照直接传入 Native reset，在旧 Conversation 关闭后一次性创建带历史的目标 Conversation，避免先建空会话再立即释放；普通 reset 行为不变。创建失败时保留已校验快照供后续模型重载恢复。该改动的云端回归待其 PR 最终 HEAD 验收，不改变本地实机待验范围。
 - **记忆边界：** Native 仍只保留最多 12 个完整轮次/10,000 UTF-16 code units；被省略的已完成轮次元数据单独记录。未完成 user-only turn 不进入成功历史，但原始用户文字仍在独立输入投影中保留。LiteRT Live KV Cache 不持久化；Token/input budget 继续 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。
 - **自动化证据：** 本次 PR 增加 Dart typed-turn/裁剪测试、Kotlin structured snapshot/角色重建校验和“不在 restore 路径调用模型”的静态回归。最终适用 CI 以该 PR 最终 HEAD 为准。
 - **Find N2 本地待验：** 历史会话恢复后连续追问早期 user/assistant 内容；切换会话、Activity recreation、强停/重启后核对 SQLite UI transcript 与 Native 重建上下文；确认恢复动作不额外生成一条助手消息。以上未执行前继续 MISSING / UNKNOWN / LOCAL ONLY。

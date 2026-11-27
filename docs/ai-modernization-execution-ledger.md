@@ -4999,6 +4999,19 @@ PR HEAD 门禁证据：
 - **问题定位：** 旧 `restoreLocalConversation` 把角色化历史包成一条 user prompt，再调用模型生成“上下文已载入”确认。它额外消耗一次推理，并把历史压成一个合成 Native 成功轮次，绕过 Native 12 个完整轮次的实际结构边界。
 - **代码修复：** 跨进程恢复改为 typed completed turns。Flutter 按最近 12 轮和 10,000 UTF-16 code units 裁剪，每轮 `user_text` / `assistant_text` 结构化传入；Native 校验字段、代理字符、轮次数与字符数，恢复 `LocalAiConversationHistorySnapshot` 后直接由 `ConversationConfig.initialMessages` 重建 USER/MODEL 角色序列。恢复不调用模型，不产生合成 assistant 回复。
 - **记忆完整性：** 只有完整 user/assistant 轮次进入 Native transcript。未完成 user-only 输入不回放或提升为成功轮次；它仍保存在独立 `userMessages` 投影中用于症状整理。被预算裁剪的成功轮次数和 UTF-16 字符数单独记录，不把未完成输入计为已省略的成功轮次。
-- **测试：** 增加 Dart typed-turn/12 轮裁剪/未完成输入测试；增加 Kotlin structured snapshot/角色重建/非法字段/surrogate/Native 预算测试；增加架构回归断言，确保 restore 不触发模型生成或 GPU/CPU 首轮 fallback。CI 以本 PR 最终 HEAD 的适用检查为准，SKIPPED 不计 PASS。
+- **测试：** 增加 Dart typed-turn/12 轮裁剪/未完成输入测试；增加 Kotlin structured snapshot/角色重建/非法字段/surrogate/Native 预算测试；增加架构回归断言，确保 restore 不触发模型生成或 GPU/CPU 首轮 fallback。
+- **PR #602 精确 HEAD：** `05faa890fcc52039021a1ce9f4678fc90c2b88e1`；Flutter tests run `46015588167` SUCCESS；Android arm64/JVM job `140566822909` SUCCESS；Fork License run `46015588157` SUCCESS。Branch validation 为 SKIPPED，不计 PASS。
+- **合并后 master：** `22102bf47cd6ad3055cacd8a9dbb99cf6ce9ba29`；Flutter tests run `46018068204`、Flutter Quality Gate run `46018068199`、Fork License run `46018068459` 均 SUCCESS；Android arm64/JVM job `140574271250` SUCCESS。Branch validation 为 SKIPPED，不计 PASS。
 - **未被本次证明：** Find N2 真机 E4B 推理、GPU/CPU 稳定性、state:7、Activity/process restart、SQLite/UI/Native 历史一致性仍为 DEVICE UNKNOWN / LOCAL ONLY，统一在唯一交接文档执行。
 - **范围边界：** 不持久化 LiteRT KV Cache；不推测 App Token/input budget；不引入自动压缩、Agent、第二套会话存储、第二套 Gate 或工作流 I。用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED。
+
+
+
+## 134. 2026-11-27 Core-1 Native 历史恢复避免空 Conversation 中间态
+
+- **基线：** 从 `master@22102bf47cd6ad3055cacd8a9dbb99cf6ce9ba29` 派生独立分支 `fix/native-restore-single-conversation-create-20261127`；只处理 Native 历史恢复中的会话创建次数，不改变已合并的 typed transcript 协议。
+- **问题：** PR #602 合并后的恢复流程先调用普通 reset 创建空 Conversation，再装入已校验历史并关闭空会话、第二次创建带历史 Conversation。该路径不触发模型推理，但每次恢复多一次 Native Conversation 创建/释放及一个额外失败点。
+- **修复：** `resetLocalConversation` 接受可选、已校验的 `LocalAiConversationHistorySnapshot`。恢复路径在旧 Conversation 安全关闭后装入快照，通过 `createConversationWithHistory` 一次性创建目标对象；普通 reset 仍创建空会话。若恢复创建失败，释放 Engine 并保留已校验快照，供后续模型重载恢复。
+- **回归：** 扩展 `test/local_ai_transcript_restore_architecture_test.dart`，断言结构化载荷先校验、恢复调用带快照、恢复路径不再二次调用 recreate，并验证快照装入发生在唯一一次 `createConversationWithHistory` 之前。
+- **边界：** 不增加模型调用、KV Cache 持久化、Token 预算、自动压缩、数据库、Gate、Agent 或工具能力；未改变普通 reset、请求 Ledger 和 UNKNOWN/non-replayable 语义。Find N2 真机 E4B/GPU/CPU、进程恢复和三方 transcript 一致性继续 LOCAL ONLY / UNKNOWN。
+- **CI：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 与 Fork License 结果为准；SKIPPED 不计 PASS。
