@@ -1,10 +1,12 @@
 # 本地 AI 多轮稳定性与 Native 生命周期审计
 
-- 审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`
+- 历史审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`（2026-11-11）
+- 当前仓库主线复核点：`master@922285573e263ecd08a1eed535d4adec771a5979`（2026-11-27）
+- 当前 AI 多轮运行时集成点：`45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 #565/#575 后续集成、#585 跨层 E2E 所在主线）
 - 修复分支：`work/ai-transcript-restore-boundary-2026-11-11`
 - 审计日期：2026-11-11
 - 范围：Flutter MethodChannel、Native Engine/Conversation、成功轮次历史、GPU→CPU 恢复、历史恢复、SQLite 持久化和资源释放。
-- 总结：A = PARTIAL。当前代码已有多轮失败后的保守恢复和显式 UNKNOWN 语义；本分支补上历史恢复截断与症状来源截断标记。真机 GPU/CPU 轮次 TRACE 和跨层持久化一致性仍未闭合。
+- 历史总结：A = PARTIAL。**当前状态以第 10 节（2026-11-27 主线复核）为准**：SQLite 原子轮次持久化、Native transcript 截断策略、临时上下文逐轮清理、结构化推理请求状态账本和 UNKNOWN 不重放已有代码/自动化覆盖；真机 GPU/CPU 轮次、state:7、Activity/进程恢复及实测 Token 上下文预算仍为 DEVICE UNKNOWN。
 
 ## 1. Native 状态与执行边界
 
@@ -32,10 +34,10 @@
 
 ### 1.3 仍存在的边界
 
-- `conversationHistoryTurns` 当前是无显式轮数/字符预算的可变列表；Native CPU 恢复会重放其全部成功轮次。当前没有基于模型 token/context window 的实测预算。不得自行添加未经模型实测的 token 上限；需在 A 后续切片用设备数据确定。
+- 当前 Native 成功轮次恢复历史由 `LocalAiConversationHistory` 管理，按最多 12 个完整成功轮次与 10,000 UTF-16 code units 双重限制，逐条淘汰最旧完整轮次并记录省略计数；CPU 恢复只回放保留的完整成功轮次。此字符/轮数上限不是 Gemma 4 E4B 的 Token/context window 预算，实际可用 Token 预算仍须设备测量。
 - `runAiTask()` 和主要推理恢复分支捕获 `Exception`，不是所有 JVM `Throwable`。不能据此声称 JNI/Error 类故障全部会被恢复。是否扩大捕获范围需按 LiteRT-LM 实际异常类型审计，不能吞掉 OOM 等致命错误。
-- `onDestroy()` 把资源释放任务排入单线程 executor 后调用 `shutdown()`，但没有等待释放完成，也没有把 teardown 结果写入 TRACE。代码顺序保证已提交任务不会因正常 shutdown 被取消，不等于已证明所有 Activity/进程终止竞态。
-- 当前 Native 方法没有独立 request ID/idempotency key；串行 executor 与 Flutter `_sending` 控制降低并发重入，但不等于跨进程重试幂等。
+- 当前 `onDestroy()` 通过 `LocalAiActivityTaskLifecycle.destroy()` 将 release 排入进程级单线程 executor，不再 shutdown 共享队列；新 Activity 的模型任务排在旧 release 后。release 失败会把进程健康状态标记为 unavailable，后续 Native 操作 fail-closed，需强停进程再启动。JVM 生命周期测试覆盖队列顺序和失败隔离，但不等同于 Find N2 真机资源释放/进程恢复验收。
+- Core-3 主文本与媒体结构化 Native 入口现已携带 `request_id + conversation_id`，在 Native 建立 pending turn 并要求显式 `finalizeReasoningTurn` / `rejectReasoningTurn`；Dart/SQLite 的 `AssistantReasoningTurnLedger` 另行持久化请求生命周期。Native 的 MethodChannel finalize/reject acknowledgement ledger 仅为进程内有界缓存；旧 `sendMessage` 与辅助窄任务不应被推定为全部拥有相同跨进程幂等语义。跨进程恢复以 App SQLite Ledger 的 UNKNOWN/non-replayable 规则为准。
 
 ## 2. 历史恢复与上下文一致性
 
@@ -236,3 +238,43 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 - Transcript 裁剪和 sourceTruncated 传播：CODE + TEST + PR Android Native CI PASS。
 - Find N2 GPU 至少 20 轮、CPU 至少 20 轮、图片/语音、多轮、Activity/进程恢复以及恢复后 SQLite/Flutter/Native 三方历史一致性：继续 DEVICE UNKNOWN。
 - `state:7` 等 Native 推理根因仍须设备 logcat、backend 和 trace_id；不使用 JVM lifecycle test 推断真机根因。
+
+---
+
+## 10. 2026-11-27 当前主线复核：Native 多轮记忆边界与请求生命周期已形成云端闭环
+
+> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
+
+### 10.1 当前已落地的 Native / Memory 治理
+
+| 事项 | 当前主线实现 | 当前结论与边界 |
+|---|---|---|
+| Native 成功轮次历史 | `LocalAiConversationHistory` / `LocalAiConversationHistoryPolicy` | 最多保留 12 个完整 user/model 成功轮次，且累计不超过 10,000 UTF-16 code units；按完整最旧轮次淘汰，保留 omitted turn/character 计数与完整成功轮次总数。不是 Token 预算，不能据此声称满足 E4B context window。 |
+| SQLite 成功轮次原子保存 | PR #117 的 `DatabaseHelper.saveAssistantTurn()` / `saveAssistantMessagesAtomically()` | user + assistant 消息同一 SQLite transaction；故障注入验证不留半轮；持久化失败由 UI 显示，不伪装为成功保存。结构化问诊 transcript 批次也原子提交；任务快照与 transcript 的 TRACE 分离由 #119 完成。 |
+| Native transcript 恢复 | `LocalAiTranscriptRestorePolicy`、`MainActivity.restoreLocalConversation()` | 以 UTF-16 字符限制保留最新尾部和显式省略 marker；最近 60 条用户文字输入会传播来源截断状态。只恢复用户/模型成功文本与附件占位说明；不恢复附件原始二进制。 |
+| 请求级临时上下文隔离 | PR #565，merge `da63bafec6e2a38784ba1d7b8a16d36d6b3a5a18` | 跟踪活动 LiteRT Conversation KV cache 是否含 RAG、SessionState、reasoning metadata 或多媒体输入；下一个请求前只在 dirty 时从有界成功 transcript 重建 Conversation。普通纯文本连续轮次不做不必要 rebuild；失败/GPU→CPU retry 保留 dirty 标记。临时 RAG 正文、SessionState 正文、reasoning envelope 和真实附件 payload 不写入恢复 transcript。 |
+| 结构化推理请求生命周期 | PR #575，merge `700d6e87e6e86d25c6e75ab3d602e3fbb0897720` | SQLite 隐藏 Ledger 持久化 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED；打开会话时未终结请求降为 UNKNOWN、禁止自动重放；已 FINALIZED 但 transcript 原子保存中断时，从 App 已验证答案重建 user/assistant 对。请求按 conversation/request identity 隔离。 |
+| Native 两阶段提交 | `sendReasoningMessage`、`sendReasoningAttachmentMessage`、`finalizeReasoningTurn` / `rejectReasoningTurn` | 主文本和媒体结构化入口均绑定 requestId 与 conversationId；Native 在解析前不把 raw JSON 当作成功轮次，Dart 校验后 finalize，失败则 reject。Native 的 finalize/reject ack ledger 为进程内缓存；跨进程 UNKNOWN/non-replayable 语义由 SQLite ReasoningTurnLedger 保证。 |
+| Activity / process 生命周期 | PR #120 的 `LocalAiProcessExecutor` / `LocalAiActivityTaskLifecycle` | Native 推理与 teardown 共享进程级单线程队列；新 Activity 排在旧 release 后。release 失败会 poison 当前进程并 fail-closed，须用户强停 App 进程后重新打开；不在释放结果未知时重建第二套 Engine。JVM 测试覆盖队列顺序与失败隔离，不替代真机资源释放证据。 |
+| 多轮 E2E | PR #585 的 20 轮 widget regression | Flutter 侧验证同一 conversation owner、requestId 唯一、SessionState 只含允许的用户/模型消息、排除隐藏 Native/工具 Ledger、一次显式确认工具执行和只读结果回流。使用测试 Native service / fake executor；不证明真实 E4B/GPU/CPU 连续推理。 |
+
+### 10.2 精确 PR HEAD 自动验收证据
+
+| 变更 | 精确 PR HEAD | Flutter / Native 相关 CI | Fork License | 说明 |
+|---|---|---|---|---|
+| #565 Native dirty-KV flush | `9f5adea9b0b2cc1391665e469bf038c881350baa` | run `45801957065` SUCCESS | run `45801957063` SUCCESS | PR 事件返回的工作流包含 Flutter tests 和许可证检查；不将其解释为实机推理结果 |
+| #575 持久化 reasoning turn ledger | `9fe364df135e42be122259043c408485b78779b7` | run `45839888161` SUCCESS | run `45839888050` SUCCESS | Android arm64/JVM 的当前主线自动验证在之后的 master runs 完成；不以此表中未列出的 PR job 声称单独通过 |
+| #585 20 轮 / 单次工具 E2E | `6d9bb0549bed768d66cb2fe6b6fcdeecb6ef369d` | run `45943407178` SUCCESS，Android arm64/JVM job `140324524005` SUCCESS | run `45943407188` SUCCESS | fake executor 的 Flutter widget 合同测试，不是 E4B 真模型 |
+
+### 10.3 当前仍为 DEVICE UNKNOWN 的验收项
+
+1. Find N2 上 GPU 实际 backend 连续至少 20 轮；记录每轮成功/空回复/异常、backend、trace_id。
+2. Find N2 上 CPU 实际 backend 连续至少 20 轮；GPU 自动 fallback 的轮次不得计为 GPU 成功。
+3. 真实图片/语音多轮输入、附件临时文件清理/保留与用户核对状态；确认结构化 Response、finalize/reject 和 Native dirty-KV flush 在实际 E4B 下行为正确。
+4. Activity recreation、请求中离开页面、App force-stop / process restart；确认旧 Native 资源释放与新 Activity 初始化顺序、SQLite transcript、Flutter UI 和 Native recovered history 三方一致。
+5. state:7 的实际根因；必须有 Find N2 logcat、实际 backend、App SHA、模型 SHA/版本和逐轮 trace_id，不能从 JVM test 推断。
+6. Gemma 4 E4B 的实测 Token/input budget、prompt/context window 与长会话行为。现有 12 轮、10,000 transcript 字符、16,000 SessionState 字符、24,000 reasoning context 字符均为字符/轮次数边界，不是模型 Token 计数，也不能直接相加推定可用预算。
+7. AI 数据清理后 Native/SQLite/附件/备份副本的不可恢复状态，按唯一设备交接文件执行。
+
+**当前判定：** Native 多轮的云端确定性代码治理已形成闭环：原子 transcript 持久化、临时 KV 上下文逐轮隔离、结构化请求终态和非 replayable 恢复、Activity executor 失败隔离均有主线实现和自动化证据。A 仍是 **PARTIAL / DEVICE UNKNOWN**，因为真实 Find N2 GPU/CPU、state:7、媒体、Activity/进程恢复、三方 transcript 对照和 Token 预算测量尚未有设备 TRACE。设备验收按唯一 `docs/local-real-device-acceptance-handoff.md` 放在所有云端工作之后，不阻塞云端代码、文档和 CI。
+
