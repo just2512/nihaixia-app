@@ -355,7 +355,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 当前已知的主要边界问题和审计方向：
 
-1. 当前知识检索与上下文构建有合并实现；需审计并明确 CandidateEvidence 与 RankedEvidenceSet 的边界，保留现有黄金行为。
+1. Core-2 已完成当前约定的召回/聚合/排序责任边界：各来源输出 CandidateEvidence，MultiSourceEvidencePipeline 只做来源聚合，SourceAwareLegacyEvidenceRanker 独立产出 RankedEvidenceSet，AssistantKnowledgeContextResult 输出 metadata-only candidateSnapshot 与最终呈现引用。AssistantKnowledgeContextBuilder 仍编排查询生成和上下文物化；后续不得重复建设候选/排序审计对象或为追求分层而改变既有黄金行为。
 2. Native Conversation 重建所用的成功轮次 transcript 与临时 RAG 输入需要严格隔离；不得把检索正文或完整 modelInput 写入用于恢复的历史列表。
 3. 当前 UI transcript、Native Conversation history、结构化任务状态和检索证据是不同数据，不得彼此替代。
 4. E4B 是语言推理层；ToolRouter/HeadlessToolDispatcher、ContextResolutionGateway 和 App 既有确定性业务函数承担不同的执行/来源校验职责，不能把它们合并为模型 Agent。
