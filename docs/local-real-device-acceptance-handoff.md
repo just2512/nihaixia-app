@@ -1,9 +1,9 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.5  
+> **文档版本：** 1.6  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
-> **当前状态：** **LOCAL ONLY / NOT RUN / EXECUTE AFTER CLOUD AI CLOSEOUT**  
+> **当前状态：** **CLOUD AI CLOSEOUT CI: PASS / DEVICE: LOCAL ONLY / NOT RUN**  
 > **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
 
 ---
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **PR #594 合并后的 master 核验点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`；AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`** | 11ac0c59 包含 Core-3 旧非结构化入口退役；45144f6c 仍是 #583/#585 的五层运行时集成锚点。本交接单更新时的 master push CI：Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 尚在 IN_PROGRESS，Fork License run `45970274615` SUCCESS。执行前必须重新 `git fetch origin` 并读取届时最新 `origin/master` SHA 及其 CI 终态；不能固定沿用历史锚点 |
+| 构建基线 | **当前 master HEAD `b978bc95475dcbc58f00be77c5479b26f91e7351`；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 当前 master 同一 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS。执行前仍必须 `git fetch origin` 并重新读取届时最新 `origin/master` SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -641,8 +641,8 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 
 ### 16.4 本轮执行状态
 
-- **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；旧自由文本包装入口已退役，Native 旧文本入口 fail-closed。应用版本、包名和模型身份未因本轮改造改变。
-- **PR #594 精确 HEAD 云端验收：** `85e77de947d144fd52902690094ba84de4d248c8` 的 Flutter regression run `45968674159` SUCCESS；Android arm64 APK/JVM job `140406700872` SUCCESS；Fork License run `45968674271` SUCCESS。PR Branch validation 为 SKIPPED，不计 PASS。
-- **合并后 master CI：** `11ac0c5918e5c25754b44e71f0ba48c82bea6669` 的 Fork License run `45970274615` SUCCESS；Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 在本交接单编写时仍为 IN_PROGRESS。读取最新 master 后必须复核两项 run 的终态，不能把 PR HEAD 的 PASS 代替合并后 master CI。
-- **本地：** `LOCAL ONLY / NOT RUN`；本文件 §7.1 首行待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。云端 Debug APK/ABI/JVM 结果不等于 Find N2 正式 Release 安装或真实设备验证。
+- **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；LocalAiService 旧非结构化包装方法已删除，Native 旧文本入口 fail-closed。当前主线 HEAD 已继续推进至 `b978bc95475dcbc58f00be77c5479b26f91e7351`。
+- **当前 master 合并后 CI：** 在 `b978bc95475dcbc58f00be77c5479b26f91e7351` 上，Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS；三项均对应当前表内同一 SHA。
+- **Core-1 / Core-4 / Core-5 云端边界：** Native transcript/KV 隔离与请求状态有自动化覆盖；四项 ACTION_PROPOSAL capability 的能力级输入、副作用、幂等及结果回读审计已记录；20 轮知识追问与一次工具动作的 Flutter 回归已合入。fake service/executor 不代表真实 E4B 或真机 TRACE。
+- **本地：** `LOCAL ONLY / NOT RUN`；本文件 §7.1 首行仍待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。Debug APK/ABI/JVM/Widget 结果不等于 Find N2 正式 Release 安装或真实设备验证。
 - **文档归并：** 当前唯一设备进度入口仍为本文件；历史验收记录和专项 runbook 已分类保留，不另建 PR/GPU/CPU/媒体/知识解读/授权专属交接单。
