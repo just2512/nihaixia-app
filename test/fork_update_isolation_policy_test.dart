@@ -41,71 +41,73 @@ void main() {
     test(
       'keeps the About page focused on introduction, local updates, and open-source thanks',
       () {
-      final dialogs = File('lib/screens/app_dialogs.dart').readAsStringSync();
-      final start = dialogs.indexOf('Future<void> showAboutPage(');
-      final end = dialogs.indexOf('/// 关于页中的单条更新日志卡片', start);
-      expect(start, greaterThanOrEqualTo(0));
-      expect(end, greaterThan(start));
-      final about = dialogs.substring(start, end);
+        final dialogs =
+            File('lib/screens/app_dialogs.dart').readAsStringSync();
+        final start = dialogs.indexOf('Future<void> showAboutPage(');
+        final end = dialogs.indexOf('/// 关于页中的单条更新日志卡片', start);
+        expect(start, greaterThanOrEqualTo(0));
+        expect(end, greaterThan(start));
+        final about = dialogs.substring(start, end);
 
-      expect(about, contains('项目介绍'));
-      expect(about, contains('研纪更新记录'));
-      expect(about, contains('开源致谢'));
-      for (final forbidden in [
-        'https://github.com',
-        '上游',
-        'Fork',
-        '同步策略',
-        '本项目仓库',
-      ]) {
-        expect(about, isNot(contains(forbidden)));
-      }
+        expect(about, contains('项目介绍'));
+        expect(about, contains('研纪更新记录'));
+        expect(about, contains('开源致谢'));
+        for (final forbidden in [
+          'https://github.com',
+          '上游',
+          'Fork',
+          '同步策略',
+          '本项目仓库',
+        ]) {
+          expect(about, isNot(contains(forbidden)));
+        }
       },
     );
 
     test(
       'shows only verified local history and independent product versions',
       () {
-      final changelogFile = File('assets/data/changelog.json');
-      final source = changelogFile.readAsStringSync();
-      final decoded = jsonDecode(source) as Map<String, dynamic>;
-      final entries = decoded['changelog'] as List<dynamic>;
-      final versions = entries
-          .map((entry) => (entry as Map<String, dynamic>)['version'] as String)
-          .toList();
+        final changelogFile = File('assets/data/changelog.json');
+        final source = changelogFile.readAsStringSync();
+        final decoded = jsonDecode(source) as Map<String, dynamic>;
+        final entries = decoded['changelog'] as List<dynamic>;
+        final versions = entries
+            .map((entry) =>
+                (entry as Map<String, dynamic>)['version'] as String)
+            .toList();
 
-      expect(versions, contains('2.0.0'));
-      expect(versions, contains('1.11.30'));
-      for (final version in versions) {
-        final major = int.tryParse(version.split('.').first) ?? 0;
-        expect(
-          major >= 2 || version == '1.11.30',
-          isTrue,
-          reason: 'About changelog must not reintroduce inherited upstream release $version',
-        );
-      }
-      expect(source, isNot(contains('上游')));
-      expect(source, isNot(contains('upstream')));
-      expect(source, isNot(contains('jangviktor-web')));
+        expect(versions, contains('2.0.0'));
+        expect(versions, contains('1.11.30'));
+        for (final version in versions) {
+          final major = int.tryParse(version.split('.').first) ?? 0;
+          expect(
+            major >= 2 || version == '1.11.30',
+            isTrue,
+            reason:
+                'About changelog must not reintroduce inherited release $version',
+          );
+        }
+        expect(source, isNot(contains('上游')));
+        expect(source, isNot(contains('upstream')));
+        expect(source, isNot(contains('jangviktor-web')));
       },
     );
 
     test(
       'keeps repository integration details out of the README project introduction',
       () {
-      final readme = File('README.md').readAsStringSync();
-      final start = readme.indexOf('### 项目定位');
-      final end = readme.indexOf('### 核心价值主张', start);
-      expect(start, greaterThanOrEqualTo(0));
-      expect(end, greaterThan(start));
-      final introduction = readme.substring(start, end);
+        final readme = File('README.md').readAsStringSync();
+        final start = readme.indexOf('### 项目定位');
+        final end = readme.indexOf('### 核心价值主张', start);
+        expect(start, greaterThanOrEqualTo(0));
+        expect(end, greaterThan(start));
+        final introduction = readme.substring(start, end);
 
-      expect(introduction, isNot(contains('https://github.com')));
-      expect(introduction, isNot(contains('上游')));
-      expect(introduction, isNot(contains('Fork')));
-      expect(readme, isNot(contains('保留 GitHub Fork 关系')));
+        expect(introduction, isNot(contains('https://github.com')));
+        expect(introduction, isNot(contains('上游')));
+        expect(introduction, isNot(contains('Fork')));
+        expect(readme, isNot(contains('保留 GitHub Fork 关系')));
       },
     );
   });
-
 }
