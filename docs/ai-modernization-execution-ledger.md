@@ -5002,3 +5002,14 @@ PR HEAD 门禁证据：
 - **测试：** 增加 Dart typed-turn/12 轮裁剪/未完成输入测试；增加 Kotlin structured snapshot/角色重建/非法字段/surrogate/Native 预算测试；增加架构回归断言，确保 restore 不触发模型生成或 GPU/CPU 首轮 fallback。CI 以本 PR 最终 HEAD 的适用检查为准，SKIPPED 不计 PASS。
 - **未被本次证明：** Find N2 真机 E4B 推理、GPU/CPU 稳定性、state:7、Activity/process restart、SQLite/UI/Native 历史一致性仍为 DEVICE UNKNOWN / LOCAL ONLY，统一在唯一交接文档执行。
 - **范围边界：** 不持久化 LiteRT KV Cache；不推测 App Token/input budget；不引入自动压缩、Agent、第二套会话存储、第二套 Gate 或工作流 I。用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED。
+
+
+## 134. 2026-11-27 Core-1 Native 历史恢复 MethodChannel 必需载荷校验
+
+- **基线：** 从 `master@22102bf47cd6ad3055cacd8a9dbb99cf6ce9ba29`（PR #602 合并提交）建立独立分支 `fix/native-restore-required-payload-20261127`。
+- **问题：** Native `restoreConversation` handler 把缺失的 `completed_turns`、省略轮次数/字符数和 `userMessages` 静默默认成空列表或 0。若 MethodChannel 合同错配或字段丢失，畸形载荷会被当成有效空历史，进而进入 reset 路径，破坏当前会话记忆。
+- **修复：** 增加纯 Kotlin `parsePayload`，要求四个字段实际存在且类型严格符合 StandardMessageCodec：turns/userMessages 为 List，计数只接受 Int/Long 非负整数，轮次数须在 Int 范围内，userMessages 每项必须为 String。拒绝在方法通道入口返回 `INVALID_RESTORE_PAYLOAD`，不进入 `runAiTask` 或 Native 会话重置。
+- **合法空历史边界：** 允许 `completed_turns=[]`，因为历史可能只有未完成 user-only 输入；但必须显式提供空数组和完整计数字段，不能靠缺省值伪造。
+- **回归：** Kotlin policy tests 覆盖缺失字段、错误数值类型、负数、越界、用户输入元素类型和有效 Int/Long 载荷。现有 typed-turn 恢复、会话重建和 UI/SQLite 历史语义保持不变。
+- **范围：** 不改变 12 轮/10,000 UTF-16 transcript 上限、Native KV Cache、Token/input budget、业务逻辑、授权 Gate 或工作流 I；Find N2 实机验证继续 MISSING / UNKNOWN。
+- **验收：** 只按本 PR 最终 HEAD 的 Flutter、Android arm64/JVM 和 Fork License 检查记录状态；SKIPPED 不计 PASS。

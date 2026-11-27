@@ -4,9 +4,67 @@ package com.nihaisha.nihaisha_app
  * Bounds history restoration without silently discarding the newest message.
  * The transcript cap is measured in UTF-16 code units, matching Kotlin String.
  */
+internal data class LocalAiTranscriptRestorePayload(
+    val completedTurns: List<*>,
+    val omittedCompletedTurnCount: Int,
+    val omittedCompletedCharacterCount: Long,
+    val userMessages: List<String>
+)
+
 internal object LocalAiTranscriptRestorePolicy {
     const val maxTranscriptCharacters = 10_000
     const val maxUserMessages = 60
+
+    /**
+     * Parse the required MethodChannel envelope without defaulting missing
+     * fields. A missing list or count must never be treated as an empty history.
+     */
+    fun parsePayload(
+        rawCompletedTurns: Any?,
+        rawOmittedCompletedTurnCount: Any?,
+        rawOmittedCompletedCharacterCount: Any?,
+        rawUserMessages: Any?
+    ): LocalAiTranscriptRestorePayload {
+        val completedTurns = rawCompletedTurns as? List<*>
+            ?: throw IllegalArgumentException("completed_turns is required and must be a list")
+        val omittedTurnCount = requiredNonNegativeInteger(
+            rawOmittedCompletedTurnCount,
+            "omitted_completed_turn_count",
+            Int.MAX_VALUE.toLong()
+        ).toInt()
+        val omittedCharacterCount = requiredNonNegativeInteger(
+            rawOmittedCompletedCharacterCount,
+            "omitted_completed_character_count"
+        )
+        val rawMessages = rawUserMessages as? List<*>
+            ?: throw IllegalArgumentException("userMessages is required and must be a list")
+        val userMessages = rawMessages.mapIndexed { index, value ->
+            value as? String
+                ?: throw IllegalArgumentException("userMessages[$index] must be a string")
+        }
+        return LocalAiTranscriptRestorePayload(
+            completedTurns = completedTurns,
+            omittedCompletedTurnCount = omittedTurnCount,
+            omittedCompletedCharacterCount = omittedCharacterCount,
+            userMessages = userMessages
+        )
+    }
+
+    private fun requiredNonNegativeInteger(
+        value: Any?,
+        field: String,
+        maximum: Long = Long.MAX_VALUE
+    ): Long {
+        val number = when (value) {
+            is Int -> value.toLong()
+            is Long -> value
+            else -> throw IllegalArgumentException("$field is required and must be an integer")
+        }
+        require(number >= 0L && number <= maximum) {
+            "$field is outside the supported non-negative integer range"
+        }
+        return number
+    }
 
     fun boundTranscript(transcript: String): String {
         require(transcript.length <= maxTranscriptCharacters) {

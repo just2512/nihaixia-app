@@ -8,6 +8,93 @@ import org.junit.Test
 class LocalAiTranscriptRestorePolicyTest {
 
     @Test
+    fun rejectsMissingOrMalformedRestoreEnvelopeBeforeHistoryMutation() {
+        val validTurns = listOf(mapOf("user_text" to "问题", "assistant_text" to "回答"))
+        val validMessages = listOf("用户自述")
+
+        val missingTurns = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = null,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(missingTurns.message!!.contains("completed_turns"))
+
+        val missingOmittedCount = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = null,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(missingOmittedCount.message!!.contains("omitted_completed_turn_count"))
+
+        val invalidNumericType = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 1.5,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(invalidNumericType.message!!.contains("integer"))
+
+        val negativeCount = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = -1,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(negativeCount.message!!.contains("non-negative"))
+
+        val overflowCount = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = Long.MAX_VALUE,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(overflowCount.message!!.contains("range"))
+
+        val malformedUserMessages = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = listOf("用户自述", 42)
+            )
+        }
+        assertTrue(malformedUserMessages.message!!.contains("userMessages[1]"))
+
+        val missingUserMessages = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = null
+            )
+        }
+        assertTrue(missingUserMessages.message!!.contains("userMessages"))
+
+        val payload = LocalAiTranscriptRestorePolicy.parsePayload(
+            rawCompletedTurns = validTurns,
+            rawOmittedCompletedTurnCount = 2L,
+            rawOmittedCompletedCharacterCount = 24,
+            rawUserMessages = validMessages
+        )
+        assertEquals(validTurns, payload.completedTurns)
+        assertEquals(2, payload.omittedCompletedTurnCount)
+        assertEquals(24L, payload.omittedCompletedCharacterCount)
+        assertEquals(validMessages, payload.userMessages)
+    }
+
+    @Test
     fun preservesShortTranscriptExactly() {
         val transcript = "用户：第一条\n助手：第一答"
         assertEquals(transcript, LocalAiTranscriptRestorePolicy.boundTranscript(transcript))
