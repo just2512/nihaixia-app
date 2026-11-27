@@ -27,7 +27,7 @@ void main() {
         )) {
           if (entity is! File || !entity.path.endsWith('.dart')) continue;
 
-          final relativePath = entity.path.replaceAll('\\\\', '/');
+          final relativePath = entity.path.replaceAll('\\', '/');
           if (relativePath == implementation) continue;
 
           final source = await entity.readAsString();
