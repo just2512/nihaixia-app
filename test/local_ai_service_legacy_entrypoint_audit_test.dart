@@ -68,10 +68,10 @@ void main() {
       // operations. A future helper in another file must be explicitly
       // reviewed and added to the architecture map before it can call the API.
       final nativeModelApi = RegExp(
-        r'\\.(?:sendMessage|createConversation|generateResponse)\\s*\\(',
+        r'\.(?:sendMessage|createConversation|generateResponse)\s*\(',
       );
       final nativeModelImports = RegExp(
-        r'^import com\\.google\\.ai\\.edge\\.litertlm',
+        r'^import com\.google\.ai\.edge\.litertlm',
         multiLine: true,
       );
       final unexpectedNativeModelCallSites = <String>[];
