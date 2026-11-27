@@ -2043,7 +2043,7 @@ class MainActivity : FlutterActivity() {
             activeConversationId = conversationId
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-                modelStatus()
+            modelStatus()
         } catch (error: Exception) {
             // Never retain an Engine without a usable Conversation. A later load
             // must start from a clean state rather than overwrite a live engine.
@@ -2061,7 +2061,7 @@ class MainActivity : FlutterActivity() {
                 conversationHistory.restore(restoredHistory)
             }
             activeBackend = "not_loaded"
-                throw error
+            throw error
         }
     }
 
