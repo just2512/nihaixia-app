@@ -5024,3 +5024,12 @@ PR HEAD 门禁证据：
 - **回归：** 扩展 `ConversationResetPolicyTest`，检查 Engine 释放失败回调、异常 suppressed 关系，并用 `UnsatisfiedLinkError` 验证 Native `Error` 会使 process health 变为 unavailable。正常 reset 及成功释放路径断言不触发回调。
 - **边界：** 不新增存储、数据库、Gate、Agent 或状态服务；复用现有进程健康状态和串行 executor，不改变普通 reset、typed transcript、已验证快照保留、推理 Ledger 或 UNKNOWN/non-replayable 语义。Find N2 真机释放行为和 TRACE 仍属 LOCAL ONLY / UNKNOWN。
 - **CI：** 本节创建时该独立分支自动验收待运行；Flutter regression/analyze、Android arm64/JVM 和 Fork License 必须在最终 PR HEAD 上成功。SKIPPED 不计 PASS。
+
+## 136. 2026-11-27 Core-1 SessionState 未知 metadata schema 记忆准入 fail-closed
+
+- **基线：** 从合并后的 `master@97335ed55ce76172fadd854dad406e25d6961e9f` 派生独立分支 `fix/session-memory-unknown-metadata-fail-closed-20261127`；只处理持久化消息 metadata 的 SessionState 记忆准入，不改变通用历史/UI decoder。
+- **缺陷：** `AssistantMessageMetadata.decode` 为兼容历史展示，在未知 `schemaVersion` 时回退默认 `replayable=true`。`SessionStateSnapshotBuilder` 直接消费该默认值，导致携带 `schemaVersion=2` 且 `replayable=false` 的消息无法解码时仍可能被提升为 `USER_ORIGINAL` 事实；损坏的 JSON 也存在相同 fail-open 风险。
+- **修复：** 新增独立 `isReplayableForSessionMemory` 准入函数：无 metadata 的历史行继续兼容；schema v1 按严格布尔值判断（字段缺失保持旧版 schema v1 兼容）；已识别的历史分号格式继续读取；未知 JSON schema、无效布尔值、损坏或无法识别的格式一律拒绝进入 SessionState。通用 `decode` 的 UI/history fallback 不变。
+- **回归：** metadata 单测覆盖缺失值、schema v1 true/false、字段缺失的旧 schema v1、无效布尔值、未知 schema、旧分号格式、损坏 JSON 和未知格式；SnapshotBuilder 测试确认未知版本与损坏 metadata 的原始用户消息只计入省略数，快照为 PARTIAL，facts 为空。
+- **边界：** 不改 SQLite schema、Reasoning Ledger、已持久化原始 transcript、UI 历史呈现、Native prompt 协议或自动重放规则；只阻止不可信/不兼容 metadata 被提升为结构化记忆事实。不新增数据库、Gate、Agent、Embedding、压缩或第二套记忆存储。工作流 I 继续 DEFERRED / NOT AUTHORIZED。
+- **CI：** 本节创建时该分支自动验收待运行；Flutter regression/analyze、Android arm64/JVM 与 Fork License 必须在 PR 最终 HEAD 上成功。SKIPPED 不计 PASS。
