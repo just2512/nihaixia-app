@@ -364,7 +364,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.1 当前 master 源码映射与已确认断点（2026-11-27）
 
-**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役（merge `11ac0c5918e5c25754b44e71f0ba48c82bea6669`），Native 不可达媒体 helper 已由 PR #598 清理（运行时代码 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`）。当前 `master` 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，仅文档同步）；当前 Native/AI 运行时代码基线为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。同一最新 master 文档 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。PR #599 未改运行时代码。以下按已合并代码描述生产能力；其他 SHA 的 CI、SKIPPED 项和本地未执行的 TRACE 不计为当前通过证据。
+**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役（merge `11ac0c5918e5c25754b44e71f0ba48c82bea6669`），Native 不可达媒体 helper 已由 PR #598 清理（运行时代码 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`）。PR #600 文档同步 merge `57fbad291c3266966e4a8e477dee64e8b6b0b837`，与已通过 CI 的 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` Git tree 完全一致，且只修改三份 docs。PR #600 HEAD 的 Flutter regression、Fork License、Android arm64 CI APK/ABI/JVM 单测均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。合并后 master Fork License SUCCESS；Flutter tests 与 Flutter Quality Gate 在本快照记录时仍 IN_PROGRESS。以下按已合并代码描述生产能力；SKIPPED 项和本地未执行 TRACE 不计 PASS。
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
@@ -549,7 +549,7 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 
 ### 5.5 当前主线运行态复核与 Native 辅助推理入口映射（2026-11-27）
 
-**AI 运行时复核基线：** 五层运行时集成锚点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；最新 Native/AI 运行时代码基线为 `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598 merge）；最新 master 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，仅文档同步）。PR #598 删除无调用点的 Native 旧媒体 helper；PR #599 不修改运行时代码。最新 master 文档 SHA 对应 Flutter tests `46003046571`、Flutter Quality Gate `46003046432`、Fork License `46003046794` 均 SUCCESS，Android arm64/JVM job `140522734914` SUCCESS；Branch validation `140519281368` 为 SKIPPED，不计 PASS。历史章节保留当时决策和实现轨迹；当前运行态以本节及 §5.8 为准。当前产品范围仍是中医学习辅助工具，不建设临床 detector、不安排医学审核、不恢复已撤销的临床门禁。
+**AI 运行时复核基线：** 五层运行时集成锚点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前 Native/AI 运行时代码基线为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598 merge）。PR #600 文档同步 merge 为 `57fbad291c3266966e4a8e477dee64e8b6b0b837`，其 Git tree 与已验收 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 相同；该 PR 只改三份 docs。PR HEAD Flutter regression、Fork License、Android arm64 CI APK/ABI/JVM 单测均 SUCCESS，Branch validation SKIPPED；合并后 master Fork License SUCCESS，master Flutter tests 与 Quality Gate 在该快照时 IN_PROGRESS。历史章节保留当时决策和实现轨迹；当前运行态以本节及 §5.8–§5.9 为准。
 
 #### 当前五层状态
 
@@ -626,7 +626,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 
 
 
-### 5.8 2026-11-27 PR #598 合并后 Native 旧媒体入口清理与当前主线基线
+### 5.8 2026-11-27 PR #598 合并后 Native 旧媒体入口清理与运行时代码基线（PR #600 文档同步前快照）
 
 - **运行时代码基线：** `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598 merge）；最新 master 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，仅文档同步）。五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
 - **精确 CI：** 最新 master 文档 SHA 上 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。PR #598 运行时代码 SHA 上的 Flutter tests、Flutter Quality Gate、Fork License 与 Android arm64/JVM job 也均 SUCCESS（run/job 见本台账 §131）。
@@ -635,3 +635,16 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - **Core-1 Token 与设备边界：** `Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 仅提供只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。不把模型声明上限或当前 KV Cache token 数解释为 App 可用输入预算，不添加推测的阈值、输出预留、自动裁剪/压缩或 KV Cache 持久化。
 - **设备验收：** Find N2 GPU/CPU 长会话、state:7、真实 E4B 生成质量、图片/音频、多轮/Activity/process restart、SQLite/UI/Native transcript 一致性、覆盖升级、数据清理及 TRACE 均为 LOCAL ONLY / MISSING / UNKNOWN，必须在设备实测；云端 CI 不替代。
 - **优先级边界：** 工作流 H 的既定云端范围完成当前批次；工作流 I 用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED；不新增 Agent、服务、数据库、AI Gate、Embedding、向量数据库或 Reranker，不扩张四项 capability allowlist。
+
+
+### 5.9 2026-11-27 PR #600 合并后五层验收树与 Native 记忆边界复核
+
+- **代码树与文档同步：** Native/AI 运行时代码基线仍为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；PR #600 文档同步 merge `57fbad291c3266966e4a8e477dee64e8b6b0b837`，与已验收 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 的 Git tree 完全一致，只有三份 docs 发生改变。
+- **PR HEAD CI：** Flutter regression run `46005551188` SUCCESS；Fork License run `46005551170` SUCCESS；Android arm64 CI verification APK/ABI/JVM unit tests job `140530639898` SUCCESS。Branch validation `140527670767` 为 SKIPPED，不计 PASS。
+- **合并后 master CI：** Fork License `46007115092` SUCCESS；Flutter tests `46007115215` 与 Flutter Quality Gate `46007115001` 在本快照时 IN_PROGRESS，不提前标为 PASS。
+- **Core-1 Native 会话记忆复核：** RAG、SessionState、附件和本轮推理上下文只进入当轮 Native live KV；独立成功 transcript 不接收临时资料或原始结构化 JSON。finalize 在结构校验后写入已完成轮次并重建当前 Native 会话；reject 不写入历史；重建失败回滚历史并释放运行时。进程内账本丢失后以 UNKNOWN 处理，不重放请求。
+- **Core-2 检索边界：** 多源 pipeline 只合并来源批次、命名空间和状态，保留调用方顺序；ranker 独立给出逐项 KEEP/DROP、原因码和策略版本，维持 legacy order/caps，不宣称语义相关性评分。6,500 UTF-16 code units 是上下文呈现上限，不是模型 token budget。
+- **Core-3 协议边界：** ReasoningRequest/Response v1 由 App 生成 requestId/sessionId/evidence/capability scope；codec 严格校验字段、requestId、证据引用/遗漏、附件结果和 action proposal。图像观察为结构化结果；音频 transcript 为待确认草稿，未确认前不提升为用户事实。
+- **Core-4 执行边界：** 只有四项现行 capability 可以形成待确认 proposal；显式确认后二次校验 request/allowlist，再持久 claim、单次 dispatch、终态回读。中断、调用异常或参数/来源不一致均为 UNKNOWN/非重放。
+- **Core-5 E2E 限制：** 20 轮知识追问 + 工具 proposal/确认/执行/解释覆盖 Flutter 应用状态、SQLite 记录和只读结果回流；测试 Native service 与 executor 是 fake，不能替代 Find N2 真实 E4B/GPU/CPU/媒体/进程恢复。
+- **设备与 Token：** Find N2 真实 GPU/CPU、state:7、token/context、Activity/process restart、覆盖升级、数据清理和 TRACE 继续 LOCAL ONLY / MISSING / UNKNOWN；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。不得推测 App 可用 Token 输入预算或添加未经实测的自动裁剪/压缩。
