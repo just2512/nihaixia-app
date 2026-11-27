@@ -265,21 +265,6 @@ class _RecordingAssistantService extends LocalAiService {
   }
 
   @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    // Legacy calls remain observable; Core-3 paths must use the structured API.
-    modelCalls++;
-    sentTexts.add(text);
-    sentContexts.add(context);
-    return '已收到：$text';
-  }
-
-  @override
   Future<void> restoreConversation({
     required int conversationId,
     required String transcript,
