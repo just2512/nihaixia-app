@@ -35,6 +35,12 @@ void main() {
       expect(result.retainedTurnCount, 2);
       expect(result.omittedTurnCount, 0);
       expect(result.omittedCharacterCount, 0);
+      expect(result.completedTurns, [
+        const LocalAiTranscriptTurn(userText: '第一问', assistantText: '第一答'),
+        const LocalAiTranscriptTurn(userText: '第二问', assistantText: '第二答'),
+      ]);
+      expect(result.omittedCompletedTurnCount, 0);
+      expect(result.omittedCompletedCharacterCount, 0);
     });
 
     test('omits oldest complete turns and never cuts the newest turn', () {
@@ -58,6 +64,9 @@ void main() {
       ));
       expect(result.transcript, contains('USER_TURN_119'));
       expect(result.transcript, contains('ASSISTANT_TURN_119'));
+      expect(result.completedTurns, hasLength(12));
+      expect(result.completedTurns.first.userText, startsWith('USER_TURN_108'));
+      expect(result.completedTurns.last.userText, startsWith('USER_TURN_119'));
       expect(result.transcript, isNot(contains('USER_TURN_0')));
       expect(result.transcript.length,
           lessThanOrEqualTo(LocalAiTranscriptRestorePolicy.maxTranscriptCharacters));
@@ -83,6 +92,11 @@ void main() {
       );
       expect(result.retainedTurnCount, 0);
       expect(result.omittedTurnCount, 1);
+      expect(result.omittedCompletedTurnCount, 1);
+      expect(result.completedTurns, isEmpty);
+      expect(result.omittedCompletedCharacterCount,
+          LocalAiTranscriptRestorePolicy.maxTranscriptCharacters +
+              'complete response'.length);
       expect(result.transcript.length,
           lessThanOrEqualTo(LocalAiTranscriptRestorePolicy.maxTranscriptCharacters));
     });
@@ -106,6 +120,8 @@ void main() {
       expect(result.transcript, contains('已完成的问题'));
       expect(result.transcript, isNot(contains('尚未完成的问题')));
       expect(result.omittedTurnCount, 1);
+      expect(result.omittedCompletedTurnCount, 0);
+      expect(result.completedTurns, hasLength(1));
     });
 
     test('counts UTF-16 code units without splitting surrogate pairs', () {

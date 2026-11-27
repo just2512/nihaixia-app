@@ -47,6 +47,72 @@ class LocalAiTranscriptRestorePolicyTest {
     }
 
     @Test
+    fun restoresTypedCompletedTurnsWithoutFlatteningTheirRoles() {
+        val snapshot = LocalAiTranscriptRestorePolicy.historySnapshot(
+            rawTurns = listOf(
+                mapOf("user_text" to "第一问", "assistant_text" to "第一答"),
+                mapOf("user_text" to "第二问", "assistant_text" to "第二答")
+            ),
+            omittedCompletedTurnCount = 3,
+            omittedCompletedCharacterCount = 120L
+        )
+
+        assertEquals(
+            listOf(
+                LocalAiCompletedTurn("第一问", "第一答"),
+                LocalAiCompletedTurn("第二问", "第二答")
+            ),
+            snapshot.turns
+        )
+        assertEquals(3, snapshot.omittedTurnCount)
+        assertEquals(120L, snapshot.omittedCharacterCount)
+        assertEquals(5L, snapshot.successfulTurnCount)
+        assertEquals(
+            listOf(
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.USER, "第一问"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.MODEL, "第一答"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.USER, "第二问"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.MODEL, "第二答")
+            ),
+            LocalAiConversationHistoryPolicy.initialMessages(snapshot)
+        )
+    }
+
+    @Test
+    fun rejectsInvalidStructuredTurnsAndNativeBudgetOverflow() {
+        val missingRole = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.historySnapshot(
+                rawTurns = listOf(mapOf("user_text" to "问题")),
+                omittedCompletedTurnCount = 0,
+                omittedCompletedCharacterCount = 0L
+            )
+        }
+        assertTrue(missingRole.message!!.contains("assistant_text"))
+
+        val oversized = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.historySnapshot(
+                rawTurns = listOf(
+                    mapOf("user_text" to "U".repeat(10_000), "assistant_text" to "答")
+                ),
+                omittedCompletedTurnCount = 0,
+                omittedCompletedCharacterCount = 0L
+            )
+        }
+        assertTrue(oversized.message!!.contains("character limit"))
+
+        val invalidSurrogate = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.historySnapshot(
+                rawTurns = listOf(
+                    mapOf("user_text" to "问题" + Char(0xD83D), "assistant_text" to "回答")
+                ),
+                omittedCompletedTurnCount = 0,
+                omittedCompletedCharacterCount = 0L
+            )
+        }
+        assertTrue(invalidSurrogate.message!!.contains("surrogate"))
+    }
+
+    @Test
     fun keepsOnlyMostRecentSixtyUserMessages() {
         val messages = (1..75).map { "user-$it" }
 

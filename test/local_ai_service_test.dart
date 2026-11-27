@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -547,23 +548,40 @@ void main() {
   });
 
   group('LocalAiService text conversation contract', () {
-    test('restoreConversation forwards bounded history and user-only turns', () async {
+    test('restoreConversation forwards role-preserving completed turns', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
         received = call;
         return <String, Object?>{'restored': true, 'backend': 'cpu'};
       });
 
+      final restore = LocalAiTranscriptRestorePolicy.fromMessages([
+        const LocalAiTranscriptMessage(
+          role: LocalAiTranscriptRole.user,
+          text: '饭后腹胀',
+        ),
+        const LocalAiTranscriptMessage(
+          role: LocalAiTranscriptRole.assistant,
+          text: '请说明持续时间',
+        ),
+      ]);
       await LocalAiService().restoreConversation(
         conversationId: 42,
-        transcript: '用户：饭后腹胀\\n助手：请说明持续时间',
+        restore: restore,
         userMessages: ['饭后腹胀'],
       );
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments, <String, Object?>{
         'conversation_id': 42,
-        'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
+        'completed_turns': [
+          {
+            'user_text': '饭后腹胀',
+            'assistant_text': '请说明持续时间',
+          },
+        ],
+        'omitted_completed_turn_count': 0,
+        'omitted_completed_character_count': 0,
         'userMessages': ['饭后腹胀'],
       });
     });

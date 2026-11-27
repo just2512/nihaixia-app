@@ -7,13 +7,30 @@
 enum LocalAiTranscriptRole { user, assistant }
 
 class LocalAiTranscriptMessage {
-  const LocalAiTranscriptMessage({
-    required this.role,
-    required this.text,
-  });
-
+  const LocalAiTranscriptMessage({required this.role, required this.text});
   final LocalAiTranscriptRole role;
   final String text;
+}
+
+class LocalAiTranscriptTurn {
+  const LocalAiTranscriptTurn({required this.userText, required this.assistantText});
+  final String userText;
+  final String assistantText;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LocalAiTranscriptTurn &&
+          other.userText == userText &&
+          other.assistantText == assistantText;
+
+  @override
+  int get hashCode => Object.hash(userText, assistantText);
+
+  Map<String, String> toMap() => {
+        'user_text': userText,
+        'assistant_text': assistantText,
+      };
 }
 
 class LocalAiTranscriptRestoreResult {
@@ -22,23 +39,25 @@ class LocalAiTranscriptRestoreResult {
     required this.retainedTurnCount,
     required this.omittedTurnCount,
     required this.omittedCharacterCount,
+    required this.completedTurns,
+    required this.omittedCompletedTurnCount,
+    required this.omittedCompletedCharacterCount,
   });
 
   final String transcript;
   final int retainedTurnCount;
   final int omittedTurnCount;
   final int omittedCharacterCount;
+  final List<LocalAiTranscriptTurn> completedTurns;
+  final int omittedCompletedTurnCount;
+  final int omittedCompletedCharacterCount;
 }
 
 class LocalAiTranscriptRestorePolicy {
   static const int maxTranscriptCharacters = 10000;
+  static const int maxRetainedTurns = 12;
   static const String truncationMarker = '【较早历史已省略，以下为最近内容】\n';
 
-  /// Replays only complete turns, preserving the newest turns first.
-  ///
-  /// Consecutive assistant messages belong to the preceding user turn.
-  /// Leading assistant-only messages (for example, the welcome message) are
-  /// attached to the first complete turn. An unfinished user turn is omitted.
   static LocalAiTranscriptRestoreResult fromMessages(
     List<LocalAiTranscriptMessage> messages,
   ) {
@@ -64,10 +83,7 @@ class LocalAiTranscriptRestorePolicy {
         return;
       }
       if (turns.isEmpty && leadingAssistantMessages.isNotEmpty) {
-        turns.add([
-          ...leadingAssistantMessages,
-          ...pendingTurn,
-        ]);
+        turns.add([...leadingAssistantMessages, ...pendingTurn]);
         leadingAssistantMessages.clear();
       } else {
         turns.add(List<LocalAiTranscriptMessage>.unmodifiable(pendingTurn));
@@ -91,21 +107,39 @@ class LocalAiTranscriptRestorePolicy {
     }
     retainPendingTurn();
 
-    // A transcript that contains only assistant-side prelude messages remains
-    // useful for restoring the initial conversation state.
+    // Assistant-only prelude remains available for diagnostics, but is not
+    // promoted into Native memory as a synthetic user/assistant turn.
     if (turns.isEmpty && leadingAssistantMessages.isNotEmpty) {
-      turns.add(List<LocalAiTranscriptMessage>.unmodifiable(
-        leadingAssistantMessages,
-      ));
+      turns.add(List<LocalAiTranscriptMessage>.unmodifiable(leadingAssistantMessages));
     }
 
     final serializedTurns = turns.map(_serializeTurn).toList(growable: false);
 
+    LocalAiTranscriptTurn? toCompletedTurn(List<LocalAiTranscriptMessage> turn) {
+      final userIndex = turn.indexWhere((m) => m.role == LocalAiTranscriptRole.user);
+      if (userIndex < 0) return null;
+      final assistantTexts = turn
+          .skip(userIndex + 1)
+          .where((m) => m.role == LocalAiTranscriptRole.assistant)
+          .map((m) => m.text)
+          .toList(growable: false);
+      if (assistantTexts.isEmpty) return null;
+      return LocalAiTranscriptTurn(
+        userText: turn[userIndex].text,
+        assistantText: assistantTexts.join('\n'),
+      );
+    }
+
+    final allCompletedTurns = turns
+        .map(toCompletedTurn)
+        .whereType<LocalAiTranscriptTurn>()
+        .toList(growable: false);
+
     int joinedLengthFrom(int start) {
       if (start >= serializedTurns.length) return 0;
       var length = serializedTurns.length - start - 1;
-      for (var index = start; index < serializedTurns.length; index++) {
-        length += serializedTurns[index].length;
+      for (var i = start; i < serializedTurns.length; i++) {
+        length += serializedTurns[i].length;
       }
       return length;
     }
@@ -113,38 +147,42 @@ class LocalAiTranscriptRestorePolicy {
     var retainedStart = serializedTurns.length;
     while (retainedStart > 0) {
       final candidateStart = retainedStart - 1;
-      // The marker is part of the same budget. It is needed either when an
-      // incomplete turn was omitted or when any older complete turn is left
-      // out by retaining only this suffix.
-      final candidateOmittedTurnCount = omittedTurnCount + candidateStart;
-      final markerLength = candidateOmittedTurnCount > 0
+      if (serializedTurns.length - candidateStart > maxRetainedTurns) break;
+      final markerLength = (omittedTurnCount + candidateStart) > 0
           ? truncationMarker.length
           : 0;
-      if (joinedLengthFrom(candidateStart) + markerLength >
-          maxTranscriptCharacters) {
+      if (joinedLengthFrom(candidateStart) + markerLength > maxTranscriptCharacters) {
         break;
       }
       retainedStart = candidateStart;
     }
 
-    for (var index = 0; index < retainedStart; index++) {
-      omittedCharacterCount += serializedTurns[index].length;
+    for (var i = 0; i < retainedStart; i++) {
+      omittedCharacterCount += serializedTurns[i].length;
       omittedTurnCount += 1;
     }
 
     final retained = serializedTurns.skip(retainedStart).join('\n');
-    final transcript = omittedTurnCount > 0
-        ? '$truncationMarker$retained'
-        : retained;
+    final transcript = omittedTurnCount > 0 ? '$truncationMarker$retained' : retained;
     if (transcript.length > maxTranscriptCharacters) {
       throw StateError('Bounded Native transcript exceeded its character budget');
     }
+
+    final retainedCompleted = allCompletedTurns.skip(retainedStart).toList(growable: false);
+    final omittedCompleted = allCompletedTurns.take(retainedStart).toList(growable: false);
+    final omittedCompletedChars = omittedCompleted.fold<int>(
+      0,
+      (sum, turn) => sum + turn.userText.length + turn.assistantText.length,
+    );
 
     return LocalAiTranscriptRestoreResult(
       transcript: transcript,
       retainedTurnCount: serializedTurns.length - retainedStart,
       omittedTurnCount: omittedTurnCount,
       omittedCharacterCount: omittedCharacterCount,
+      completedTurns: List<LocalAiTranscriptTurn>.unmodifiable(retainedCompleted),
+      omittedCompletedTurnCount: omittedCompleted.length,
+      omittedCompletedCharacterCount: omittedCompletedChars,
     );
   }
 

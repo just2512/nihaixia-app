@@ -18,6 +18,48 @@ internal object LocalAiTranscriptRestorePolicy {
         return transcript
     }
 
+    fun historySnapshot(
+        rawTurns: List<*>,
+        omittedCompletedTurnCount: Int,
+        omittedCompletedCharacterCount: Long
+    ): LocalAiConversationHistorySnapshot {
+        require(omittedCompletedTurnCount >= 0) {
+            "omittedCompletedTurnCount cannot be negative"
+        }
+        require(omittedCompletedCharacterCount >= 0L) {
+            "omittedCompletedCharacterCount cannot be negative"
+        }
+        require(rawTurns.size <= LocalAiConversationHistoryPolicy.maxRetainedTurns) {
+            "Structured transcript exceeds the Native completed-turn limit"
+        }
+        val turns = rawTurns.mapIndexed { index, rawTurn ->
+            val turn = rawTurn as? Map<*, *>
+                ?: throw IllegalArgumentException("Completed turn $index is not a map")
+            val userText = turn["user_text"] as? String
+                ?: throw IllegalArgumentException("Completed turn $index has no user_text")
+            val assistantText = turn["assistant_text"] as? String
+                ?: throw IllegalArgumentException("Completed turn $index has no assistant_text")
+            require(userText.isNotBlank()) { "Completed turn $index has blank user_text" }
+            require(assistantText.isNotBlank()) { "Completed turn $index has blank assistant_text" }
+            require(!hasUnpairedSurrogate(userText) && !hasUnpairedSurrogate(assistantText)) {
+                "Completed turn $index contains an unpaired UTF-16 surrogate"
+            }
+            LocalAiCompletedTurn(userText, assistantText)
+        }
+        val retainedCharacters = turns.sumOf {
+            it.userText.length.toLong() + it.modelText.length.toLong()
+        }
+        require(retainedCharacters <= LocalAiConversationHistoryPolicy.maxRetainedCharacters) {
+            "Structured transcript exceeds the Native UTF-16 character limit"
+        }
+        return LocalAiConversationHistorySnapshot(
+            turns = turns,
+            omittedTurnCount = omittedCompletedTurnCount,
+            omittedCharacterCount = omittedCompletedCharacterCount,
+            successfulTurnCount = omittedCompletedTurnCount.toLong() + turns.size.toLong()
+        )
+    }
+
     fun recentUserMessages(messages: List<String>): List<String> =
         messages.takeLast(maxUserMessages)
 

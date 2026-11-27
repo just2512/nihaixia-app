@@ -9,6 +9,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
 import 'package:nihaisha_app/services/assistant_reasoning_turn_ledger.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
@@ -49,11 +50,11 @@ class _HistoryResumeService extends LocalAiService {
   @override
   Future<void> restoreConversation({
     required int conversationId,
-    required String transcript,
+    required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
   }) async {
     restoredConversationId = conversationId;
-    restoredTranscript = transcript;
+    restoredTranscript = restore.transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
 

@@ -691,3 +691,12 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 - **本地当前进度：** 本轮云端未连接或操作 Find N2，也未产生设备 TRACE。§7.1 仍保留“待本地首次执行填写”；所有安装覆盖升级、GPU/CPU、多轮、媒体、Activity/process restart、授权/Keystore、AI 数据清理、折叠屏布局与真实 E4B 质量场景继续 MISSING / UNKNOWN / LOCAL ONLY。不得把 CI APK、Flutter widget、静态审计或 Android arm64/JVM 构建写成 Find N2 实机 PASS。
 - **唯一交接与进度回填：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接单；本地执行者在 §7.1 按实际日期、设备/Android/ColorOS、构建 SHA、APK version/versionCode、场景 ID、状态、证据目录、缺口和下一步追加记录。六份历史验收记录/专项 runbook 保留操作步骤，不建立平行进度表，不按 PR 或功能拆交接文件。
 - **Token 观测边界：** `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不可根据 `getTokenCount()` 或模型声明上下文长度自行推导 App 可用输入预算；设备校准前不增加自动压缩、推测阈值或 KV Cache 持久化。
+
+
+## 19. 2026-11-27 Core-1 Native 历史恢复确定性重建与实机待验项
+
+- **云端代码变化：** 跨进程历史恢复从“将整段 transcript 作为一条 user prompt 再调用模型确认”改为 typed completed turns。Native 直接按 USER/MODEL 角色经 `ConversationConfig.initialMessages` 重建上下文；恢复过程不发起 E4B 推理、不产生合成 assistant 消息，也不触发 GPU/CPU fallback。
+- **记忆边界：** Native 仍只保留最多 12 个完整轮次/10,000 UTF-16 code units；被省略的已完成轮次元数据单独记录。未完成 user-only turn 不进入成功历史，但原始用户文字仍在独立输入投影中保留。LiteRT Live KV Cache 不持久化；Token/input budget 继续 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。
+- **自动化证据：** 本次 PR 增加 Dart typed-turn/裁剪测试、Kotlin structured snapshot/角色重建校验和“不在 restore 路径调用模型”的静态回归。最终适用 CI 以该 PR 最终 HEAD 为准。
+- **Find N2 本地待验：** 历史会话恢复后连续追问早期 user/assistant 内容；切换会话、Activity recreation、强停/重启后核对 SQLite UI transcript 与 Native 重建上下文；确认恢复动作不额外生成一条助手消息。以上未执行前继续 MISSING / UNKNOWN / LOCAL ONLY。
+- **唯一进度入口：** 本地结果仍只追加在本文件 §7.1；不建立 Native/恢复专项交接单。

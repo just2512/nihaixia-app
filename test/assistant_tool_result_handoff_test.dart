@@ -16,6 +16,7 @@ import 'package:nihaisha_app/services/sanshan_lingqian_tool_executor.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
 import 'package:nihaisha_app/services/yuxiaji_omen_tool_executor.dart';
@@ -267,10 +268,10 @@ class _RecordingAssistantService extends LocalAiService {
   @override
   Future<void> restoreConversation({
     required int conversationId,
-    required String transcript,
+    required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
   }) async {
-    restoredTranscript = transcript;
+    restoredTranscript = restore.transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
 }

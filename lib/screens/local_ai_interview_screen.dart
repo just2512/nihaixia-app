@@ -372,7 +372,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late Future<int?> _conversationIdFuture;
   Future<void> _taskStateWrite = Future<void>.value();
   final Set<String> _persistedDiagnosisTaskIds = <String>{};
-  String? _pendingHistoryTranscript;
+  LocalAiTranscriptRestoreResult? _pendingHistoryRestore;
   List<String> _pendingHistoryUserMessages = const [];
   int _historyRestoreGeneration = 0;
   bool _contextualInitializationPending = false;
@@ -473,7 +473,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingDreamArguments = null;
         _pendingShoushengDebtArguments = null;
         _pendingSavedChartsArguments = null;
-        _pendingHistoryTranscript = null;
+        _pendingHistoryRestore = null;
         _pendingHistoryUserMessages = const [];
       }
       setState(() {
@@ -493,7 +493,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         _error = null;
       });
-      if (status.ready && _pendingHistoryTranscript != null) {
+      if (status.ready && _pendingHistoryRestore != null) {
         await _restorePendingHistory();
       }
       if (status.ready) {
@@ -6431,7 +6431,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required int conversationId,
   }) async {
     if (_status?.ready != true) return;
-    final transcript = LocalAiTranscriptRestorePolicy.fromMessages(
+    final restore = LocalAiTranscriptRestorePolicy.fromMessages(
       _messages
           .where((message) => message.includeInModelContext)
           .map((message) => LocalAiTranscriptMessage(
@@ -6441,14 +6441,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 text: message.text,
               ))
           .toList(growable: false),
-    ).transcript;
+    );
     final userMessages = _messages
         .where((message) => message.isUser)
         .map((message) => message.text)
         .toList(growable: false);
     await _service.restoreConversation(
       conversationId: conversationId,
-      transcript: transcript,
+      restore: restore,
       userMessages: userMessages,
     );
   }
@@ -7970,7 +7970,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   )
                 : null;
 
-    final transcript = LocalAiTranscriptRestorePolicy.fromMessages(
+    final restore = LocalAiTranscriptRestorePolicy.fromMessages(
       restoredMessages
           .where((message) => message.includeInModelContext)
           .map((message) => LocalAiTranscriptMessage(
@@ -7980,7 +7980,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 text: message.text,
               ))
           .toList(growable: false),
-    ).transcript;
+    );
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
@@ -8007,7 +8007,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ..clear()
         ..addAll(restoredMessages);
       _confirmedDraft = null;
-      _pendingHistoryTranscript = canRestoreContext ? transcript : null;
+      _pendingHistoryRestore = canRestoreContext ? restore : null;
       _pendingHistoryUserMessages =
           canRestoreContext ? replayableUserMessages : const [];
       _contextResolutionError = contextRestoreError;
@@ -8028,10 +8028,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _restoringPendingHistory = true;
     final generation = _historyRestoreGeneration;
     final targetConversationFuture = _conversationIdFuture;
-    final transcript = _pendingHistoryTranscript;
+    final restore = _pendingHistoryRestore;
     final userMessages = List<String>.unmodifiable(_pendingHistoryUserMessages);
     try {
-      if (transcript == null || _status?.ready != true) return;
+      if (restore == null || _status?.ready != true) return;
       final conversationId = await targetConversationFuture;
       if (conversationId == null || conversationId <= 0) {
         throw StateError('历史会话缺少有效的持久化 ID，已阻止 Native 恢复。');
@@ -8041,7 +8041,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
     )) {
-      _pendingHistoryTranscript = null;
+      _pendingHistoryRestore = null;
       _pendingHistoryUserMessages = const [];
       return;
     }
@@ -8050,12 +8050,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       await _service.restoreConversation(
         conversationId: conversationId,
-        transcript: transcript,
+        restore: restore,
         userMessages: userMessages,
       );
       if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() {
-        _pendingHistoryTranscript = null;
+        _pendingHistoryRestore = null;
         _pendingHistoryUserMessages = const [];
         _error = null;
       });
@@ -8067,7 +8067,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final shouldRestoreLatestSelection =
           mounted &&
           generation != _historyRestoreGeneration &&
-          _pendingHistoryTranscript != null;
+          _pendingHistoryRestore != null;
       _restoringPendingHistory = false;
       if (shouldRestoreLatestSelection) {
         await _restorePendingHistory();
@@ -10689,7 +10689,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingXiaoliurenArguments = null;
       _pendingDreamArguments = null;
       _pendingShoushengDebtArguments = null;
-      _pendingHistoryTranscript = null;
+      _pendingHistoryRestore = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
         _status = status;
