@@ -227,6 +227,10 @@ class AssistantToolInvocationLedger {
         ? rawDisclaimer
         : null;
     final identityMatches =
+        // Legacy terminal rows predate the explicit scope field. Their read is
+        // already constrained by conversationId; all new rows bind it again.
+        (terminal['conversationId'] == null ||
+            terminal['conversationId'] == claim.conversationId) &&
         terminal['invocationId'] == claim.invocationId &&
         terminal['requestId'] == claim.requestId &&
         terminal['toolId'] == claim.toolId &&
@@ -354,6 +358,7 @@ class AssistantToolInvocationLedger {
       final payload = <String, Object?>{
         'schema': _schema,
         'kind': _terminalKind,
+        'conversationId': claim.conversationId,
         'invocationId': claim.invocationId,
         'requestId': claim.requestId,
         'toolId': claim.toolId,
@@ -455,6 +460,7 @@ class AssistantToolInvocationLedger {
     return <String, Object?>{
       'schema': _schema,
       'kind': _terminalKind,
+      'conversationId': claim.conversationId,
       'invocationId': invocationId,
       'requestId': claim.requestId,
       'toolId': claim.toolId,
@@ -486,6 +492,13 @@ class AssistantToolInvocationLedger {
   ) {
     final left = Map<String, Object?>.from(existing)..remove('createdAt');
     final right = Map<String, Object?>.from(candidate)..remove('createdAt');
+    // Preserve idempotent read/write behavior for terminal rows written before
+    // conversationId was added to the terminal schema. _readInvocation already
+    // constrains those rows to the owning conversation.
+    if (left['conversationId'] == null &&
+        right['conversationId'] is int) {
+      left['conversationId'] = right['conversationId'];
+    }
     return jsonEncode(_canonical(left)) == jsonEncode(_canonical(right));
   }
 
@@ -605,6 +618,8 @@ class _InvocationEvent {
           decoded['status'] is String &&
           AssistantToolExecutionStatus.values
               .any((status) => status.name == decoded['status']) &&
+          (decoded['conversationId'] == null ||
+              decoded['conversationId'] is int) &&
           decoded['requestId'] is String &&
           decoded['toolId'] is String &&
           decoded['capabilityId'] is String &&
