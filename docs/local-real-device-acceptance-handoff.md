@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **本轮运行时代码基线 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f；五层运行时集成点 45144f6c3d140d259ac51f8cfbb886c19c10e0a3；Core-3 旧包装 API 退役合并点 11ac0c5918e5c25754b44e71f0ba48c82bea6669；Native 旧媒体 helper 清理合并点 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f** | 运行时代码基线 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f 的 Flutter tests run 45993861676、Flutter Quality Gate run 45993861611、Fork License run 45993861643 均 SUCCESS；Android arm64/JVM job 140491798547 与 140488210528 均 SUCCESS。Branch validation job 140488213234 为 SKIPPED，不计 PASS。执行前仍必须 git fetch origin 并重新读取届时最新 origin/master SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
+| 构建基线 | **最新 master 文档 HEAD `f34b12573e16a790032a1450afb245d67891d680`（PR #599，文档同步）；当前 Native/AI 运行时代码基线 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598）；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 最新 master 文档 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。运行时代码 SHA `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f` 的 Flutter tests run `45993861676`、Flutter Quality Gate run `45993861611`、Fork License run `45993861643`、Android arm64/JVM job `140491798547` / `140488210528` 均 SUCCESS。PR #599 仅变更文档，未改变应用运行时代码。执行前仍必须 git fetch origin 并重新读取届时最新 origin/master SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -681,3 +681,13 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不作为当前五层收尾门槛。
 - **唯一设备交接：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动交接单。专项折叠屏、品牌图标、AI TRACE、GPU/CPU 清单均为操作规范；所有本地进度、场景状态、证据目录、缺口和下一步统一回填该文件 §7.1。未实测仍为 MISSING / UNKNOWN / BLOCKED。
 - **执行要求：** 本文件和专项 runbook 均不预填设备结果。执行前必须同步最新 `origin/master`；本节 SHA 是本次运行时代码复核快照，不替代本地构建时的实时 HEAD。
+
+
+## 17. 2026-11-27 PR #599 合并后的最新主线同步与本地执行状态
+
+- **最新 master 文档 HEAD：** `f34b12573e16a790032a1450afb245d67891d680`（PR #599，文档同步）；PR #599 修改 7 份文档，没有修改 Dart、Kotlin、Native 运行时代码。
+- **本地构建应使用的运行时代码基线：** 当前运行时代码仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`，五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧 LocalAiService 包装 API 退役点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`。本地真正构建前必须再次 fetch 并核验最新 master、CI、版本、设备已安装版本和原签名，不得直接按历史 SHA 构建。
+- **最新 master 精确 SHA CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 是 SKIPPED，不计 PASS。
+- **本地当前进度：** 本轮云端未连接或操作 Find N2，也未产生设备 TRACE。§7.1 仍保留“待本地首次执行填写”；所有安装覆盖升级、GPU/CPU、多轮、媒体、Activity/process restart、授权/Keystore、AI 数据清理、折叠屏布局与真实 E4B 质量场景继续 MISSING / UNKNOWN / LOCAL ONLY。不得把 CI APK、Flutter widget、静态审计或 Android arm64/JVM 构建写成 Find N2 实机 PASS。
+- **唯一交接与进度回填：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接单；本地执行者在 §7.1 按实际日期、设备/Android/ColorOS、构建 SHA、APK version/versionCode、场景 ID、状态、证据目录、缺口和下一步追加记录。六份历史验收记录/专项 runbook 保留操作步骤，不建立平行进度表，不按 PR 或功能拆交接文件。
+- **Token 观测边界：** `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不可根据 `getTokenCount()` 或模型声明上下文长度自行推导 App 可用输入预算；设备校准前不增加自动压缩、推测阈值或 KV Cache 持久化。
