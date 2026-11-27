@@ -1,6 +1,7 @@
 package com.nihaisha.nihaisha_app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -15,7 +16,8 @@ class ConversationResetPolicyTest {
                 events += "conversation.create"
                 "new-conversation"
             },
-            closeEngine = { events += "engine.close" }
+            closeEngine = { events += "engine.close" },
+            onEngineReleaseFailure = { throw AssertionError("unexpected engine release failure") }
         )
 
         assertEquals("new-conversation", result)
@@ -27,6 +29,7 @@ class ConversationResetPolicyTest {
         val closeError = IllegalStateException("conversation close failed")
         val engineCloseError = IllegalStateException("engine close failed")
         val events = mutableListOf<String>()
+        val releaseFailures = mutableListOf<Throwable>()
 
         val thrown = try {
             ConversationResetPolicy.recreateConversation(
@@ -41,7 +44,8 @@ class ConversationResetPolicyTest {
                 closeEngine = {
                     events += "engine.close"
                     throw engineCloseError
-                }
+                },
+                onEngineReleaseFailure = { releaseFailures += it }
             )
             throw AssertionError("Expected reset to fail")
         } catch (error: IllegalStateException) {
@@ -50,6 +54,7 @@ class ConversationResetPolicyTest {
 
         assertSame(closeError, thrown.cause)
         assertEquals(listOf(engineCloseError), closeError.suppressed.toList())
+        assertEquals(listOf(engineCloseError), releaseFailures)
         assertEquals(listOf("conversation.close", "engine.close"), events)
     }
 
@@ -65,7 +70,8 @@ class ConversationResetPolicyTest {
                     events += "conversation.create"
                     throw createError
                 },
-                closeEngine = { events += "engine.close" }
+                closeEngine = { events += "engine.close" },
+                onEngineReleaseFailure = { throw AssertionError("unexpected engine release failure") }
             )
             throw AssertionError("Expected reset to fail")
         } catch (error: IllegalStateException) {
@@ -78,4 +84,25 @@ class ConversationResetPolicyTest {
             events
         )
     }
+    @Test
+    fun marksProcessUnavailableWhenEngineCloseThrowsNativeError() {
+        val conversationCloseError = IllegalStateException("conversation close failed")
+        val engineCloseError = UnsatisfiedLinkError("native engine close failed")
+        val processHealth = LocalAiProcessHealth()
+
+        val thrown = org.junit.Assert.assertThrows(IllegalStateException::class.java) {
+            ConversationResetPolicy.recreateConversation(
+                closePrevious = { throw conversationCloseError },
+                createNext = { "must-not-be-created" },
+                closeEngine = { throw engineCloseError },
+                onEngineReleaseFailure = processHealth::markReleaseFailure
+            )
+        }
+
+        assertSame(conversationCloseError, thrown.cause)
+        assertEquals(listOf(engineCloseError), conversationCloseError.suppressed.toList())
+        assertSame(engineCloseError, processHealth.releaseFailure())
+        assertFalse(processHealth.isAvailable())
+    }
+
 }
