@@ -1297,3 +1297,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored source-level static audit test that scans production Dart references to LocalAiService and guards against legacy unstructured text/media calls and duplicate raw MethodChannel ownership; it does not alter runtime behavior; ownership evidence required.
+
+Files:
+ test/local_ai_transcript_restore_architecture_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Native transcript restore architecture regression test. It ensures typed completed-turn hydration uses the existing Native history snapshot/rebuild path and does not invoke model generation or GPU/CPU first-turn fallback; ownership evidence required.
