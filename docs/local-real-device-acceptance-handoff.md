@@ -683,11 +683,11 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 - **执行要求：** 本文件和专项 runbook 均不预填设备结果。执行前必须同步最新 `origin/master`；本节 SHA 是本次运行时代码复核快照，不替代本地构建时的实时 HEAD。
 
 
-## 17. 2026-11-27 PR #599 合并后的最新主线同步与本地执行状态
+## 17. 2026-11-27 PR #599 合并后的历史主线/本地状态快照（PR #600 合并前）
 
-- **PR #600 文档同步点：** merge `57fbad291c3266966e4a8e477dee64e8b6b0b837`；PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 与 merge commit 的 Git tree 完全一致。PR #600 仅修改三份文档，没有修改 Dart、Kotlin、Native 运行时代码。
+- **当时 master 文档 HEAD：** `f34b12573e16a790032a1450afb245d67891d680`（PR #599 文档同步）。该 SHA 是本节的历史快照，不作为当前主线 HEAD；后续 PR #600 同步点见 §18。
 - **本地构建应使用的运行时代码基线：** 当前运行时代码仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`，五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧 LocalAiService 包装 API 退役点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`。本地真正构建前必须再次 fetch 并核验最新 master、CI、版本、设备已安装版本和原签名，不得直接按历史 SHA 构建。
-- **最新 master 精确 SHA CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 是 SKIPPED，不计 PASS。
+- **PR #599 文档基线的历史 CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 是 SKIPPED，不计 PASS。
 - **本地当前进度：** 本轮云端未连接或操作 Find N2，也未产生设备 TRACE。§7.1 仍保留“待本地首次执行填写”；所有安装覆盖升级、GPU/CPU、多轮、媒体、Activity/process restart、授权/Keystore、AI 数据清理、折叠屏布局与真实 E4B 质量场景继续 MISSING / UNKNOWN / LOCAL ONLY。不得把 CI APK、Flutter widget、静态审计或 Android arm64/JVM 构建写成 Find N2 实机 PASS。
 - **唯一交接与进度回填：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接单；本地执行者在 §7.1 按实际日期、设备/Android/ColorOS、构建 SHA、APK version/versionCode、场景 ID、状态、证据目录、缺口和下一步追加记录。六份历史验收记录/专项 runbook 保留操作步骤，不建立平行进度表，不按 PR 或功能拆交接文件。
 - **Token 观测边界：** `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不可根据 `getTokenCount()` 或模型声明上下文长度自行推导 App 可用输入预算；设备校准前不增加自动压缩、推测阈值或 KV Cache 持久化。
