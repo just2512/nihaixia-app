@@ -158,7 +158,9 @@ class AssistantMessageMetadata {
       return false;
     }
 
-    if (decoded is! Map || decoded['schemaVersion'] != 1) {
+    if (decoded is! Map ||
+        decoded['schemaVersion'] is! int ||
+        decoded['schemaVersion'] != 1) {
       return false;
     }
     if (!decoded.containsKey('replayable')) return true;

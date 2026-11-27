@@ -199,6 +199,14 @@ void main() {
       ),
       isFalse,
     );
+    // The schema contract requires an integer version, not a floating-point
+    // JSON number that happens to compare numerically equal to 1.
+    expect(
+      AssistantMessageMetadata.isReplayableForSessionMemory(
+        '{"schemaVersion":1.0,"replayable":true}',
+      ),
+      isFalse,
+    );
     expect(
       AssistantMessageMetadata.isReplayableForSessionMemory(
         'mode=consultation;selectedMode=learning;tool=yunqi',

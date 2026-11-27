@@ -5044,3 +5044,13 @@ PR HEAD 门禁证据：
 - **回归：** Kotlin policy tests 覆盖缺失字段、错误数值类型、负数、越界、用户输入元素类型、有效 Int/Long 与显式空 envelope；Flutter architecture test 断言 envelope 校验严格早于 Native 任务入队且没有静默默认值。
 - **范围：** 不改变 12 轮/10,000 UTF-16 transcript 上限、Native KV Cache、Token/input budget、业务逻辑、ai_access/AiModelAccessGate 或工作流 I；Find N2 实机验证继续 MISSING / UNKNOWN。
 - **验收：** 仅按本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 与 Fork License 结果记录状态；Branch validation 若为 SKIPPED 不计 PASS。
+
+
+## 138. 2026-11-28 Core-1 SessionState 拒绝非整数 metadata schemaVersion
+
+- **基线：** 从 PR #608 合并后的 `master@fad8b82ed25cabb23558377f2b5d7089f5f4cb14` 建立独立分支 `fix/session-memory-reject-noninteger-schema-version-20261128`；只收紧 SessionState memory admission 的 JSON schemaVersion 类型判断。
+- **缺陷：** `isReplayableForSessionMemory` 原先以 `decoded['schemaVersion'] != 1` 判断版本。Dart 数值比较中 JSON 浮点数 `1.0` 与整数 `1` 数值相等，因此类型错误的 schemaVersion 仍可通过 v1 准入；对 fail-closed 记忆边界而言，版本字段应按冻结的整数合同校验。
+- **修复：** 先要求 `schemaVersion is int`，再要求值严格为 `1`。未更改通用 metadata decoder，也未改变缺 metadata、有效 schema v1 或已识别 legacy 分号格式的兼容行为。
+- **回归：** metadata 单测明确拒绝 `{"schemaVersion":1.0,"replayable":true}`；Builder 回归确认该消息不会生成 USER_ORIGINAL fact，只增加 omitted 计数并把快照标记为 PARTIAL。
+- **范围：** 不改 SQLite schema、transcript 展示、Native prompt 协议、SessionState owner、Reasoning Ledger、Core-2 证据排序或 Core-3/4 执行路径；Find N2 设备项仍按 MISSING / UNKNOWN 记录。
+- **验收：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 和 Fork License 为准；Branch validation 若为 SKIPPED 不计 PASS。
