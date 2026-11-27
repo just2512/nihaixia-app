@@ -40,7 +40,9 @@ class ChangelogRepository {
       final jsonStr =
           await rootBundle.loadString('assets/data/changelog.json');
       final data = json.decode(jsonStr) as Map<String, dynamic>;
+      // 只有显式标记为本项目维护的记录才进入关于页；未标记的历史/外部版本不展示。
       final list = (data['changelog'] as List<dynamic>? ?? [])
+          .where((e) => e is Map<String, dynamic> && e['project_owned'] == true)
           .map((e) => ChangelogEntry.fromJson(e as Map<String, dynamic>))
           .toList();
       // 按版本号倒序（最新在前）；changelog.json 已是最新在前，这里再兜底排序。
