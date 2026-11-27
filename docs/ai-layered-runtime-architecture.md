@@ -364,7 +364,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.1 当前 master 源码映射与已确认断点（2026-11-27）
 
-**审计基线：** `master@45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。该基线已包含 PR #583 的 Core-3 图片/音频结构化推理接线，以及 PR #585 的 Core-5 20 轮记忆隔离与工具执行回流 E2E。以下按已合并代码描述生产能力；开放 PR、旧 SHA 的 CI 和本地未执行的 TRACE 不计为当前通过证据。
+**AI 运行时代码审计基线：** PR #585 合并点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，已包含 PR #583 的 Core-3 图片/音频结构化推理接线，以及 PR #585 的 Core-5 20 轮记忆隔离与工具执行回流 E2E。当前仓库 `master` 已推进至 `922285573e263ecd08a1eed535d4adec771a5979`（PR #586 仅涉及 About/项目更新说明与对应测试，没有改动五层 AI 运行时代码）；本节五层审计以 45144f6c 的 AI 运行时集成点为锚，并以当前 master 检查文档/兼容性。以下按已合并代码描述生产能力；开放 PR、旧 SHA 的 CI 和本地未执行的 TRACE 不计为当前通过证据。
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
@@ -543,7 +543,7 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 
 ### 5.5 当前主线运行态复核与 Native 辅助推理入口映射（2026-11-27）
 
-**复核基线：** `master@45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。本节是当前主线状态的权威快照；§5.1–§5.2 已同步更新为相同基线。历史章节保留当时决策和实现轨迹，不覆盖本节当前状态。当前产品范围仍是中医学习辅助工具，不建设临床 detector、不安排医学审核、不恢复已撤销的临床门禁。
+**AI 运行时复核基线：** PR #585 合并点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库主线 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`（PR #586）。本节是当前主线 AI 运行态快照；§5.1–§5.2 描述的 AI 生产入口以 45144f6c 为实现集成锚点，文档与全仓现状以当前 master 为准。历史章节保留当时决策和实现轨迹，不覆盖本节当前状态。当前产品范围仍是中医学习辅助工具，不建设临床 detector、不安排医学审核、不恢复已撤销的临床门禁。
 
 #### 当前五层状态
 
@@ -585,7 +585,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 
 #### 当前依赖顺序与放行结论
 
-1. Core-0：当前五层契约/源码映射与测试锚点已刷新到 master@45144f6c；代码入口和数据所有权保持可追溯。
+1. Core-0：当前五层契约/源码映射与测试锚点已刷新；AI 运行时实现锚点为 45144f6c，仓库文档/主线 HEAD 已推进到 92228557；代码入口和数据所有权保持可追溯。
 2. Core-1：推理请求账本、UNKNOWN/non-replayable 和 transcript 对账已合入；Token budget/KV Cache/自动压缩保持 UNKNOWN 或 NOT IMPLEMENTED。
 3. Core-2：当前约定范围已落地：五类结构化资料进入 CandidateEvidence，MultiSourceEvidencePipeline、SourceAwareLegacyEvidenceRanker、候选元数据快照与 RankedEvidenceSet 分层输出；后续维持黄金行为，不新增语义评分/Embedding/Reranker，也不把字符预算写成 Token budget。
 4. Core-3：五种主文本模式与图片/音频附件均通过结构化协议；旧辅助任务与兼容入口按各自边界治理。
