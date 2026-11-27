@@ -1,0 +1,573 @@
+import '../models/diagnosis.dart';
+import '../models/tcm_interview_task_state.dart';
+import '../models/zangfu_evidence.dart';
+import 'tcm_interview_adapter.dart';
+
+/// Deterministic TCM interview state machine hosted by the unified assistant
+/// timeline. It owns no widgets and never asks a language model to choose
+/// diagnostic answers or calculate a result.
+class TcmInterviewConversationController {
+  TcmInterviewConversationController({
+    String? defaultGender,
+    String? taskId,
+  })  : _adapter = TcmInterviewAdapter(defaultGender: defaultGender),
+        taskId = taskId ?? 'tcm-${DateTime.now().microsecondsSinceEpoch}';
+
+  TcmInterviewConversationController._restored({
+    required this._adapter,
+    required this.taskId,
+  });
+
+  static const _temperatureQuestion =
+      '你整体的寒热感觉是怎样的？（平时怕冷还是怕热，或者身体某处发凉、发热都可以告诉我）';
+  static const _tonguePulseQuestion = '接下来请告诉我你的舌象和脉象（可跳过）：';
+
+  static const Map<String, String> _zhenJiaClueKeys = {
+    '面红如妆（两颧鲜红界限分明）': 'face_flush',
+    '口渴欲冷饮，饮入即消': 'drink_immediate',
+    '渴不欲饮或喜热饮': 'thirst_no_drink',
+    '小便清长、尿色淡白': 'urine_clear',
+    '小便短赤、尿色深黄': 'urine_short',
+    '胸腹久按不蒸手（初按似热久按不热）': 'abdomen_cool',
+    '胸腹久按蒸蒸有热气（四肢虽寒）': 'abdomen_hot',
+    '大便稀溏无灼热': 'stool_loose',
+    '大便硬结/肛门灼热': 'stool_burning',
+  };
+
+  final TcmInterviewAdapter _adapter;
+  final String taskId;
+  final List<TcmInterviewTaskMessage> _messages = [];
+  final List<String> _zhenJiaSelected = [];
+  final Map<String, String> _pendingConfirmedTenAnswers = {};
+
+  String _status = 'in_progress';
+  String? _pendingPromptId;
+  String? _pendingPromptText;
+  List<String> _pendingOptions = const [];
+  bool _meridianFollowupActive = false;
+  DiagnosisResult? _completedDiagnosis;
+
+  List<TcmInterviewTaskMessage> get messages =>
+      List.unmodifiable(_messages);
+  String? get pendingPromptId => _pendingPromptId;
+  String? get pendingPromptText => _pendingPromptText;
+  List<String> get pendingOptions => List.unmodifiable(_pendingOptions);
+  bool get isCompleted => _status == 'completed';
+  DiagnosisResult? get completedDiagnosis => _completedDiagnosis;
+  ZangFuEvidenceAssessment get currentZangFuEvidence =>
+      _adapter.buildZangFuEvidence();
+  bool get canAnswer => !isCompleted &&
+      _pendingPromptId != null &&
+      _pendingOptions.isNotEmpty;
+
+  /// Natural language may only map into one of the current single-choice
+  /// questions. Multi-select clues and tongue/pulse forms retain their
+  /// dedicated App controls.
+  bool get canAcceptNaturalLanguageAnswer =>
+      canAnswer &&
+      (_pendingPromptId == 'temperature' ||
+          _pendingPromptId!.startsWith('ten:') ||
+          _pendingPromptId!.startsWith('followup:'));
+
+  List<String> get tongueCoatingOptions => _adapter.tongueCoatingOptions;
+  List<String> get tongueShapeOptions => _adapter.tongueShapeOptions;
+  List<String> get pulseOptions => _adapter.pulseOptions;
+
+  /// Existing DiagnosticEngine questions/options, exposed as a bounded extraction schema.
+  List<Map<String, Object?>> get symptomQuestionSchema =>
+      _adapter.tenQuestionPrompts
+          .map((prompt) => <String, Object?>{
+                'id': prompt.id,
+                'question': prompt.question,
+                'options': prompt.options,
+              })
+          .toList(growable: false);
+
+  factory TcmInterviewConversationController.restore(
+    TcmInterviewTaskState state, {
+    String? defaultGender,
+  }) {
+    final controller = TcmInterviewConversationController._restored(
+      adapter: TcmInterviewAdapter(
+        snapshot: state.snapshot,
+        defaultGender: defaultGender,
+      ),
+      taskId: state.taskId,
+    );
+    controller._status = state.status;
+    controller._completedDiagnosis = state.completedDiagnosis;
+    controller._pendingPromptId = state.pendingPromptId;
+    controller._pendingPromptText = state.pendingPromptText;
+    controller._pendingOptions = List<String>.unmodifiable(state.pendingOptions);
+    controller._pendingConfirmedTenAnswers.addAll(state.pendingConfirmedTenAnswers);
+    controller._messages.addAll(state.transcript);
+    for (final entry in _zhenJiaClueKeys.entries) {
+      if (state.snapshot.answers['zhenjia_${entry.value}'] == true) {
+        controller._zhenJiaSelected.add(entry.key);
+      }
+    }
+    final pendingId = state.pendingPromptId;
+    if (pendingId != null && pendingId.startsWith('followup:')) {
+      final key = pendingId.substring('followup:'.length);
+      final isPulseOrCombined = controller._adapter.pulseTongueCrossChecks
+              .any((prompt) => prompt.id == key) ||
+          controller._adapter.requiredCombinedPatternChecks
+              .any((prompt) => prompt.id == key);
+      final meridian = controller._adapter.meridianDirection ?? '少阴';
+      controller._meridianFollowupActive = !isPulseOrCombined &&
+          controller._adapter.followUpPrompts(meridian)
+              .any((prompt) => prompt.id == key);
+    }
+    return controller;
+  }
+
+  /// Starts the deterministic question flow. Free-text context is preserved
+  /// as a user message only; it is never silently converted into engine keys.
+  void start({
+    String? initialUserMessage,
+    String? userContext,
+    Map<String, String> confirmedTenAnswers = const {},
+  }) {
+    if (_messages.isNotEmpty || _pendingPromptId != null) {
+      throw StateError('问诊任务已经启动');
+    }
+    final prompts = _adapter.tenQuestionPrompts;
+    final allowed = <String, Set<String>>{
+      for (final prompt in prompts) prompt.id: prompt.options.toSet(),
+    };
+    for (final entry in confirmedTenAnswers.entries) {
+      if (!allowed.containsKey(entry.key) || !allowed[entry.key]!.contains(entry.value)) {
+        throw ArgumentError.value(
+          entry.value,
+          entry.key,
+          '已确认候选不属于当前 DiagnosticEngine 题目/选项',
+        );
+      }
+    }
+    _pendingConfirmedTenAnswers.addAll(confirmedTenAnswers);
+    if (initialUserMessage != null && initialUserMessage.trim().isNotEmpty) {
+      _appendUser(initialUserMessage.trim());
+    }
+    if (userContext != null && userContext.trim().isNotEmpty) {
+      _appendUser('已核对的症状摘要（仅作对话上下文；只有逐项确认的候选才会映射到规则问项）：\n' + userContext.trim());
+    }
+    if (_pendingConfirmedTenAnswers.isNotEmpty) {
+      _appendUser('已逐项确认 ' + _pendingConfirmedTenAnswers.length.toString() + ' 条十问候选；只将这些选项提交给原规则问诊，其余信息继续追问。');
+    }
+    _appendAssistant(_adapter.initialGreeting);
+    _askTemperature();
+  }
+
+  /// Applies one visible option and advances the state machine.
+  ///
+  /// Tongue/pulse entry is a dialog action and must be completed with
+  /// [answerTonguePulse], not submitted as a text option.
+  void answerOption(String option) {
+    if (!canAnswer) throw StateError('当前没有可回答的问诊问题');
+    if (!_pendingOptions.contains(option)) {
+      throw ArgumentError.value(option, 'option', '不属于当前问诊选项');
+    }
+
+    final promptId = _pendingPromptId!;
+    if (promptId == 'temperature') {
+      final match = _adapter.temperatureOptions
+          .where((item) => item.label == option);
+      if (match.isEmpty) throw StateError('无法恢复当前寒热选项');
+      _appendUser(option);
+      _adapter.answerTemperature(match.first.key);
+      _askTonguePulse();
+      return;
+    }
+
+    if (promptId == 'tongue_pulse') {
+      if (option == '选择舌诊脉诊') {
+        throw StateError('舌诊脉诊必须通过结构化输入对话框提交');
+      }
+      if (option != '跳过，直接问诊') {
+        throw ArgumentError.value(option, 'option', '未知舌脉选项');
+      }
+      _appendUser('跳过舌诊脉诊');
+      _adapter.answerTonguePulse();
+      _askTenQuestion();
+      return;
+    }
+
+    if (promptId.startsWith('ten:')) {
+      final questionId = promptId.substring(4);
+      _appendUser(option);
+      _adapter.answerTenQuestion(questionId, option);
+      _askTenQuestion();
+      return;
+    }
+
+    if (promptId == 'zhenjia') {
+      if (_zhenJiaClueKeys.containsKey(option)) {
+        _appendUser(option);
+        _zhenJiaSelected.add(option);
+        _adapter.answerZhenJia(_zhenJiaClueKeys[option]!, option);
+        _askZhenJia();
+      } else if (option.startsWith('没有/跳过') ||
+          option.startsWith('完成鉴别')) {
+        _appendUser(_zhenJiaSelected.isEmpty
+            ? '跳过寒热真假鉴别'
+            : '寒热真假鉴别完成（${_zhenJiaSelected.length} 条）');
+        _continueAfterOptionalChecks();
+      } else {
+        throw ArgumentError.value(option, 'option', '未知寒热真假选项');
+      }
+      return;
+    }
+
+    if (promptId.startsWith('followup:')) {
+      final questionId = promptId.substring('followup:'.length);
+      _appendUser(option);
+      _adapter.answerFollowUp(questionId, option);
+      _continueAfterOptionalChecks();
+      return;
+    }
+
+    throw StateError('无法识别待回答问诊问题：$promptId');
+  }
+
+  /// Keeps a free-text answer in the task transcript without writing it to
+  /// DiagnosticEngine. It remains evidence/context only until the user chooses
+  /// one of the exact current App-provided options.
+  void recordNaturalLanguageInput(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前问诊步骤不接受自然语言候选');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 2000) {
+      throw ArgumentError.value(text, 'text', '问诊补充内容为空或过长');
+    }
+    _appendUser(normalized);
+  }
+
+  /// Adds an informational assistant line to the same durable interview
+  /// transcript. It does not alter the DiagnosticEngine snapshot or pending
+  /// question.
+  void addAssistantNotice(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 1000) {
+      throw ArgumentError.value(text, 'text', '问诊提示为空或过长');
+    }
+    _appendAssistant(normalized);
+  }
+
+  /// Adds a user-facing interpretation or clarification while keeping the
+  /// canonical App question and its option whitelist unchanged for Native
+  /// validation. The new visible assistant message becomes the only bubble
+  /// carrying the current option controls.
+  void appendPendingPromptNotice(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前没有可追问的单选问诊问题');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 300) {
+      throw ArgumentError.value(text, 'text', '问诊澄清内容为空或过长');
+    }
+    _clearPendingOptionMarkers();
+    _appendAssistant(normalized, hasPendingOptions: true);
+  }
+
+  /// Commits canonical tongue/pulse values from the structured selector.
+  void answerTonguePulse({
+    String? tongueCoating,
+    String? tongueShape,
+    String? primaryPulse,
+    String? secondaryPulse,
+  }) {
+    if (_pendingPromptId != 'tongue_pulse') {
+      throw StateError('当前不在舌诊脉诊步骤');
+    }
+    final label = StringBuffer('舌诊脉诊：');
+    if (tongueCoating != null) label.write('苔$tongueCoating ');
+    if (tongueShape != null) label.write('形$tongueShape ');
+    if (primaryPulse != null) label.write('脉$primaryPulse');
+    if (secondaryPulse != null) label.write('兼脉$secondaryPulse');
+    if (tongueCoating == null &&
+        tongueShape == null &&
+        primaryPulse == null &&
+        secondaryPulse == null) {
+      label.write('未选择');
+    }
+    _appendUser(label.toString());
+    _adapter.answerTonguePulse(
+      tongueCoating: tongueCoating,
+      tongueShape: tongueShape,
+      primaryPulse: primaryPulse,
+      secondaryPulse: secondaryPulse,
+    );
+    _askTenQuestion();
+  }
+
+  TcmInterviewTaskState createTaskState() => TcmInterviewTaskState(
+        taskId: taskId,
+        snapshot: _adapter.createSnapshot(),
+        status: _status,
+        pendingPromptId: _status == 'in_progress' ? _pendingPromptId : null,
+        pendingPromptText:
+            _status == 'in_progress' ? _pendingPromptText : null,
+        pendingOptions:
+            _status == 'in_progress' ? _pendingOptions : const [],
+        transcript: List.unmodifiable(_messages),
+        pendingConfirmedTenAnswers: Map.unmodifiable(_pendingConfirmedTenAnswers),
+        updatedAt: DateTime.now().toUtc(),
+        completedDiagnosis: _completedDiagnosis,
+      );
+
+  void _askTemperature() {
+    _setPrompt(
+      id: 'temperature',
+      text: _temperatureQuestion,
+      options: _adapter.temperatureOptions.map((item) => item.label).toList(),
+    );
+  }
+
+  void _askTonguePulse() {
+    _setPrompt(
+      id: 'tongue_pulse',
+      text: _tonguePulseQuestion,
+      options: const ['选择舌诊脉诊', '跳过，直接问诊'],
+    );
+  }
+
+  void _askTenQuestion() {
+    while (true) {
+      final questions = _adapter.tenQuestionPrompts;
+      final validIds = questions.map((question) => question.id).toSet();
+      _pendingConfirmedTenAnswers.removeWhere((id, _) => !validIds.contains(id));
+      final index = _adapter.questionIndex;
+      if (index >= questions.length) {
+        _afterTenQuestions();
+        return;
+      }
+      final question = questions[index];
+      final confirmedAnswer = _pendingConfirmedTenAnswers.remove(question.id);
+      if (confirmedAnswer != null) {
+        _appendUser('已确认自述对应问项「' + question.question + '」：' + confirmedAnswer);
+        _adapter.answerTenQuestion(question.id, confirmedAnswer);
+        continue;
+      }
+      _setPrompt(
+        id: 'ten:' + question.id,
+        text: question.question,
+        options: question.options,
+      );
+      return;
+    }
+  }
+
+  void _afterTenQuestions() {
+    if (_adapter.healthyBaselineOk) {
+      // 与 chat_screen 老入口文案对齐：健康基线全部达标 = 倪师定义的"正常人"，
+      // 无异常证可辨，按设计不进入辨证。列出六条明细让结果可核对、可理解。
+      _completeWithText(
+        '恭喜，你符合倪师六条健康基线，是正常人\n\n'
+        '达标项：\n'
+        '• 一觉到天亮，中间不醒\n'
+        '• 晨起正常排便，成形\n'
+        '• 小便淡黄，一天 5-7 次\n'
+        '• 手脚温热\n'
+        '• 有胃口，食之有味\n'
+        '• 早起床精神好\n\n'
+        '全部达标说明身体没有需要辨证处理的异常信号，因此本轮不输出六经证型；'
+        '这不是检查 omission，而是"无证可辨"的正常结局。\n\n'
+        '继续保持：不熬夜、忌生冷、七分饱、顺应时辰。'
+        '如有持续不适或新发症状，建议接受正规医疗评估。',
+      );
+      return;
+    }
+    _askZhenJia();
+  }
+
+  void _askZhenJia() {
+    const prompt =
+        '进阶鉴别（选填）：请逐条勾选符合你的「寒热真假」线索（可多选），'
+        '选完点「完成」；没有特殊线索直接点「跳过」。';
+    final remaining = _zhenJiaClueKeys.keys
+        .where((label) => !_zhenJiaSelected.contains(label))
+        .toList(growable: false);
+    _setPrompt(
+      id: 'zhenjia',
+      text: prompt,
+      options: [
+        ...remaining,
+        _zhenJiaSelected.isEmpty
+            ? '没有/跳过'
+            : '完成鉴别（已选 ${_zhenJiaSelected.length} 条）',
+      ],
+    );
+  }
+
+  void _continueAfterOptionalChecks() {
+    final pulseQuestions = _adapter.pulseTongueCrossChecks;
+    if (pulseQuestions.isNotEmpty) {
+      _askFollowUp(pulseQuestions.first);
+      return;
+    }
+
+    final combinedQuestions = _adapter.requiredCombinedPatternChecks;
+    if (combinedQuestions.isNotEmpty) {
+      _appendAssistant('合病候选条件还缺少必要证据，先核对：');
+      _askFollowUp(combinedQuestions.first);
+      return;
+    }
+
+    final meridian = _adapter.meridianDirection ?? '少阴';
+    final unresolvedMeridianQuestions = _adapter
+        .followUpPrompts(meridian)
+        .where((prompt) =>
+            !_adapter.createSnapshot().answers.containsKey(prompt.id))
+        .toList(growable: false);
+    if (_meridianFollowupActive) {
+      if (unresolvedMeridianQuestions.isNotEmpty) {
+        _askFollowUp(unresolvedMeridianQuestions.first);
+        return;
+      }
+      _meridianFollowupActive = false;
+      final result = _adapter.diagnose();
+      if (result != null) {
+        _completeWithDiagnosis(result);
+      } else {
+        _completeWithText(
+          '当前问诊信息仍不足以形成可复核的辨证结果。\n'
+          '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\n\n'
+          '建议补充四诊信息，并由执业中医师面诊核实。',
+        );
+      }
+      return;
+    }
+
+    final result = _adapter.diagnose();
+    if (result != null) {
+      _completeWithDiagnosis(result);
+      return;
+    }
+
+    if (unresolvedMeridianQuestions.isNotEmpty) {
+      _meridianFollowupActive = true;
+      _appendAssistant('还需要补充少量信息，才能完成规则核对：');
+      _askFollowUp(unresolvedMeridianQuestions.first);
+      return;
+    }
+
+    _completeWithText(
+      '当前问诊信息仍不足以形成可复核的辨证结果。\n'
+      '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\n\n'
+      '建议补充四诊信息，并由执业中医师面诊核实。',
+    );
+  }
+
+  void _askFollowUp(TcmInterviewPrompt prompt) {
+    _setPrompt(
+      id: 'followup:${prompt.id}',
+      text: prompt.question,
+      options: prompt.options,
+    );
+  }
+
+  void _completeWithDiagnosis(DiagnosisResult result) {
+    _completedDiagnosis = result;
+    final lines = <String>[
+      '辨证结果',
+      '【六经】${result.displayMeridian}',
+      if (result.isCombined) '【合病】${result.meridian}与${result.combinedMeridian}同病',
+      '【证型】${result.pattern}',
+      if (result.formula.isNotEmpty) '【方剂】${result.formula}',
+      if (result.recommendedFormulas.length > 1)
+        '【并列方剂】${result.recommendedFormulas.join('、')}',
+      '',
+      result.patternDetail,
+      '',
+      result.explanation,
+    ];
+    if (result.pulseTongueContradiction != null) {
+      lines.add('\n脉舌交叉核验：${result.pulseTongueContradiction}');
+    }
+    final assessment = result.pulseTongueAssessment;
+    if (assessment != null) {
+      lines.add('\n脉舌证据状态：${assessment.status}');
+      if (assessment.supportingEvidence.isNotEmpty) {
+        lines.add('支持：${assessment.supportingEvidence.join('、')}');
+      }
+      if (assessment.contradictingEvidence.isNotEmpty) {
+        lines.add('冲突：${assessment.contradictingEvidence.join('、')}');
+      }
+      if (assessment.missingEvidence.isNotEmpty) {
+        lines.add('缺失：${assessment.missingEvidence.join('、')}');
+      }
+    }
+    if (result.recommendConsult || result.formula.isEmpty) {
+      lines.insert(1, '【状态】证据不足，不自动推荐方剂');
+      lines.add('\n请由执业中医师结合四诊信息面诊核实，不要根据本结果自行用药。');
+    } else {
+      lines.add('\n本结果是规则引擎对已录入信息的整理，不替代执业中医师诊断和处方。');
+    }
+
+    final evidence = _adapter.buildZangFuEvidence();
+    if (evidence.hasAnsweredEvidence) {
+      lines.add('\n脏腑证据（原始问答）');
+      for (final record in evidence.records) {
+        final answer = record.answerText;
+        if (answer != null) {
+          lines.add('${record.questionLabel}：$answer');
+        }
+      }
+      lines.add('脏腑归属：MISSING（没有经过逐条核验的问项—脏腑来源映射）；不输出脏腑诊断。');
+    }
+    _completeWithText(lines.join('\n'));
+  }
+
+  void _completeWithText(String text) {
+    _clearPendingOptionMarkers();
+    _status = 'completed';
+    _pendingPromptId = null;
+    _pendingPromptText = null;
+    _pendingOptions = const [];
+    _appendAssistant(text, isResult: true);
+  }
+
+  void _setPrompt({
+    required String id,
+    required String text,
+    required List<String> options,
+  }) {
+    _clearPendingOptionMarkers();
+    _status = 'in_progress';
+    _pendingPromptId = id;
+    _pendingPromptText = text;
+    _pendingOptions = List.unmodifiable(options);
+    _appendAssistant(text, hasPendingOptions: true);
+  }
+
+  void _clearPendingOptionMarkers() {
+    for (var index = 0; index < _messages.length; index++) {
+      final message = _messages[index];
+      if (!message.isUser && message.hasPendingOptions) {
+        _messages[index] = TcmInterviewTaskMessage(
+          text: message.text,
+          isUser: false,
+          isResult: message.isResult,
+        );
+      }
+    }
+  }
+
+  void _appendAssistant(
+    String text, {
+    bool isResult = false,
+    bool hasPendingOptions = false,
+  }) {
+    _messages.add(TcmInterviewTaskMessage(
+      text: text,
+      isUser: false,
+      isResult: isResult,
+      hasPendingOptions: hasPendingOptions,
+    ));
+  }
+
+  void _appendUser(String text) {
+    _messages.add(TcmInterviewTaskMessage(text: text, isUser: true));
+  }
+}

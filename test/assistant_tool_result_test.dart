@@ -1,0 +1,159 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
+
+void main() {
+  test('typed tool result preserves fields and marks missing values explicitly', () {
+    const result = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {
+        '推算日期': '2026-11-06',
+        '司天': '少阳相火',
+        '岁运病候': '',
+      },
+      disclaimer: '仅供理论学习。',
+      sourceIds: ['local-engine:yunqi'],
+      arguments: {'date': '2026-11-06'},
+    );
+
+    final text = result.toConversationText();
+    expect(text, contains('工具：五运六气推算'));
+    expect(text, contains('执行状态：SUCCEEDED'));
+    expect(text, contains('执行参数：date=2026-11-06'));
+    expect(text, contains('推算日期：2026-11-06'));
+    expect(text, contains('岁运病候：MISSING'));
+    expect(text, contains('来源标识：local-engine:yunqi'));
+    expect(text, contains('说明：仅供理论学习。'));
+    expect(result.validateFor('yunqi'), isEmpty);
+    expect(result.validateFor('ziwei'), isNotEmpty);
+  });
+  test('工具结果参数必须与实际执行参数一致', () {
+    const matching = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      arguments: {'date': '2026-11-07'},
+    );
+    expect(
+      matching.validateArgumentsMatch(const {'date': '2026-11-07'}),
+      isEmpty,
+    );
+    expect(
+      matching.validateArgumentsMatch(const {'date': '2026-11-06'}),
+      isNotEmpty,
+    );
+    expect(
+      matching.validateArgumentsMatch(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }),
+      isNotEmpty,
+    );
+
+    const legacy = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'结果': '旧页面返回'},
+    );
+    expect(legacy.validateArgumentsMatch(const {'date': '2026-11-07'}), isNotEmpty);
+    final normalizedLegacy =
+        legacy.withArguments(const {'date': '2026-11-07'});
+    expect(normalizedLegacy.arguments, isEmpty);
+    expect(normalizedLegacy.status, AssistantToolExecutionStatus.unknown);
+    expect(normalizedLegacy.statusLabel, 'UNKNOWN');
+    expect(
+      normalizedLegacy.validateArgumentsMatch(const {'date': '2026-11-07'}),
+      contains('工具结果缺少可验证的实际执行参数'),
+    );
+
+    const partial = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      arguments: {'date': '2026-11-07'},
+    );
+    expect(
+      partial.withArguments(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }).validateArgumentsMatch(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }),
+      isNotEmpty,
+    );
+  });
+
+  test('typed tool result carries source identifiers into the conversation', () {
+    const result = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      values: {'命宫': '寅宫'},
+      sourceIds: ['ziwei-engine:local-rules:v1'],
+    );
+    expect(result.validateFor('ziwei'), isEmpty);
+    expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
+  });
+
+  test('成功工具结果必须带有实际业务来源，页面路由不能冒充来源', () {
+    const missing = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'司天': '少阳相火'},
+      arguments: {'date': '2026-11-06'},
+    );
+    expect(
+      missing.validateFor('yunqi'),
+      contains('成功的工具结果缺少可验证的业务来源或引擎标识'),
+    );
+
+    const pageRouteOnly = AssistantToolResult(
+      toolId: 'yijing',
+      title: '易经起卦结果',
+      values: {'卦象': '乾为天'},
+      sourceIds: ['local-page-tool:yijing'],
+    );
+    expect(
+      pageRouteOnly.validateFor('yijing'),
+      contains('页面路由标识不能作为业务结果来源'),
+    );
+  });
+
+  test('来源标识和参数名称不得为空白', () {
+    const invalid = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      sourceIds: [''],
+      arguments: {' ': '2026-11-07'},
+    );
+    final errors = invalid.validateFor('yunqi');
+    expect(errors, contains('工具结果包含空来源标识'));
+    expect(errors, contains('工具结果包含空参数名称'));
+  });
+
+  test('显式取消与无返回值必须使用不同的终态', () {
+    const cancelled = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      status: AssistantToolExecutionStatus.cancelled,
+      values: const {},
+    );
+    expect(cancelled.statusLabel, 'CANCELLED');
+    expect(cancelled.toConversationText(), contains('执行状态：CANCELLED'));
+    expect(cancelled.validateFor('ziwei'), isEmpty);
+  });
+
+  test('无返回值的工具调用必须标记 NO_RESULT 而不是成功', () {
+    const result = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      status: AssistantToolExecutionStatus.noResult,
+      values: {'返回内容': 'MISSING'},
+      disclaimer: '无法区分取消与旧页面未回传。',
+    );
+    expect(result.validateFor('ziwei'), isEmpty);
+    expect(result.toConversationText(), contains('执行状态：NO_RESULT'));
+  });
+
+}

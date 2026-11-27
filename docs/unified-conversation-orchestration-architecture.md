@@ -1,0 +1,179 @@
+# 统一对话主入口与本地 AI 调度架构
+
+状态：架构基线 + 分阶段实施记录（见文末）；尚未达到完整统一调度验收。目标设备：OPPO Find N2 内外屏；Android 本地推理优先。
+
+## 产品结论
+
+应用应只有一个主对话入口。用户在同一个输入框中可以问诊、学习中医知识、调用五运六气/紫微/八字/易经/子午流注等工具。AI 根据当前任务切换“问诊助手、学习助手、工具助手”的职责，不是三个独立聊天页面。用户可把工具助手显示为“玄学大师”，但界面必须标明民俗文化参考，不暗示超自然能力。
+
+统一入口不等于把业务逻辑写进一个巨大 ChatScreen。采用稳定对话壳层、调度器、领域适配器和受控工具注册表。
+
+## 架构
+
+```text
+UnifiedConversationScreen
+ ├─ ConversationShell：消息时间线、输入、附件、任务状态
+ ├─ ConversationOrchestrator：意图识别、澄清、任务路由、上下文管理
+ │   ├─ TcmInterviewAdapter：现有确定性 DiagnosticEngine
+ │   ├─ KnowledgeLearningAdapter：本地知识检索
+ │   └─ ToolExecutionAdapter：现有排盘/推算/计算器
+ ├─ LocalAiService：本地模型推理
+ ├─ KnowledgeGateway：统一知识库接口
+ ├─ AppToolRegistry：工具白名单、参数 schema、权限和执行器
+ └─ ConversationRepository：会话、任务状态、调用记录
+```
+
+UI 不直接调用引擎、数据库或排盘服务。Orchestrator 只负责选能力，不计算证候或命盘。模型只能提出结构化意图和参数草案；Dart 层校验、授权、执行。工具返回结构化结果及来源，模型只能解释，不能改写计算结果。
+
+## 调度协议
+
+每轮输入顺序：
+1. 延续当前任务状态；短追问不应重新分类。
+2. 识别用户明确的切换/结束命令。
+3. 确定性规则先识别明确工具名、动作词和参数格式。
+4. 模糊输入才调用本地模型分类，输出受 schema 约束的候选意图。
+5. 存在歧义时先澄清，不猜测；健康描述与知识学习不清晰时问用户是分析自身情况还是学习概念。
+6. 参数校验与权限闸：只读知识检索可直接执行；排盘个人资料、保存、导出、删除等先预览并确认。
+7. 调用领域 adapter；执行失败必须回报失败，不得生成假结果。
+8. 结果回传时间线，包含数据、来源、缺失字段和限制。
+9. 保存会话任务状态，确保跨模式切换可恢复。
+
+意图结构建议：`intent`（tcm_interview / knowledge_learning / tool_execution / general_chat / clarify）、`task`、`parameters`、`missing_parameters`、`requires_confirmation`、`route_reason`。不用模型概率分数作为界面决策依据；缺参追问，冲突拒绝执行。
+
+## 三种职责
+
+### 问诊助手
+- 唯一辨证计算来源是现有 DiagnosticEngine。
+- AI 把自然语言整理为症状草稿、追问缺项、解释结果。
+- 用户确认前，模型提取内容不得写入引擎快照。
+- 不允许模型自行给证型、方剂、剂量或覆盖引擎结果。
+- 红旗症状优先提示及时线下/急诊评估；不以 AI 替代临床诊疗。
+
+### 学习助手
+- 检索方剂、本草、穴位、经典条文、医案、讲义。
+- 明确区分原文、版本、注释、现代解释和倪师讲授观点。
+- 每条结果携带 repository、recordId、章节/条文、版本和片段定位；出处缺失标记 MISSING。
+- 本地未命中就明确告知，不把模型记忆伪装成库内资料。
+
+### 工具助手
+- 复用现有五运六气、紫微、八字、易经、子午流注等引擎。
+- 模型负责识别任务、收集参数、展示参数预览和解释结果；计算由原有 Dart 引擎完成。
+- 日期、时区、出生地、历法、性别等必要参数缺失时先追问。
+- 保存命盘、收藏、删除等写操作必须显式确认。
+
+## 本地知识库接入
+
+第一阶段不引入云 API、向量数据库或在线 embedding。KnowledgeGateway 先包装已有 FormulaRepository、HerbRepository、AcupunctureRepository、AcupointRepository、Neijing/Guji/Shanghan/Jingui 数据、MedicalCase 数据和工具说明。
+
+检索顺序：精确 ID/标题/别名 → 规范化关键词倒排索引 → 标题/正文/方名/证候/出处字段检索 → 截取短片段和来源元数据交给本地模型。后续若性能不足再评估 SQLite FTS/BM25；只有真机测试证明必要才考虑本地向量检索。知识检索不能修改辨证规则状态。
+
+## 工具注册协议
+
+每个工具定义 id、用途、领域、参数 schema、必填项/枚举/范围、参数预览、只读/写入属性、是否涉及个人信息、执行函数、结果 schema、来源版本和旧页面兼容路由。首批端到端接入五运六气与八字或紫微中的一个；通过后再迁移其他工具。禁止模型自由调用任意 Dart 方法。
+
+## 单一对话界面与双屏
+
+- 外屏：单列消息流，任务结果卡可折叠，输入框固定底部，设置可从 AppBar 菜单进入。
+- 内屏/横屏：会话列表、对话流、任务详情/证据面板分区显示；宽度不足自动退化为单列。
+- 消息、问诊证据、知识引用、排盘结果在同一时间线上；复杂内容展开面板，返回后恢复滚动位置和任务状态。
+- 按可用窗口宽度、分区和键盘 inset 布局，不以固定像素宽度为唯一依据。
+- 模式是任务状态，不是三个 Tab 或三套会话。
+
+## 设置和一级导航
+
+建议一级入口：统一对话（默认首页）、知识、工具、收藏/历史、设置。设置独立于问诊，包含模型管理、隐私、主题、字号、默认问诊偏好、数据管理、更新和关于。工具目录继续保留传统入口，作为统一对话调度失败时的可用退路。
+
+## 实施顺序
+
+A. 完成当前合病矩阵、调用链、脉舌交叉验证验收。
+B. 脏腑证据层：独立结构和证据展示，不输出自动脏腑诊断。
+C. 经典条文/医案来源核验，缺失出处标 MISSING。
+D. 先建立 ConversationOrchestrator、ConversationRepository、ToolRegistry、KnowledgeGateway 的纯 Dart 层及测试。
+E. 把 LocalAiInterviewScreen 的模型管理、文本/语音/图片能力迁入统一对话壳层；保留原生推理桥和附件生命周期。
+F. 把 ChatScreen 确定性问诊封装为 TcmInterviewAdapter；AI 症状草稿经用户确认后才进入引擎。
+G. 接知识检索及首批两个工具，完成缺参追问、参数确认、执行、结果解释、恢复测试。
+H. HomeScreen 收敛为统一对话主入口，设置升级为一级入口；旧页面先保留兼容路由。
+I. 真机验收 Find N2 外屏、内屏、横屏、键盘弹起、窗口尺寸变化。
+
+每阶段必须交付代码、测试、UI 回归、CI 记录和迁移说明。不能以入口接通代替端到端验收。
+
+## 关键验收场景
+
+- “我最近口苦、睡不好”进入问诊追问，不直接生成诊断。
+- “少阳病怎么理解”进入知识学习，不启动个人问诊。
+- “算今年五运六气”补齐必要参数并预览后调用计算器。
+- “排八字”追问出生时间、地点、时区、历法口径，确认后执行。
+- 问诊中问“太阳病是什么”可切换知识解释，返回后问诊状态不丢失。
+- 学习中提出自身症状可创建独立问诊任务，不污染学习上下文。
+- 模型未安装、推理失败、输出非法结构或未知工具 ID 时，拒绝执行且传统功能可用。
+- 外屏可单手完成输入和追问；内屏不出现大面积无效留白。
+- 设置从任何主页面都能进入。
+
+## 优势与风险
+
+优势：统一入口降低功能割裂；确定性引擎继续承担业务计算；新工具通过注册 adapter 扩展；离线检索与本地推理保留隐私边界。
+
+风险：E4B 在 Find N2 的延迟、上下文长度和结构化输出稳定性必须真机实测；工具白名单和权限闸不可省略；单一时间线可能信息过载，需用任务卡和可折叠面板控制；迁移必须保留两个旧问诊页面的附件、快照和模型生命周期行为。
+
+明确不做：云端模型依赖、模型任意执行代码、模型覆盖诊断/排盘结果、把民俗推演当作事实预测、第一阶段就引入向量数据库、阶段 A 未验收前重写诊断核心。
+
+
+## 2026-11-04 当前落地状态校正
+
+本节以 `master` 当前代码为准；上文“实施顺序”是目标架构，不代表所有阶段已经完成。
+
+| 能力 | 当前实现 | 状态 / 边界 |
+|---|---|---|
+| 统一主入口 | Home 默认进入 `LocalAiInterviewScreen`，本地 AI 对话作为主要入口 | 已落地基础入口 |
+| 角色调度 | `AssistantConversationOrchestrator` + `AssistantToolRouter` 按明确关键词、动作和参数识别问诊/学习/工具任务 | 部分落地；目前主要是确定性规则路由，不是本地模型的结构化意图分类 |
+| 模糊意图 | 现有路由会请求澄清或回退到学习模式 | 仍需完善；尚未实现架构基线中定义的 `general_chat / clarify` 统一 schema 和本地模型分类器 |
+| 规则问诊 | 仍由 `DiagnosticEngine` 负责确定性计算；主对话可以调用“继续规则辨证” | 部分融合；ChatScreen 仍是独立的规则问诊子流程，结束后将问诊摘要回传主对话，不是同一条消息时间线中的原生交互卡 |
+| 本地知识检索 | `AssistantKnowledgeContextBuilder` 连接 App 本地公式、本草、穴位及经典文本索引；问诊与学习模式按各自上下文构建检索片段 | 已有本地检索桥；完整医案逐案检索、来源定位和统一知识引用协议仍待完成 |
+| 工具调用 | 主对话通过工具路由打开现有五运六气、排盘、计算等页面，并接收返回结果 | 已有可用入口；尚未把所有工具改造成统一的参数 schema / 预览 / 执行 / 结构化结果 adapter |
+| 会话持久化 | SQLite 会话和消息表；可恢复历史会话继续对话；历史列表支持多选删除 | 已落地代码与存储测试；仍需补充完整 UI 级“打开历史后继续发送”的回归测试 |
+| 设置入口 | 设置已成为首页一级导航项，不再隐藏在问诊内部 | 已落地 |
+| Find N2 布局 | 根导航按窗口宽度适配；完全展开时使用全窗口内容；角色/工具控制改为窄屏可换行；折叠屏 Widget 测试覆盖 hinge/fold | 自动化布局覆盖已增加；真机日志与截图仍为 `MISSING` |
+
+### 当前对话持久化行为
+
+- 每个会话具有稳定 conversation ID，用户消息、助手回复、工具请求和工具返回摘要写入数据库。
+- 历史列表点击会话后恢复原有消息，再次发送时继续写入同一 conversation ID；新建会话才分配新 ID。
+- 历史列表支持进入多选模式、选择多个会话并确认删除；数据库层同步删除会话及其消息。
+- 当前工具子流程返回的完整规则问诊记录以摘要消息形式回到主对话；尚未逐轮把规则问诊中的每一问/每一答拆成主时间线消息。
+
+### 下一步不可跳过的架构工作
+
+1. 把问诊引擎封装成 `TcmInterviewAdapter`，由主对话时间线呈现逐轮追问和选项，不再打开独立 ChatScreen。
+2. 为模型输出定义严格 JSON intent schema；本地模型只负责意图/参数草案，Dart 层校验并决定路由，模型不得自行调用任意方法。
+3. 为每个工具注册参数 schema、缺参提示、执行器、结果 schema、来源和写操作确认规则。
+4. 扩展 `KnowledgeGateway`，纳入医案逐案原始来源、经典版本/条文定位和工具说明；未命中必须返回 MISSING，不用模型记忆补造。
+5. 增加历史恢复端到端测试：打开旧会话、恢复问诊任务状态、继续发送、切换工具后返回、批量删除及重启后持久化。
+6. Find N2 实机采集 `[WINDOW_METRICS]`、截图和系统版本；自动化 Widget 测试不能代替实机验收。
+
+**当前结论：** 主入口、基本调度、工具跳转、本地知识检索、历史持久化和一级设置入口已经有代码实现；统一时间线中的规则问诊、模型辅助意图分类、全量工具 schema 和实机折叠屏验收仍未完成。不得把“一个主入口”误报为“完整统一调度已完成”。
+
+
+## 2026-11-04 实施状态补记
+
+- 脏腑证据构建器现在也保留脉舌冲突追问（饮水、小便、四肢温度、表里证据、少阳/太阴线索）的原始答案和 `follow_up:<key>` 来源标识；这些回答此前只参与交叉验证计算，没有进入独立证据记录。
+- 对明确“无方剂”或来源待核的合病关联，诊断结果为空方剂时，UI 不再用相似度/表格候选重新显示方剂；仅显示缺少可核验方剂来源的说明。一般证据不足场景仍保留带警示的参考提示。
+- 上述修改均需以最新 SHA 的 Flutter tests 与 Flutter Quality Gate 结果验收；历史绿色 CI 不自动覆盖新提交。
+
+
+## 2026-11-06 implementation status
+
+### Already present in the current code path
+
+- `LocalAiInterviewScreen` is the unified assistant entry used by the home experience. The orchestrator classifies consultation, learning, tools and metaphysics intents.
+- Structured TCM interview is now an inline conversation task in this screen, backed by `TcmInterviewConversationController`; task snapshots are stored through `AssistantConversationStore.saveTcmInterviewTaskState`.
+- Selecting a history record restores both the message transcript and any pending structured-interview prompt/options. Continuing the interview writes subsequent messages and the updated task snapshot back to the selected conversation.
+- History supports multi-selection and deletion; normal conversation resume and pending tool-action restoration have widget tests.
+- Local knowledge retrieval is assembled into the context passed to the local model. This is retrieval/context injection, not unrestricted database access.
+
+### Still incomplete
+
+- `AssistantToolRouter` currently dispatches many calculators through their existing screen builders. Results can return to the conversation, but the calculation form itself is not yet an inline tool card in the same chat timeline.
+- Five-movement/six-qi, Ziwei and Bazi need calculation-service adapters with explicit input schemas, missing-parameter prompts, result payloads and provenance. The chat should orchestrate these adapters rather than navigate to independent tool pages.
+- Knowledge retrieval and tool execution are not yet one registry. A single capability registry is still required to declare searchable knowledge sources, executable tools, required parameters, safety constraints and result renderers.
+
+Do not mark the unified tool-dialog requirement complete until the calculator inputs and outputs are exercised without leaving the main conversation.
