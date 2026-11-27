@@ -394,11 +394,11 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | 顺序 | 层 | 当前主线状态 | 现有证据 | 尚未闭合 / 放行边界 |
 |---|---|---|---|---|
 | 1 | Core-0 契约与源码映射 | **DOC/CODE MAP 已完成** | §5.1–§5.5 已映射五层 DTO、数据所有权、Native 入口、失败语义和测试锚点 | 后续随主线变更维护映射；不再为已存在的类重复建第二套抽象 |
-| 2 | Core-1 会话记忆与 Native 多轮 | **云端代码/测试已落地；DEVICE UNKNOWN** | #565 dirty-KV flush；#575 持久化推理请求终态；#117/#119 原子 transcript 与 TRACE 分离；#120 Activity 资源串行释放；Native 12 轮/10,000 UTF-16 边界与恢复测试 | LiteRT KV Cache 不跨进程持久化；模型实际 Token/input budget、自动压缩、Find N2 GPU/CPU 连续推理、state:7、Activity/process restart 与三方历史一致性留给最终设备 TRACE |
+| 2 | Core-1 会话记忆与 Native 多轮 | **云端确定性记忆隔离已落地；设备观测仍 UNKNOWN；Token 预算未配置** | #565 dirty-KV flush；#575 持久化推理请求终态；#117/#119 原子 transcript 与 TRACE 分离；#120 Activity 资源串行释放；Native 12 轮/10,000 UTF-16 边界与恢复测试；`Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 只读观测 | LiteRT KV Cache 不跨进程持久化；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，尚无 App 可用输入 Token 预算或自动压缩；Find N2 GPU/CPU、多轮数值、state:7、Activity/process restart 与三方历史一致性留给最终设备 TRACE |
 | 3 | Core-2 知识召回与证据排序 | **当前约定范围已完成** | #527 RankedEvidenceSet；#568 五类结构化资料 CandidateEvidence；metadata-only candidateSnapshot、query/retrieval provenance、KEEP/DROP reason、strategy/version 和 6,500 UTF-16 呈现预算 | 保留 legacy query/matching/order/per-source caps 与 golden 行为；不将字符预算说成 Token，不扩展语义评分/Embedding/Reranker 作为虚假收尾条件 |
-| 4 | Core-3 语言推理 | **五种主文本模式与媒体附件已接入结构化协议** | #573 five modes；#583 image/audio structured Request/Response 与 Native finalize/reject；旧 sendImage/sendAudio fail-closed | 辅助 intent/Bazi/symptom/问项保留窄 DTO；旧 sendMessage 兼容入口需按全仓真实调用者审计后决定退役，不能无证据删除 |
-| 5 | Core-4 业务执行 | **四项能力的受限生产闭环已接通** | #561/#566：ACTION_PROPOSAL → App 显式确认 → durable one-shot claim → Dispatcher → terminal read-back → 新 requestId/空 allowlist 只读解释 | 仅四项 plan-eligible capability；不等于 18 个 Headless executor 全部可被模型调用。逐项版本化 schema、副作用、幂等、取消/超时和补偿策略仍需按能力审计 |
-| 6 | Core-5 端到端验收 | **云端 20 轮 + 单次工具闭环 PASS；设备部分 UNKNOWN** | #585 widget E2E 覆盖 20 轮、owner/requestId、记忆隔离、一次确认动作与只读结果回流；精确 PR HEAD Flutter/Android arm64/JVM/Fork License PASS | fake executor 不证明 E4B Native/GPU/CPU 或真机进程恢复；设备实测统一放到所有云端改造/CI/文档收尾之后 |
+| 4 | Core-3 语言推理 | **主对话与媒体结构化协议已落地；旧自由文本入口退役** | #573 five modes；#583 image/audio structured Request/Response 与 Native finalize/reject；#594 删除旧 LocalAiService 包装 API，Native sendMessage/sendImage/sendAudio 均 fail-closed；全仓静态审计覆盖旧 Dart 调用，当前批次进一步删除两个无调用点的 Native 私有自由文本媒体 helper | resolveAssistantIntent、extractBaziSlots、extractSymptoms、understandTcmInterviewAnswer 继续使用各自窄 DTO；保留的旧 MethodChannel 名称只作拒绝兼容，不得触发模型；真实 E4B/Find N2 行为留给设备 TRACE |
+| 5 | Core-4 业务执行 | **四项受限能力闭环与能力级审计已完成当前云端范围** | #561/#566 闭环；#126 已逐项记录四项 capability 的输入 schema、数据来源、副作用、幂等/时间依赖与补偿适用性；显式确认、持久 one-shot claim、终态安全读回和 UNKNOWN 不重放均有回归 | 只开放 dosage、solar_terms、yuxiaji_omen、sanshan_lingqian；执行中通用取消/deadline 未实现，但四项当前为纯计算或本地只读、没有外部业务写入，不作为本轮收尾阻塞；不扩权 |
+| 6 | Core-5 端到端验收 | **云端 20 轮 + 单次工具闭环 PASS；设备部分 UNKNOWN** | #585 widget E2E 覆盖 20 轮、owner/requestId、记忆隔离、一次确认动作与只读结果回流；PR #585 应用层 20 轮与单次工具闭环 E2E 已合并；本轮 PR #597 文档同步的精确 HEAD `6e69c907c7117bb859f37b4979394b07b388a571` Flutter 完整回归、Android arm64 验证 APK/JVM 与 Fork License 均 SUCCESS | fake executor 不证明 E4B Native/GPU/CPU 或真机进程恢复；设备实测统一放到所有云端改造/CI/文档收尾之后 |
 
 执行与集成要求：
 
@@ -574,7 +574,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 | `extractBaziSlots` | 工具参数缺失时的八字出生资料抽取 | 只允许 App 声明的缺失字段；模型必须提供原文 evidence；Dart Draft parser、字段白名单和工具参数 schema 再校验；缺失/不确定不得推断补齐 | Core-3 辅助槽位抽取；结果仅为候选输入 |
 | `extractSymptoms` | 问诊初始描述与“整理症状”入口 | 使用 App 当前问诊题目 schema；候选 answer 必须命中原选项并有用户原文证据；UI 提供核对/接受步骤 | Core-3 辅助症状草稿；不是诊断或规则结果 |
 | `understandTcmInterviewAnswer` | 结构化问诊逐题自然语言补充 | 当前 questionId、题目、合法选项及用户原文上下文是固定输入；Dart 校验 answer 必须逐字匹配选项且 evidence 存在于用户文字，歧义转澄清 | Core-3 辅助单题理解；不决定下一题、不诊断、不代替用户确认 |
-| `sendImage` / `sendAudio` | 旧 Native 自由文本附件兼容入口 | 统一返回 STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED，不启动模型推理；生产助手发送路径不再调用这两个旧入口 | 已 fail-closed；保留旧入口仅为兼容，不可用于新代码 |
+| `sendImage` / `sendAudio` | 旧 MethodChannel 名称的 fail-closed 拒绝路由 | 分别固定返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`；不进入 `runAiTask`，不调用模型；原私有自由文本媒体 helper 已删除 | 只保留拒绝兼容，不是推理入口；生产附件必须使用结构化协议 |
 | `restoreConversation` | 历史会话恢复与模型上下文重建 | Native 接收按完整轮次裁剪后的 transcript，reset 后重建 Conversation；提示将历史视为记录而非新指令；只确认 restored，不作为一轮成功答案写入 | Core-1 transcript 到 Native context 的重建入口；不是 KV Cache 持久化 |
 | `sendMessage` | 已无生产 Dart 调用方；Native `MainActivity` 仅保留旧 MethodChannel 名称作拒绝兼容 | 固定返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`；不调用 `runAiTask`、不触发模型、不写入成功 transcript；旧 Service 包装 API 已删除，静态审计测试防止旧调用回归 | 已 fail-closed；不是可执行推理入口，不得恢复为自由文本旁路 |
 | `finalizeReasoningTurn` / `rejectReasoningTurn` | 所有结构化主对话回合，包括媒体附件 | 按 conversationId + requestId 确认 pending turn；finalize 才提交成功答案，reject 清除未验证原始 JSON | Core-1/Core-3 双阶段提交边界，不是独立推理入口 |
