@@ -399,3 +399,34 @@ Headless Dispatcher 注册的 18 个本地确定性执行器与 AI ACTION_PROPOS
 4. SQLite transcript 恢复和 Ledger 状态恢复已有自动化覆盖，但真实 Android Activity/process restart、设备实机多轮与 TRACE 仍为 LOCAL ONLY / NOT RUN。
 
 **当前判定：** Core-4 的四项受限 ACTION_PROPOSAL 生产闭环已接通；“18 项 Headless executor 全部可被模型计划调用”并未实现，也不应作为目标。本节不授权扩大能力白名单，不修改任何业务计算或问诊规则。
+
+---
+
+## 14. 2026-11-27 当前四项 ACTION_PROPOSAL 能力逐项副作用与执行语义
+
+> 本节只审计当前 plan-eligible 白名单，不把 Headless Dispatcher 的注册目录等同于 AI 可调用范围，也不扩大能力授权。
+
+### 14.1 能力级合同矩阵
+
+| capability / toolId | 输入合同 | 数据来源与执行 | 副作用 | 幂等性 / 可重复性 |
+|---|---|---|---|---|
+| `dosage` | `value`、`unit` 和可选 `standard`；调用前由专项参数校验器拒绝非法/未声明字段 | 本地 `DosageConversionService.convert` 与既有换算因子 | 纯换算；不写业务数据库/文件、不访问网络 | 确定性；同一规范化参数得到相同换算结果 |
+| `solar_terms` | 仅允许 `term`；显式值必须是 24 节气之一；省略时查询当前节气 | 本地节气服务/知识资产 | 只读，无业务持久化写入 | 显式 term 可重复；缺省查询由当前时间决定，节气交界前后结果可变 |
+| `yuxiaji_omen` | 空参数对象；不允许模型传入时辰/签次 | App 本地时钟映射时辰后读取本地时辰条目 | 只读，无业务持久化写入 | 同一 invocation 由 one-shot claim 阻止重复执行；新 invocation 按当时本地时辰重新取值 |
+| `sanshan_lingqian` | 空参数对象；不允许模型指定签号、序号或随机种子 | App 本地从 92 签目录随机抽取 | 不写业务状态或外部系统 | 结果本身随机；同一 invocation 不重放，新的显式确认 invocation 代表新的抽取 |
+
+### 14.2 跨能力执行状态与风险边界
+
+- `ReasoningActionProposalGate` 当前仅允许上述四项 plan-eligible capability。其他已注册 Headless executor、Page-only 页面和问诊内联能力仍不在模型提案白名单中。
+- 用户显式确认后，`AssistantToolExecutionCoordinator` 在 dispatch 前先持久化 one-shot claim；完成后写入 `AssistantToolInvocationLedger`，并重新读取终态。结果必须通过 toolId、参数和 sourceIds 校验，只有已验证 SUCCEEDED 结果可回流至新的只读解释请求。
+- 同一 invocation 的重复 claim、冲突、未决或结果状态不确定时不再次 dispatch；异常、进程中断、终态无法读回等状态保留 UNKNOWN，禁止自动重放。Ledger 是执行审计记录，不是四项工具的业务状态写入。
+- **取消：** 用户确认前取消不会写 claim/dispatch。确认并开始执行后，当前四项 executor 与 coordinator 没有通用的协作取消令牌；不能将 UI 关闭/取消描述为已经停止底层执行。
+- **超时：** 当前没有统一的执行 deadline。单纯给 Future 套 `Future.timeout` 只终止等待，不会取消底层 Future；在没有 executor 级取消保证时，不能用它把仍可能执行中的状态宣告为 CANCELLED。
+- **补偿：** 四项当前能力均为纯计算或本地只读，不存在业务持久化写入/外部系统变更，补偿不适用。未来加入写库、网络提交、文件修改或外部设备动作时，必须先定义幂等键、协作取消、超时后的 UNKNOWN 策略与补偿/对账方式，再考虑进入 allowlist。
+- **测试证据：** Gate、Coordinator、Invocation Ledger 和四项 executor 的既有测试覆盖参数约束、用户确认、claim-before-dispatch、重复不重放、UNKNOWN 和结果来源校验。Widget/单测证明应用层合同，不证明 Find N2 Native 进程恢复或任何外部副作用已实测。
+- **本节没有授权：** 不扩大四项能力白名单、不把全部 18 个已注册 executor 变成模型可用能力、不新增通用执行平台、不修改业务计算与问诊规则。
+
+### 14.3 判定
+
+当前 Core-4 四项受限能力的参数入口、执行来源、业务副作用、幂等/时间依赖和补偿适用性已逐项记录。执行中协作取消与统一 deadline 当前**未实现**；由于这四项没有外部业务写入，不将其人为包装成已支持取消。任何未来具有真实副作用的能力必须先补齐自己的执行状态合同，UNKNOWN 仍不得自动重放。
+
