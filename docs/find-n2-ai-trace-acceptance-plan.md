@@ -1,10 +1,11 @@
 # Find N2 AI 多轮 / 附件 / 恢复 / 清除真机验收方案
 
-> 本文是执行方案，不是 PASS 报告。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。
+> 本文仅是 Native 多轮、附件、恢复、清除和 TRACE 的专项操作规范，不是独立设备交接单或进度表。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。
+> 唯一活动设备交接和进度入口：`docs/local-real-device-acceptance-handoff.md`。当前运行时代码基线、CI、APK 元数据、场景状态、证据目录、缺口与下一步均以该文件 §1、§7、§7.1 为准；本文件中的旧 SHA 仅作历史记录。
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：应用运行时代码 `master @ 1717b36ba0c2359a1526e22d23f75befacd80628`（最近一次运行时代码变更为 PR #455；后续 PR #460/#461/#462 仅更新文档与台账；App 版本 `2.0.0+8048`）。当前 master 文档基线为 `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`。PR #127 早期引入的仅调试构建可见 TRACE 开关及本文件所列 TRACE 事件契约继续适用；本文是本地执行方案，不是设备 PASS 报告。Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测；不能以 PR HEAD 或 CI 结果替代实机验收。
+当前执行版本以 `docs/local-real-device-acceptance-handoff.md` §1 中的最新 master 和运行时代码复核快照为准；本文件不维护第二份基线。PR #127 引入的 Debug-only TRACE 控件与本文件所列事件契约继续作为操作步骤参考。Find N2 端到端 TRACE 必须按实际本地 Release/Debug APK SHA、模型版本和 Native 实际 backend 在实体设备实测，不能以 PR HEAD 或 CI 结果替代实机验收。
 
 当前已有实现：
 
@@ -181,7 +182,7 @@ output/find-n2-ai/<run-id>/
 6. 对每一项分别记录 PASS / FAIL / BLOCKED / UNKNOWN；未执行场景保持 MISSING。此项必须由 Find N2 实测，本段是操作规范而非完成报告。
 
 
-## 10. 本地 Release 签名 Debug TRACE 构建（master d61ada6）
+## 10. 本地 Release 签名 Debug TRACE 构建
 
 为在 Find N2 上启用仅 Debug 可见的 TRACE 控件，同时避免 Debug 签名与设备当前 Release 安装包不一致，最新 master 增加本地显式构建属性：
 
