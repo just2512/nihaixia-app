@@ -315,51 +315,13 @@ class MainActivity : FlutterActivity() {
                         "音频必须通过结构化附件推理协议发送",
                         null
                     )
-                    "sendMessage" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val text = call.argument<String>("text")?.trim().orEmpty()
-                        val context = call.argument<String>("context")?.trim().orEmpty()
-                        val sessionStateContext =
-                            call.argument<String>("session_state_context")?.trim().orEmpty()
-                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
-                            call.argument<Any>("session_state_conversation_id")
-                        )
-                        if (text.isEmpty()) {
-                            result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
-                        } else {
-                            val validatedSessionState = try {
-                                LocalAiSessionStateInputPolicy.validate(
-                                    sessionStateContext,
-                                    sessionStateConversationId,
-                                    conversationId
-                                )
-                            } catch (error: IllegalArgumentException) {
-                                result.error(
-                                    "SESSION_STATE_INVALID",
-                                    error.message,
-                                    null
-                                )
-                                return@handler
-                            }
-                            runAiTask(result, requiresAiAccess = true) {
-                                LocalAiTraceIdPolicy.attach(
-                                    sendLocalMessage(
-                                        conversationId,
-                                        text,
-                                        context,
-                                        validatedSessionState
-                                    ),
-                                    traceId
-                                )
-                            }
-                        }
-                    }
+                    // Legacy unstructured text requests are closed. All production turns
+                    // must use the validated ReasoningRequest/Response v1 protocol.
+                    "sendMessage" -> result.error(
+                        "STRUCTURED_REASONING_PROTOCOL_REQUIRED",
+                        "文本请求必须通过结构化推理协议发送",
+                        null
+                    )
                     "sendReasoningMessage" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
                         val requestId = call.argument<String>("request_id")?.trim().orEmpty()
@@ -1364,41 +1326,6 @@ class MainActivity : FlutterActivity() {
         return mapOf("rejected" to true, "request_id" to requestId)
     }
 
-    private fun sendLocalMessage(
-        conversationId: Long,
-        text: String,
-        context: String = "",
-        sessionStateContext: String = ""
-    ): Map<String, Any> {
-        ensureActiveConversation(conversationId)
-        refreshConversationBeforeNextTurnIfNeeded()
-        // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
-        // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
-        // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
-        // 与各角色 context 中给出。
-        val preparedMessage = LocalAiMessageInputPolicy.prepare(
-            text,
-            context,
-            sessionStateContext
-        )
-        val hasEphemeralContext =
-            preparedMessage.modelInput != preparedMessage.historyUserText
-        if (hasEphemeralContext) conversationContainsEphemeralContext = true
-        val reply = try {
-            sendWithFirstTurnGpuFallback(preparedMessage.historyUserText) { conversation ->
-                conversation.sendMessage(preparedMessage.modelInput).toString()
-            }
-        } catch (error: Exception) {
-            if (hasEphemeralContext) conversationContainsEphemeralContext = true
-            throw error
-        }
-        // A backend fallback may have rebuilt the Conversation mid-call. Mark
-        // again after success because the retry's new KV cache now holds this payload.
-        if (hasEphemeralContext) conversationContainsEphemeralContext = true
-        // Only literal user text is eligible for symptom extraction.
-        recordUserInput("用户文字自述", text)
-        return mapOf("reply" to reply, "backend" to activeBackend)
-    }
 
     private fun sendWithFirstTurnGpuFallback(
         userMessageText: String,
