@@ -136,11 +136,9 @@ void main() {
       for (final method in modelInferenceRoutes) {
         final routeStart = native.indexOf('"$method" ->');
         expect(routeStart, greaterThanOrEqualTo(0), reason: method);
-        final nextRoute = RegExp(r'\n\s{20}"[A-Za-z]').firstMatch(
-          native,
-          routeStart + 1,
-        );
-        final routeEnd = nextRoute?.start ?? native.length;
+        final routeSeparator = String.fromCharCode(10) + '                    "';
+        final nextRoute = native.indexOf(routeSeparator, routeStart + 1);
+        final routeEnd = nextRoute < 0 ? native.length : nextRoute;
         final route = native.substring(routeStart, routeEnd);
         expect(
           route,
