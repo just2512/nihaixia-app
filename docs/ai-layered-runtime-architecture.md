@@ -646,3 +646,9 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - **云端回归：** Dart 覆盖最近 12 轮、UTF-16 边界、完整轮次与未完成 user-only 分离；Kotlin 覆盖 typed role 恢复、代理字符与 Native 字符/轮次边界；静态架构回归确认 `restoreLocalConversation` 不调用模型或 GPU/CPU fallback。
 - **单次 Native 会话创建：** 历史恢复把已校验快照传入 `resetLocalConversation`；旧 Conversation 关闭后先恢复成功历史，再通过 `createConversationWithHistory` 一次性创建目标 Conversation，不创建空会话中间态。若关闭/创建失败，Engine 按既有 fail-closed 规则释放，并保留已校验快照供后续模型重载恢复；普通 reset 仍创建空会话。
 - **设备边界：** 真实 E4B 生成、GPU/CPU 多轮、state:7、Activity/process restart 和 SQLite/UI/Native transcript 一致性仍需 Find N2 TRACE；CI 不替代设备 PASS。
+
+### 5.11 Core-1 Native 历史恢复载荷采用必需字段校验
+
+- `restoreConversation` 的 MethodChannel envelope 必须同时包含 `completed_turns`、`omitted_completed_turn_count`、`omitted_completed_character_count` 和 `userMessages`；缺失字段、非整数计数、负数/越界计数或非字符串用户输入均在会话重置之前以 `INVALID_RESTORE_PAYLOAD` 拒绝。
+- 不再用空列表或 0 替代缺失字段，避免协议错配被误当成有效空历史而清空当前 Native 会话。合法空 `completed_turns` 仍允许用于没有完整成功轮次、仅有未完成输入的历史；独立用户输入投影仍按既有 60 条入口和 `UserReportedInputPolicy` 字符/条目边界治理。
+- 不改变历史裁剪、12 轮/10,000 UTF-16 上限、Token 预算状态、会话所有权、模型推理和业务逻辑。
