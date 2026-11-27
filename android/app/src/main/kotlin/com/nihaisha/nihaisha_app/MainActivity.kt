@@ -446,19 +446,30 @@ class MainActivity : FlutterActivity() {
                     }
                     "restoreConversation" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val completedTurns = call.argument<List<*>>("completed_turns") ?: emptyList<Any>()
-                        val omittedCompletedTurnCount =
-                            (call.argument<Number>("omitted_completed_turn_count") ?: 0).toInt()
-                        val omittedCompletedCharacterCount =
-                            (call.argument<Number>("omitted_completed_character_count") ?: 0).toLong()
-                        val userMessages = call.argument<List<String>>("userMessages") ?: emptyList()
+                        val restorePayload = try {
+                            LocalAiTranscriptRestorePolicy.parsePayload(
+                                rawCompletedTurns = call.argument<Any>("completed_turns"),
+                                rawOmittedCompletedTurnCount =
+                                    call.argument<Any>("omitted_completed_turn_count"),
+                                rawOmittedCompletedCharacterCount =
+                                    call.argument<Any>("omitted_completed_character_count"),
+                                rawUserMessages = call.argument<Any>("userMessages")
+                            )
+                        } catch (error: IllegalArgumentException) {
+                            result.error(
+                                "INVALID_RESTORE_PAYLOAD",
+                                error.message ?: "历史恢复载荷缺失或类型无效",
+                                null
+                            )
+                            return@handler
+                        }
                         runAiTask(result, requiresAiAccess = true) {
                             restoreLocalConversation(
                                 conversationId,
-                                completedTurns,
-                                omittedCompletedTurnCount,
-                                omittedCompletedCharacterCount,
-                                userMessages
+                                restorePayload.completedTurns,
+                                restorePayload.omittedCompletedTurnCount,
+                                restorePayload.omittedCompletedCharacterCount,
+                                restorePayload.userMessages
                             )
                         }
                     }
