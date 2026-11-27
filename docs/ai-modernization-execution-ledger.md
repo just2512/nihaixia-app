@@ -4872,3 +4872,15 @@ PR HEAD 门禁证据：
 - 不新增 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker。
 - 不改变产品定位：研纪是学习辅助工具，不是医疗诊断软件。
 - 不把设备未执行、CI 未查到或全仓调用者未盘清的项目标为 PASS。
+
+## 124. 2026-11-27 Core-3 旧 LocalAiService 调用点扫描门禁
+
+- **基线：** 从合并后的 master `62f18244220c073bcd5f7bf802ca48d7714f7aeb` 建立独立分支 `core3-legacy-callsite-audit-20261127`。
+- **已核对：** `LocalAiInterviewScreen` 的生产发送路径仅调用结构化主文本/附件入口；`LocalAiService` 仍保留旧 `sendMessage*` 文本包装方法及 `sendImage*` / `sendAudio*` 兼容包装；Native `sendMessage` handler 仍活动，媒体 handler fail-closed。
+- **代码切片：** 新增 `test/local_ai_service_legacy_entrypoint_audit_test.dart`，递归扫描 `lib/**/*.dart` 中显式引用 LocalAiService 的文件，检查旧方法调用；同时检查是否有其他生产文件直接创建原始 local AI MethodChannel。
+- **验收边界：** 测试结果待本分支精确 HEAD CI。测试通过后，才把 Dart 生产调用点审计记为 PASS；它不自动证明外部反射/动态调用不存在，也不代表可直接删除兼容方法。旧 service 合同测试仍单独存在，Native handler 尚未删除。
+- **后续最小切片：** 若扫描与 CI 均通过，再按实际测试合同逐项评估退役活动的旧 `sendMessage` 路径；fail-closed 的旧媒体入口是否继续保留作为兼容拒绝边界，单独决定。不得把几个 API 混成一次批量删除。
+- **Core-1：** transcript/reasoning request 状态在云端已有 policy 与单元测试；12 轮、10,000 UTF-16 是字符边界，不代表 token budget。Native KV Cache 持久化、模型实际 token/input budget、GPU/CPU 与进程恢复继续保持 UNKNOWN/NOT IMPLEMENTED 或 DEVICE ONLY，不伪报完成。
+- **Core-4：** 保持四项 plan-eligible capability 白名单不变；逐项复核 schema、副作用、幂等、取消/超时与 UNKNOWN，不扩权。
+- **Core-5：** 现有 20 轮 + 一次工具执行 fake-executor/widget 回归继续作为云端应用层证据，不等价于真实 E4B Native / Find N2。
+- **范围冻结：** 工作流 I Markdown 书架继续 DEFERRED；不增加 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker；产品定位继续是学习辅助工具。
