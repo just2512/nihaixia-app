@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库 master 核验点 `922285573e263ecd08a1eed535d4adec771a5979`** | 45144f6c 标识 #583/#585 的 AI 运行时集成；92228557 是本交接单更新时的最新仓库 HEAD（含 #586 About/项目更新说明调整）。本地执行前必须重新 `git fetch origin` 并以实际最新 `origin/master` SHA 构建，记录构建 SHA 和 CI，不能固定沿用这两个历史锚点 |
+| 构建基线 | **AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库 master 核验点 `d024d2e277e80bb960b8986dc01d860eb7f7670f`** | 45144f6c 标识 #583/#585 的 AI 运行时集成；92228557 是本交接单更新时的最新仓库 HEAD（含 #586 About/项目更新说明调整）。本地执行前必须重新 `git fetch origin` 并以实际最新 `origin/master` SHA 构建，记录构建 SHA 和 CI，不能固定沿用这两个历史锚点 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -285,7 +285,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
 
- - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档更新时的仓库 HEAD：** `master @ 922285573e263ecd08a1eed535d4adec771a5979`（PR #586，About/项目更新说明调整；未改 AI 运行时代码）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
+ - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档更新时的仓库 HEAD：** `master @ d024d2e277e80bb960b8986dc01d860eb7f7670f`（PR #586，About/项目更新说明调整；未改 AI 运行时代码）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
 - **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
 - **Core 云端实现记录：**
   - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
@@ -338,11 +338,26 @@ test-results.md 每一行按以下格式填写：
 - **MISSING**：未执行或证据不足；
 - **NOT_APPLICABLE / NOT_ENABLED**：当前设备/系统/产品范围不适用，必须注明理由。
 
-### 7.1 禁止进入证据包的资料
+#### 7.1 本地执行进度汇报要求
+
+本文件是唯一设备交接单。本地执行者必须直接更新本文件，不得为每个 PR、每个设备场景或每次修复另建交接文档。每次开始、阶段完成、遇到阻塞和结束时，均在本节追加一条进度记录，并同步更新 §7 的 `test-results.md` 对应场景状态。
+
+| 日期/时间 | 本地执行者 | 本轮构建 SHA / APK 版本 | 已完成场景（ID） | 当前状态（PASS/FAIL/BLOCKED/MISSING） | 证据目录/文件 | 缺口或阻塞原因 | 下一步 |
+|---|---|---|---|---|---|---|---|
+| 待本地首次执行填写 | 本地执行者填写 | 必须填写实际值，不沿用文档历史 SHA | 待填写 | MISSING | `output/find-n2/<run-id>/` | 尚未开始本地实机验收 | 从 §1、§3 开始，先核对设备旧包、签名和最新 master |
+
+**更新规则：**
+- 不覆盖旧记录；每次进度更新追加新行，保留时间顺序。
+- 只填写真实执行结果；未执行写 MISSING，缺少依赖写 BLOCKED，证据不完整写 UNKNOWN，不得预填 PASS。
+- 每次更新必须包含实际 master SHA、APK version/versionCode、设备型号、证据目录和明确缺口；失败场景同时记录最小复现与脱敏日志。
+- 若本地发现需要远端修复的问题，在本表记录缺陷 ID/复现与证据，并在同一仓库的执行台账登记；远端修复完成后仍回到本文件更新原场景，不新建第二份交接单。
+- 远端每次合并影响设备验收的改动，只更新本文件对应章节和当前基线，不新增 PR 专属交接文件。
+
+### 7.2 禁止进入证据包的资料
 
 不得提交 keystore、key.properties、密码、完整 Token、私钥、公钥原始材料、真实病历/症状、个人出生资料、梦境隐私、prompt/response 原文、图片/音频正文、模型二进制、附件绝对路径或账号身份信息。截图和日志先脱敏。
 
-### 7.2 整体验收完成定义
+### 7.3 整体验收完成定义
 
 只有本轮约定范围内所有必测场景均为 PASS，且 APK 身份/签名/升级、数据保留、外屏/内屏/半折叠、品牌、E4B 实际 backend、授权门禁与恢复证据齐全，才能记录 **LOCAL DEVICE ACCEPTANCE = PASS**。
 
@@ -371,7 +386,7 @@ test-results.md 每一行按以下格式填写：
  
 ### 14.1 云端合并与构建前置条件
  
-  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。交接文档更新时仓库 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`（#586）；#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
+  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。交接文档更新时仓库 HEAD 为 `d024d2e277e80bb960b8986dc01d860eb7f7670f`（#586）；#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
 2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
 3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
 4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
@@ -583,3 +598,42 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 截图和录屏只包含 App 合成知识资料与 UI，不得包含真实患者资料、个人病历、身份资料或私密信息。不得把原始数据库、模型文件、签名密钥、`key.properties`、prompt/response 正文或附件复制进仓库、PR、Issue 或 CI artifact；TRACE 只保留项目允许的脱敏元数据。完整交接回报按 §7.1–§7.2 与本文件 §14.4 执行。
 
 **合并说明：** 原 PR #560 的独立文件 `docs/find-n2-ai-knowledge-interpretation-local-handoff.md` 不作为第二交接入口；其 P0/P1 设备场景已并入本节，实际执行只更新本文件定义的统一证据目录和记录表。
+
+
+---
+
+## 16. 当前统一交接入口与文档归并核对（2026-11-27）
+
+### 16.1 唯一交接入口
+
+- 唯一设备执行与进度汇报入口：`docs/local-real-device-acceptance-handoff.md`（即本文件）。
+- 本地所有实机任务、修复回归和阶段进度均在本文件 §7.1 追加记录；场景逐项状态仍写入本文件定义的 `output/find-n2/<run-id>/test-results.md`。
+- 不再新增 PR 专属交接单、GPU/CPU 专属交接单、媒体专属交接单、知识解读专属交接单或授权专属交接单。新场景并入本文件相应章节。
+
+### 16.2 已核对的历史交接路径
+
+| 历史路径 | 当前 master 核对结果 | 处理口径 |
+|---|---|---|
+| `docs/find-n2-e4b-local-handover.md` | 不存在（404） | 旧内容已并入本文件；不恢复独立入口 |
+| `docs/find-n2-ai-knowledge-interpretation-local-handoff.md` | 不存在（404） | P0/P1 场景已并入 §15；不恢复独立入口 |
+| `docs/local-device-acceptance-handoff-2026-11-24.md` | 不存在（404） | 不作为当前交接文件 |
+| PR #576 临时交接内容 | 已在本文件中保留对应场景与执行约束 | 只更新本文件，不另建临时文件 |
+
+### 16.3 配套规范与交接单的区别
+
+以下文件是专项操作规范或产品/架构规范，不是独立交接单，继续保留引用，不重复复制成多份进度文档：
+
+- `docs/local-android-release-checklist.md`
+- `docs/find-n2-real-device-acceptance.md`
+- `docs/local-ai-e4b.md`
+- `docs/find-n2-local-ai-acceptance-checklist.md`
+- `docs/find-n2-ai-trace-acceptance-plan.md`
+- `docs/yanji-visual-design-system.md`
+- `docs/brand-identity.md`
+- `docs/pro-edition-architecture-constraints.md`
+
+### 16.4 本轮执行状态
+
+- 远端：统一交接文档已补充当前 master 基线与本地进度回报规则；具体设备场景仍未执行。
+- 本地：`LOCAL ONLY / NOT RUN`；本文件 §7.1 首行待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。
+- 云端 CI：最近有明确终态的父基线 `922285573e263ecd08a1eed535d4adec771a5979` 的 Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS；当前文档同步提交 `d024d2e277e80bb960b8986dc01d860eb7f7670f` 的 post-merge CI 未取得可核验终态，记 UNKNOWN。
