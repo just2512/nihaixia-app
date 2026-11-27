@@ -37,11 +37,7 @@ void main() {
       'releaseModel',
       'clearRuntimeCache',
     };
-    const legacyFailClosed = {
-      'sendMessage': 'STRUCTURED_REASONING_PROTOCOL_REQUIRED',
-      'sendImage': 'STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED',
-      'sendAudio': 'STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED',
-    };
+    const legacyMediaClosed = {'sendImage', 'sendAudio'};
     for (var index = 0; index < branches.length; index++) {
       final match = branches[index];
       final name = match.group(1)!;
@@ -50,20 +46,18 @@ void main() {
           : handler.length;
       final body = handler.substring(match.start, end);
       if (maintenanceOnly.contains(name)) continue;
-      final failureCode = legacyFailClosed[name];
-      if (failureCode != null) {
-        // Retired unstructured endpoints must fail closed before inference.
-        // They do not call the model and therefore do not need the gate on
-        // this branch; the only path that may reach LiteRT is gated below.
+      if (legacyMediaClosed.contains(name)) {
+        // These compatibility endpoints must fail closed before any model
+        // inference. Only the new typed attachment entrypoint can reach AI.
         expect(
           body,
-          contains(failureCode),
-          reason: 'Legacy Native endpoint "$name" must fail closed',
+          contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'),
+          reason: 'Legacy Native media handler "$name" must fail closed',
         );
         expect(
           body,
           isNot(contains('runAiTask(')),
-          reason: 'Legacy Native endpoint "$name" must not call the model',
+          reason: 'Legacy Native media handler "$name" must not call the model',
         );
         continue;
       }
