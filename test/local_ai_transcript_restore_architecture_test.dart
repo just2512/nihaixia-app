@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Native transcript restore hydrates typed turns without model generation', () async {
+  test(
+    'Native transcript restore hydrates typed turns without model generation or an empty intermediate conversation',
+    () async {
     final source = await File(
       'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
     ).readAsString();
@@ -35,8 +37,18 @@ void main() {
       resetMethod,
       contains('restoredHistory: LocalAiConversationHistorySnapshot? = null'),
     );
-    expect(resetMethod, contains('conversationHistory.restore(restoredHistory)'));
-    expect(resetMethod, contains('createConversationWithHistory(engine)'));
+    final restoreHistory = resetMethod.indexOf(
+      'conversationHistory.restore(restoredHistory)',
+    );
+    final createWithHistory = resetMethod.indexOf(
+      'createConversationWithHistory(engine)',
+    );
+    expect(restoreHistory, greaterThanOrEqualTo(0));
+    expect(createWithHistory, greaterThan(restoreHistory));
+    expect(
+      'createConversationWithHistory(engine)'.allMatches(resetMethod),
+      hasLength(1),
+    );
     expect(resetMethod, contains('if (restoredHistory == null)'));
   });
 }
