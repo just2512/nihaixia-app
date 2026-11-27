@@ -182,7 +182,10 @@ class AssistantMessageMetadata {
       legacy[part.substring(0, separator).trim()] =
           part.substring(separator + 1).trim();
     }
-    if (!legacy.keys.any(recognizedKeys.contains)) return false;
+    if (legacy.containsKey('schemaVersion') ||
+        !legacy.keys.any(recognizedKeys.contains)) {
+      return false;
+    }
 
     final replayable = legacy['replayable'];
     if (replayable == null) return true;
