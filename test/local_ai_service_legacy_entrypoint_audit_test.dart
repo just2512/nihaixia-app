@@ -63,6 +63,38 @@ void main() {
       final native = await File(
         'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
       ).readAsString();
+
+      // MainActivity is the sole Kotlin owner of LiteRT Engine/Conversation
+      // operations. A future helper in another file must be explicitly
+      // reviewed and added to the architecture map before it can call the API.
+      final nativeModelApi = RegExp(
+        r'\\.(?:sendMessage|createConversation|generateResponse)\\s*\\(',
+      );
+      final nativeModelImports = RegExp(
+        r'^import com\\.google\\.ai\\.edge\\.litertlm',
+        multiLine: true,
+      );
+      final unexpectedNativeModelCallSites = <String>[];
+      await for (final entity in Directory(
+        'android/app/src/main/kotlin',
+      ).list(recursive: true, followLinks: false)) {
+        if (entity is! File || !entity.path.endsWith('.kt')) continue;
+        final relativePath = entity.path.replaceAll('\\\\', '/');
+        if (relativePath ==
+            'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt') {
+          continue;
+        }
+        final source = await entity.readAsString();
+        if (nativeModelApi.hasMatch(source) || nativeModelImports.hasMatch(source)) {
+          unexpectedNativeModelCallSites.add(relativePath);
+        }
+      }
+      expect(
+        unexpectedNativeModelCallSites,
+        isEmpty,
+        reason: 'Native LiteRT Engine/Conversation calls must remain behind '
+            'the audited MainActivity access gate.',
+      );
       final legacyImageStart = native.indexOf('"sendImage" ->');
       final legacyAudioStart = native.indexOf('"sendAudio" ->', legacyImageStart);
       final legacyTextStart = native.indexOf('"sendMessage" ->', legacyAudioStart);
