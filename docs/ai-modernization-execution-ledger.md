@@ -4854,6 +4854,7 @@ PR HEAD 门禁证据：
 - `lib/services/local_ai_service.dart`：仍公开保留 `sendMessage`、`sendMessageWithTrace`、`sendMessageWithContext`、`sendMessageWithContextAndTrace`，以及旧 `sendImage` / `sendAudio` 包装方法。
 - `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt`：仍保留 Native `sendMessage` MethodChannel handler；Native `sendImage` / `sendAudio` 已 fail-closed，返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`。
 - 辅助任务 `resolveAssistantIntent`、`extractBaziSlots`、`extractSymptoms`、`understandTcmInterviewAnswer` 继续保持各自窄 DTO / 参数约束，不并入主聊天协议。
+- `test/local_ai_service_test.dart` 仍有旧 `sendMessage`、`sendImage`、`sendAudio` 包装方法的 MethodChannel 契约测试（包括错误回复与 trace echo）；这些是 Service API 合同测试，不证明生产页面仍调用旧入口，但删除包装方法前必须同步调整/移除相应测试并证明全仓没有其他调用者。
 - **审计结论：PARTIAL。** 已确认当前助手主屏不再走旧文本/媒体包装入口，但尚未形成全仓所有 Dart/Kotlin 调用者的完整清单；不能据单个页面未命中就删除公开 Service 方法或 Native `sendMessage` handler。旧媒体 Native handler 已关闭，后续只在确认没有兼容依赖后清理 Dart 包装层。
 
 ### 123.4 下一云端切片与验收顺序
