@@ -575,7 +575,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 | `extractSymptoms` | 问诊初始描述与“整理症状”入口 | 使用 App 当前问诊题目 schema；候选 answer 必须命中原选项并有用户原文证据；UI 提供核对/接受步骤 | Core-3 辅助症状草稿；不是诊断或规则结果 |
 | `understandTcmInterviewAnswer` | 结构化问诊逐题自然语言补充 | 当前 questionId、题目、合法选项及用户原文上下文是固定输入；Dart 校验 answer 必须逐字匹配选项且 evidence 存在于用户文字，歧义转澄清 | Core-3 辅助单题理解；不决定下一题、不诊断、不代替用户确认 |
 | `sendImage` / `sendAudio` | 旧 MethodChannel 名称的 fail-closed 拒绝路由 | 分别固定返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`；不进入 `runAiTask`，不调用模型；原私有自由文本媒体 helper 已删除 | 只保留拒绝兼容，不是推理入口；生产附件必须使用结构化协议 |
-| `restoreConversation` | 历史会话恢复与模型上下文重建 | Native 接收按完整轮次裁剪后的 transcript，reset 后重建 Conversation；提示将历史视为记录而非新指令；只确认 restored，不作为一轮成功答案写入 | Core-1 transcript 到 Native context 的重建入口；不是 KV Cache 持久化 |
+| `restoreConversation` | 历史会话恢复与模型上下文重建 | Flutter 按 UTF-16 10,000 字符及最近 12 个完整轮次裁剪；以 typed completed turns（user_text / assistant_text）和被省略的已完成轮次元数据传入 Native。Native 校验字段、surrogate、轮次数及字符边界，恢复 `LocalAiConversationHistorySnapshot` 后以 `ConversationConfig.initialMessages` 构建 USER/MODEL 角色消息；不触发模型推理、不生成合成恢复轮次。未完成 user-only 输入不计入 Native 成功轮次，但仍通过 `userMessages` 独立保留供症状整理 | Core-1 transcript 到 Native context 的确定性重建入口；不是 KV Cache 持久化 |
 | `sendMessage` | 已无生产 Dart 调用方；Native `MainActivity` 仅保留旧 MethodChannel 名称作拒绝兼容 | 固定返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`；不调用 `runAiTask`、不触发模型、不写入成功 transcript；旧 Service 包装 API 已删除，静态审计测试防止旧调用回归 | 已 fail-closed；不是可执行推理入口，不得恢复为自由文本旁路 |
 | `finalizeReasoningTurn` / `rejectReasoningTurn` | 所有结构化主对话回合，包括媒体附件 | 按 conversationId + requestId 确认 pending turn；finalize 才提交成功答案，reject 清除未验证原始 JSON | Core-1/Core-3 双阶段提交边界，不是独立推理入口 |
 
@@ -635,3 +635,13 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - **Core-1 Token 与设备边界：** `Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 仅提供只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。不把模型声明上限或当前 KV Cache token 数解释为 App 可用输入预算，不添加推测的阈值、输出预留、自动裁剪/压缩或 KV Cache 持久化。
 - **设备验收：** Find N2 GPU/CPU 长会话、state:7、真实 E4B 生成质量、图片/音频、多轮/Activity/process restart、SQLite/UI/Native transcript 一致性、覆盖升级、数据清理及 TRACE 均为 LOCAL ONLY / MISSING / UNKNOWN，必须在设备实测；云端 CI 不替代。
 - **优先级边界：** 工作流 H 的既定云端范围完成当前批次；工作流 I 用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED；不新增 Agent、服务、数据库、AI Gate、Embedding、向量数据库或 Reranker，不扩张四项 capability allowlist。
+
+
+### 5.10 2026-11-27 Core-1 Native 跨进程 transcript 恢复改为确定性角色重建
+
+- **缺陷：** 旧 `restoreLocalConversation` 将历史文本包成一条新的用户 prompt，再调用模型生成“上下文已载入”确认。这会额外运行一次推理，并把旧 user/assistant 角色边界压扁成一个合成 Native 成功轮次；Native 12 轮上限也可能被绕开。
+- **修复：** Flutter 按最近 12 个完整轮次和 10,000 UTF-16 code units 裁剪，并输出结构化 `completedTurns`、已完成轮次省略数及字符数。Native 校验字段、surrogate、轮次数与字符数，恢复 `LocalAiConversationHistorySnapshot` 后直接通过 `ConversationConfig.initialMessages` 重建角色序列。
+- **记忆边界：** 完整轮次保留原 user/assistant 角色；同一 user turn 下连续 assistant 消息合并到该轮 assistant 文本。assistant-only 欢迎/前导消息不伪装成用户轮次。未完成 user-only 消息不进入 Native 成功 transcript，也不计入已完成/已省略成功轮次数；原始用户文字仍通过独立 `userMessages` 保留，供症状整理使用。
+- **执行语义：** 恢复过程不调用 E4B、不触发 GPU/CPU fallback、不生成 synthetic assistant reply；Live KV Cache 仍不跨进程持久化。模型生成与工具执行的请求状态语义不变，UNKNOWN 仍不自动重放。
+- **云端回归：** Dart 覆盖最近 12 轮、UTF-16 边界、完整轮次与未完成 user-only 分离；Kotlin 覆盖 typed role 恢复、代理字符与 Native 字符/轮次边界；静态架构回归确认 `restoreLocalConversation` 不调用模型或 GPU/CPU fallback。
+- **设备边界：** 真实 E4B 生成、GPU/CPU 多轮、state:7、Activity/process restart 和 SQLite/UI/Native transcript 一致性仍需 Find N2 TRACE；CI 不替代设备 PASS。

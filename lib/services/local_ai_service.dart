@@ -723,14 +723,13 @@ class LocalAiService {
 
   Future<void> restoreConversation({
     required int conversationId,
-    required String transcript,
+    required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
   }) async {
-    final normalized = transcript.trim();
-    if (normalized.isEmpty) {
+    if (restore.transcript.trim().isEmpty) {
       throw const FormatException('历史对话为空，无法恢复');
     }
-    if (normalized.length >
+    if (restore.transcript.length >
         LocalAiTranscriptRestorePolicy.maxTranscriptCharacters) {
       throw const FormatException(
         '历史对话超出 Native 恢复预算；必须先按完整轮次裁剪',
@@ -740,7 +739,9 @@ class LocalAiService {
       'restoreConversation',
       {
         'conversation_id': _requireConversationId(conversationId),
-        'transcript': normalized,
+        'completed_turns': restore.completedTurns.map((turn) => turn.toMap()).toList(growable: false),
+        'omitted_completed_turn_count': restore.omittedCompletedTurnCount,
+        'omitted_completed_character_count': restore.omittedCompletedCharacterCount,
         'userMessages': userMessages,
       },
     );

@@ -4992,3 +4992,13 @@ PR HEAD 门禁证据：
 - **工作流 H：** 本轮约定的 Core-0～Core-5 云端代码、自动化、文档与 CI 范围已完成当前批次收口；总体状态保持 PARTIAL，剩余为只能由 Find N2 产生的设备证据，不构成云端阻塞。
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不作为本轮收尾条件。
 - **下一步：** 云端不再为了形式拆层新增服务、Agent、数据库、第二套授权 Gate、Embedding、向量数据库或 Reranker；不扩展四项 ACTION_PROPOSAL 白名单。设备验收统一留到最后，本地执行前刷新最新 master 并按唯一交接单运行；任何未实际执行项继续 MISSING / UNKNOWN。
+
+
+## 133. 2026-11-27 Core-1 Native 历史恢复确定性重建修复
+
+- **问题定位：** 旧 `restoreLocalConversation` 把角色化历史包成一条 user prompt，再调用模型生成“上下文已载入”确认。它额外消耗一次推理，并把历史压成一个合成 Native 成功轮次，绕过 Native 12 个完整轮次的实际结构边界。
+- **代码修复：** 跨进程恢复改为 typed completed turns。Flutter 按最近 12 轮和 10,000 UTF-16 code units 裁剪，每轮 `user_text` / `assistant_text` 结构化传入；Native 校验字段、代理字符、轮次数与字符数，恢复 `LocalAiConversationHistorySnapshot` 后直接由 `ConversationConfig.initialMessages` 重建 USER/MODEL 角色序列。恢复不调用模型，不产生合成 assistant 回复。
+- **记忆完整性：** 只有完整 user/assistant 轮次进入 Native transcript。未完成 user-only 输入不回放或提升为成功轮次；它仍保存在独立 `userMessages` 投影中用于症状整理。被预算裁剪的成功轮次数和 UTF-16 字符数单独记录，不把未完成输入计为已省略的成功轮次。
+- **测试：** 增加 Dart typed-turn/12 轮裁剪/未完成输入测试；增加 Kotlin structured snapshot/角色重建/非法字段/surrogate/Native 预算测试；增加架构回归断言，确保 restore 不触发模型生成或 GPU/CPU 首轮 fallback。CI 以本 PR 最终 HEAD 的适用检查为准，SKIPPED 不计 PASS。
+- **未被本次证明：** Find N2 真机 E4B 推理、GPU/CPU 稳定性、state:7、Activity/process restart、SQLite/UI/Native 历史一致性仍为 DEVICE UNKNOWN / LOCAL ONLY，统一在唯一交接文档执行。
+- **范围边界：** 不持久化 LiteRT KV Cache；不推测 App Token/input budget；不引入自动压缩、Agent、第二套会话存储、第二套 Gate 或工作流 I。用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED。
