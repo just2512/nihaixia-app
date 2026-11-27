@@ -5033,3 +5033,14 @@ PR HEAD 门禁证据：
 - **回归：** metadata 单测覆盖缺失值、schema v1 true/false、字段缺失的旧 schema v1、无效布尔值、未知 schema、旧分号格式、损坏 JSON 和未知格式；SnapshotBuilder 测试确认未知版本与损坏 metadata 的原始用户消息只计入省略数，快照为 PARTIAL，facts 为空。
 - **边界：** 不改 SQLite schema、Reasoning Ledger、已持久化原始 transcript、UI 历史呈现、Native prompt 协议或自动重放规则；只阻止不可信/不兼容 metadata 被提升为结构化记忆事实。不新增数据库、Gate、Agent、Embedding、压缩或第二套记忆存储。工作流 I 继续 DEFERRED / NOT AUTHORIZED。
 - **CI：** 本节创建时该分支自动验收待运行；Flutter regression/analyze、Android arm64/JVM 与 Fork License 必须在 PR 最终 HEAD 上成功。SKIPPED 不计 PASS。
+
+
+## 137. 2026-11-28 Core-1 Native 历史恢复 MethodChannel 必需载荷校验（基于最新 master）
+
+- **基线：** 从 `master@07ef58c407063baead785d612aa3e5b985fa622e`（PR #607 合并后）建立独立分支 `fix/native-restore-required-payload-master-20261128`；只移植 Native 历史恢复 envelope 校验，不覆盖当前主线的 Engine 释放失败进程级隔离和 SessionState metadata 准入修复。
+- **问题：** Native `restoreConversation` handler 把缺失的 `completed_turns`、省略轮次数/字符数和 `userMessages` 静默默认成空列表或 0。若 MethodChannel 合同错配或字段丢失，畸形载荷会被当成有效空历史并进入 reset 路径，可能破坏当前 Native 会话。
+- **修复：** 增加纯 Kotlin `parsePayload`，要求四个字段实际存在且类型符合 StandardMessageCodec：turns/userMessages 为 List，计数只接受 Int/Long 非负整数，轮次数须在 Int 范围内，userMessages 每项必须为 String。拒绝在 MethodChannel 入口返回 `INVALID_RESTORE_PAYLOAD`，不进入 `runAiTask` 或 Native 会话重置。
+- **合法空历史边界：** 允许显式 `completed_turns=[]` 与显式空 `userMessages=[]`，因为历史可能只有未完成 user-only 输入；但缺失字段不能用默认值伪造。
+- **回归：** Kotlin policy tests 覆盖缺失字段、错误数值类型、负数、越界、用户输入元素类型、有效 Int/Long 与显式空 envelope；Flutter architecture test 断言 envelope 校验严格早于 Native 任务入队且没有静默默认值。
+- **范围：** 不改变 12 轮/10,000 UTF-16 transcript 上限、Native KV Cache、Token/input budget、业务逻辑、ai_access/AiModelAccessGate 或工作流 I；Find N2 实机验证继续 MISSING / UNKNOWN。
+- **验收：** 仅按本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 与 Fork License 结果记录状态；Branch validation 若为 SKIPPED 不计 PASS。
