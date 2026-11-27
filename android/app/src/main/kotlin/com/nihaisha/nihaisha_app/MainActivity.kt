@@ -1980,15 +1980,18 @@ class MainActivity : FlutterActivity() {
         userMessages: List<String>
     ): Map<String, Any> {
         aiModelAccessGate.requireAccess()
-        resetLocalConversation(conversationId)
 
-        // Deterministic hydration: preserve the original USER/MODEL turn roles
-        // and do not run an extra model request just to acknowledge restoration.
+        // Validate the complete payload before resetting the currently active
+        // Native conversation, so malformed channel data cannot destroy it.
         val restoredSnapshot = LocalAiTranscriptRestorePolicy.historySnapshot(
             rawTurns = completedTurns,
             omittedCompletedTurnCount = omittedCompletedTurnCount,
             omittedCompletedCharacterCount = omittedCompletedCharacterCount
         )
+
+        // Deterministic hydration: preserve the original USER/MODEL turn roles
+        // and do not run an extra model request just to acknowledge restoration.
+        resetLocalConversation(conversationId)
         conversationHistory.restore(restoredSnapshot)
         recreateCurrentConversationFromHistory()
 
