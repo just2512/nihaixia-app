@@ -16,12 +16,27 @@ void main() {
     final validation = restore.indexOf(
       'LocalAiTranscriptRestorePolicy.historySnapshot',
     );
-    final reset = restore.indexOf('resetLocalConversation(conversationId)');
+    final reset = restore.indexOf(
+      'resetLocalConversation(conversationId, restoredSnapshot)',
+    );
     expect(validation, greaterThanOrEqualTo(0));
     expect(reset, greaterThan(validation));
-    expect(restore, contains('conversationHistory.restore(restoredSnapshot)'));
-    expect(restore, contains('recreateCurrentConversationFromHistory()'));
+    expect(restore, isNot(contains('conversationHistory.restore(')));
+    expect(restore, isNot(contains('recreateCurrentConversationFromHistory()')));
     expect(restore, isNot(contains('sendWithFirstTurnGpuFallback')));
     expect(restore, isNot(contains('conversation.sendMessage(')));
+
+    final resetStart = source.indexOf('private fun resetLocalConversation(');
+    final resetEnd = source.indexOf('private fun releaseLocalModel(', resetStart);
+    expect(resetStart, greaterThanOrEqualTo(0));
+    expect(resetEnd, greaterThan(resetStart));
+    final resetMethod = source.substring(resetStart, resetEnd);
+    expect(
+      resetMethod,
+      contains('restoredHistory: LocalAiConversationHistorySnapshot? = null'),
+    );
+    expect(resetMethod, contains('conversationHistory.restore(restoredHistory)'));
+    expect(resetMethod, contains('createConversationWithHistory(engine)'));
+    expect(resetMethod, contains('if (restoredHistory == null)'));
   });
 }
