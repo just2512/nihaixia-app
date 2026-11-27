@@ -6,6 +6,8 @@
 **执行方式：** 本地执行；由设备操作者安装、截图、填写结果并回传  
 **验收原则：** 未在真实设备执行的项目一律记为 `MISSING`，不得用 CI 构建成功或 Widget 测试通过替代真机结论。
 
+> 本文件仅是 Android 品牌名称、Launcher 图标和安装显示的专项操作规范，不是独立设备交接单或进度表。唯一活动设备交接和进度入口为 `docs/local-real-device-acceptance-handoff.md`；当前 master SHA、CI、APK 元数据、场景状态、证据目录、缺口和下一步统一记录在该文件 §1、§7、§7.1。执行时以最新品牌设计系统和主线资源为准。
+
 ---
 
 ## 1. 验收目的与范围
@@ -33,8 +35,8 @@
 | Android namespace | `com.nihaisha.nihaisha_app`，不得修改 |
 | Dart package | `nihaisha_app`，不得修改 |
 | 桌面显示名称 | 研纪 |
-| Launcher 主体色 | `#43594D`（App 现有低饱和松墨绿 primary） |
-| Launcher 背景色 | `#E7E9E4`（App 现有灰绿 background） |
+| Launcher 主体色 | 以当前品牌红与 Android Launcher 前景资源为准，核对 `docs/yanji-visual-design-system.md` v1.5 和 `lib/theme/yanji_palette.dart` |
+| Launcher 背景色 | 以当前 Android Launcher 背景资源为准；本文件不另行定义独立背景色值 |
 | 数据目录、数据库和模型路径 | 保持原位，不迁移、不清理 |
 | 签名 | 必须与当前设备已安装版本相同，才能验证覆盖升级 |
 
@@ -46,8 +48,8 @@
 
 **颜色以 App 主题 Token 为准：**
 
-- 主体：松墨绿 `#43594D`。
-- 底色：灰绿 `#E7E9E4`。
+- 主体：按当前 Android Launcher 前景资源和 `docs/yanji-visual-design-system.md` v1.5 的品牌红规范核对；浅色品牌主色为 `#D71019`。
+- 底色：按当前 Android Launcher 背景资源核对，不沿用历史灰绿色规范。
 - 不再使用旧图标的朱红 `#A93226`、米纸白 `#F3EBDD`、古金 `#B89453` 作为当前 Launcher 图标配色。
 - 图标是系统桌面静态资源，不随 App 内浅色/深色主题切换；在两种主题下均应保持清晰。
 
@@ -269,7 +271,7 @@ Find N2 的系统窗口实际尺寸受 ColorOS 显示缩放、系统栏、折叠
 
 **最终结论：** `PASS / FAIL / MISSING`（有任何关键项 FAIL 或 MISSING 时，不得签署“全部通过”）。
 
-**本地交接要求：** 完成后将本文件填写版、截图目录、APK SHA-256、签名证书指纹以及失败复现步骤交回项目维护方。不要提交签名私钥、keystore 密码、模型文件或含用户隐私的数据库副本。
+**统一进度回填要求：** 本文件只用于查阅专项步骤，不另建或单独回传一份交接文档。完成的场景、结果、截图目录、APK SHA-256、签名证书指纹和失败复现摘要，统一追加到 `docs/local-real-device-acceptance-handoff.md` §7.1；原始证据保存在该文件要求的本地证据目录。不要提交签名私钥、keystore 密码、模型文件或含用户隐私的数据库副本。
 
 ---
 

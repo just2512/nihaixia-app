@@ -4962,3 +4962,19 @@ PR HEAD 门禁证据：
 - **架构映射：** 更新 `docs/ai-layered-runtime-architecture.md` §5.5 与 §6：Core-3 旧拒绝路由不再描述为可用兼容推理入口；Core-1 token 只读观测与未配置 App 输入预算明确分开；Core-4 四项 capability 既有能力审计完成，通用执行中取消/deadline 仍未实现，但不虚构为本轮阻塞。
 - **边界：** 本批不涉及 Find N2 实测；GPU/CPU、E4B、多媒体真实推理和进程恢复仍为 `LOCAL ONLY / UNKNOWN`。不改变工作流 I 的延期状态。
 - **CI 放行：** 本节创建时 PR 精确 HEAD 的 Flutter、Android arm64/JVM 和 Fork License 自动验收尚待执行；只有各适用检查在最终 HEAD 上 SUCCESS 才能合并。SKIPPED 不计 PASS。
+
+## 131. 2026-11-27 PR #598 合并后五层运行时与 Native 记忆层云端收尾复核
+
+- **运行时代码基线：** `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598 merge commit）。本轮仅删除 MainActivity 中已无调用点的 `sendLocalImage()` / `sendLocalAudio()` 旧自由文本媒体推理 helper；旧 sendImage / sendAudio MethodChannel 保持 fail-closed，结构化附件推理路径、Native 队列、模型配置、会话状态和授权 Gate 均未改变。
+- **精确 SHA CI：** Flutter tests run `45993861676` SUCCESS；Flutter Quality Gate run `45993861611` SUCCESS；Fork License run `45993861643` SUCCESS。Android arm64/JVM job `140491798547` 与 Quality Gate 中的 Android native/JVM/arm64 debug build job `140488210528` 均 SUCCESS。Branch validation job `140488213234` 为 SKIPPED，不计 PASS；不得把 SKIPPED 改写为通过。
+- **Native 唯一模型访问门禁：** `test/local_ai_service_legacy_entrypoint_audit_test.dart` 现在逐项检查 8 个真实模型调用入口均设置 `requiresAiAccess=true`，并确认共享 `runAiTask` 调用唯一 `AiModelAccessGate`。旧 sendMessage / sendImage / sendAudio 拒绝路由不触发模型推理。
+- **Core-0：** 五层 DTO、责任边界、数据所有权、失败状态、当前源码/测试映射已冻结；不因形式上的五层拆分新增服务、Agent、数据库或第二套授权门禁。
+- **Core-1 / Native 会话记忆：** 云端确定性范围已覆盖有界成功 transcript、临时 RAG/SessionState/reasoning/media 上下文 dirty-KV 隔离、SessionState conversation owner/provenance、推理请求 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 持久化 Ledger、UNKNOWN/non-replayable 恢复及相关 Native/Flutter 回归。`Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 是只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，App 可用 Token/input budget、输出预留、自动预算裁剪/压缩未配置，不得在设备校准前猜值。GPU/CPU 连续推理、state:7、真实 token/context 行为、Activity/process restart 与 SQLite/UI/Native 三方一致性继续为 DEVICE UNKNOWN / LOCAL ONLY。
+- **Core-2：** 当前约定范围的 CandidateEvidence、多源召回、独立 RankedEvidenceSet/KEEP-DROP 决策、策略版本、预算诊断和黄金检索回归已落地；保留既有 query/matching/order/per-source caps，不以评分或排序信号代替内容结论，不引入无证据 Embedding/Reranker。
+- **Core-3：** 五种主文本模式及图片/音频附件已使用 ReasoningRequest/Response v1 和 Native 双阶段提交；旧 Dart 自由文本包装 API 与 Native 不可达媒体 helper 已退役，旧 MethodChannel 仅 fail-closed。辅助 intent、八字槽位、症状整理和单题问项继续是独立窄任务 DTO。
+- **Core-4：** ACTION_PROPOSAL 生产白名单仍仅为 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian` 四项；显式确认、持久 one-shot claim、终态安全读回、实际参数/来源校验和 UNKNOWN 不重放已有自动化覆盖，不扩展其他 Headless 工具权限。
+- **Core-5：** 20 轮知识追问与一次工具提案/确认/执行/结果解释的 Flutter 应用层 E2E 已合入；该测试使用 fake Native service/executor，不能证明真实 Gemma 4 E4B 输出、GPU/CPU、多媒体或 Find N2 进程恢复。
+- **工作流 H：** 当前约定范围内的云端代码、自动化、架构映射、执行台账和 CI 收尾已完成；总状态仍为 PARTIAL，仅因 Find N2 实机证据尚未执行，不是设备阻塞云端。所有本地场景必须保留 MISSING / UNKNOWN / BLOCKED 直至有真实证据。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不属于当前五层核心收尾阻塞项。
+- **本地交接：** 仅保留 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接入口。折叠屏、品牌、AI TRACE、GPU/CPU 文件作为专项操作规范，不得单独维护交接状态或新增 PR 专属交接文档；所有本地进度只更新唯一交接单 §7.1。
+- **记忆层后续边界：** 在获得真实 Find N2 token/context/长会话测量前，不增加臆测的 App 输入 Token 限值、动态压缩、自动摘要或 KV Cache 持久化逻辑。缺少设备数据属于 UNKNOWN / DEVICE ONLY，不允许为追求全部 PASS 而降低验收门槛。

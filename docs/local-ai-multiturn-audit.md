@@ -288,3 +288,13 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 - PR #594 已将 LocalAiService 旧非结构化包装方法退役；Native 旧 `sendMessage` 保留为 fail-closed 路由，不调用模型。该 Core-3 变更不改变本节 Core-1 的恢复边界。
 - 当前主线已有 KV Cache token 数与模型声明 maxContextTokens 的只读观测；`conversationKvCacheBudgetStatus` 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，因此实测可用 Token/input budget、预算控制/自动压缩并未完成。
 - 本次只同步当前主线核验点、CI 证据和 Token 观测/预算边界，未修改 Native 多轮运行时代码。真实 Find N2 GPU/CPU、state:7、媒体、Activity/process restart、实际 token/context 值与长会话行为仍按第 10.3 节和唯一设备交接文件执行，继续保持 DEVICE UNKNOWN / NOT RUN。
+
+
+## 11. 2026-11-27 PR #598 后 Native 多轮云端状态复核
+
+- **复核运行时代码基线：** `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。PR #598 改动属于 Core-3 旧 Native 媒体 helper 清理，不改变 Core-1 会话历史、请求 Ledger、SessionState owner 或 dirty-KV 隔离路径。
+- **精确 SHA 自动化：** Flutter tests `45993861676`、Flutter Quality Gate `45993861611`、Fork License `45993861643` 均 SUCCESS；Android arm64/JVM job `140491798547` 与 `140488210528` 均 SUCCESS。Branch validation `140488213234` 是 SKIPPED，不计 PASS。
+- **云端确定性部分：** 有界成功 transcript、临时 RAG/SessionState/reasoning/media 上下文隔离、请求终态 Ledger、UNKNOWN/non-replayable 恢复、Native 串行队列与失败隔离维持现有代码和自动化覆盖；本轮不改这些运行时逻辑。
+- **Token 观察边界：** `Conversation.getTokenCount()` 和 `ModelInfo.maxContextTokens()` 是 Native 运行时只读观察；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。它们不代表 App 可用输入 Token 预算、剩余空间、输出预留或安全截断阈值。没有 Find N2 实测数据前，不添加推测性 token budget 或自动压缩。
+- **设备未决项：** GPU/CPU 各至少 20 轮、state:7、图片/语音、多轮上下文行为、Activity/process restart、SQLite/Flutter/Native transcript 三方对照、真实 KV Cache 数值、长会话边界仍为 `DEVICE UNKNOWN / LOCAL ONLY / NOT RUN`。不得用 Android CI build、JVM、Widget 或 fake executor 改写为设备 PASS。
+- **交接路径：** 设备所有执行状态和本地证据只回填 `docs/local-real-device-acceptance-handoff.md` §7.1；本审计文档保留 Native 多轮技术边界与代码审计，不另开设备进度表。

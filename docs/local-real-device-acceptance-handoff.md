@@ -1,6 +1,6 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.7  
+> **文档版本：** 1.8  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
 > **当前状态：** **CLOUD AI CLOSEOUT CI: PASS / DEVICE: LOCAL ONLY / NOT RUN**  
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **当前 master HEAD `1d79bc2f628fde789c5b5602cee889f844972c23`；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 当前 master 同一 SHA 的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS。执行前仍必须 `git fetch origin` 并重新读取届时最新 `origin/master` SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
+| 构建基线 | **本轮运行时代码基线 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f；五层运行时集成点 45144f6c3d140d259ac51f8cfbb886c19c10e0a3；Core-3 旧包装 API 退役合并点 11ac0c5918e5c25754b44e71f0ba48c82bea6669；Native 旧媒体 helper 清理合并点 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f** | 运行时代码基线 04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f 的 Flutter tests run 45993861676、Flutter Quality Gate run 45993861611、Fork License run 45993861643 均 SUCCESS；Android arm64/JVM job 140491798547 与 140488210528 均 SUCCESS。Branch validation job 140488213234 为 SKIPPED，不计 PASS。执行前仍必须 git fetch origin 并重新读取届时最新 origin/master SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -284,8 +284,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 - 不得把测试 issuer 加入生产 Release，不得伪造 Token，不得用本地开关绕过 Gate。
 
 ### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
-
- - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档上次基线：** `master @ d024d2e277e80bb960b8986dc01d860eb7f7670f`；**当前复核基线：** `master @ 1d79bc2f628fde789c5b5602cee889f844972c23`（本次仅同步文档；三项主线 CI 均 SUCCESS，详见 §1）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
+- **AI 五层运行时集成点：** 45144f6c3d140d259ac51f8cfbb886c19c10e0a3（PR #585 merge commit，包含 #583 媒体结构化协议）。本轮运行时代码复核基线：master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f；当前 app version 2.0.0+8048，Android applicationId = com.nihaisha.nihaisha_app。本地执行前始终重新读取最新 origin/master 并记录实际构建 SHA、APK 元数据、签名证书及设备当前安装版本。
 - **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
 - **Core 云端实现记录：**
   - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
@@ -295,6 +294,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
  - **PR #576 产品范围纠偏（历史记录）：** PR #576 的精确 HEAD 及 CI 结果仍作为该次变更的历史证据；其 merge commit `5dcf91f...` 已被后续主线推进取代，不再是当前应用代码基线。
  - **Core-3 媒体协议 / PR #583：** 图片、音频附件已接入 ReasoningRequest/Response v1 和 Native 双阶段提交；精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 与 push Branch validation 均 SUCCESS。旧 sendImage/sendAudio Native 入口 fail-closed；音频转写仍是待用户确认草稿。
 - **Core-3 旧兼容接口退役 / PR #594：** 精确 HEAD `85e77de947d144fd52902690094ba84de4d248c8` 已合并为 master `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。LocalAiService 旧 sendMessage*/sendImage*/sendAudio* 包装方法已移除；Native 旧 sendMessage 保留为返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED` 的 fail-closed 兼容入口。Flutter regression run `45968674159`、Android arm64 APK/JVM job `140406700872`（22/22 steps）与 Fork License run `45968674271` 均 SUCCESS；PR Branch validation 为 SKIPPED，不计 PASS。
+- **Core-3 Native 旧媒体 helper 清理 / PR #598：** merge commit `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f` 删除已无调用点的 `sendLocalImage()` / `sendLocalAudio()` 自由文本推理 helper；旧 `sendImage` / `sendAudio` MethodChannel 仍 fail-closed，结构化附件主路径不变。静态回归扩展至核对 8 个真实模型调用入口均声明 `requiresAiAccess=true`，并确认 `runAiTask` 经过唯一 `AiModelAccessGate`。该变更并入既有媒体/Native 场景，不单独建立本地交接单。精确运行时代码 HEAD 的 Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS；Android arm64/JVM 对应 job SUCCESS。
 - **Core-5 跨层 E2E / PR #585：** 已合并 20 轮知识追问和一次工具动作确认/执行/结果解释 widget 测试。精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 和同 SHA push Branch validation 均 SUCCESS。fake executor 不代表真实 E4B/设备已通过。
 - **当前主线 CI：** 本地执行前再次读取最新 master SHA 和对应 CI 终态。任何未完成、SKIPPED 或其他 SHA 的检查不得计 PASS；本交接文档更新不改变运行时代码。
 - 上述 CI Debug APK/arm64 artifact 只证明 CI 构建、ABI、Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。Branch validation 为 SKIPPED 时不计 PASS。
@@ -339,13 +339,31 @@ test-results.md 每一行按以下格式填写：
 - **MISSING**：未执行或证据不足；
 - **NOT_APPLICABLE / NOT_ENABLED**：当前设备/系统/产品范围不适用，必须注明理由。
 
+#### 7.0 Find N2 本地验收总览（统一状态矩阵）
+
+下表把已合并的远端改动归并为本地执行包。它是同一交接单的总索引，不按 PR 或功能另建文档。云端 CI 通过只代表代码/自动化门禁通过；本表中的设备项当前全部尚未实测。
+
+| 工作包 | 云端代码/自动化状态 | Find N2 当前状态 | 本地必须留存的关键证据 |
+|---|---|---|---|
+| 安装身份、原签名覆盖升级与数据保留 | Manifest、ABI、签名构建保护等自动化门禁通过；正式 Release 仍由本地原签名构建 | MISSING | 旧/新 APK 元数据、签名证书 SHA-256、版本码、覆盖安装结果、升级前后数据哨兵 |
+| 品牌名称、Launcher 图标与外屏/内屏/半折叠布局 | 品牌资源/几何约束有自动化检查；PR #564 尚未合并，不属于本轮运行时代码基线 | MISSING | 当前 master 图标截图、ColorOS 遮罩、外屏/内屏/半折叠截图与窗口 metrics |
+| Core-1 Native 会话记忆与多轮恢复 | Transcript、SessionState owner/provenance、临时上下文隔离、请求终态 Ledger、UNKNOWN 不重放已有代码/测试 | MISSING / DEVICE UNKNOWN | GPU 与 CPU 各至少 20 轮、实际 backend、state:7、Activity/process restart、SQLite/UI/Native transcript 对照 |
+| Core-2 检索证据与知识条目解读 | CandidateEvidence、RankedEvidenceSet、黄金检索回归及来源回填约束已有云端覆盖 | MISSING | 本地知识命中/无命中/跨轮回指、知识条目情境入口、来源锚点和消息 metadata |
+| Core-3 五模式文本与图片/音频附件 | 五模式结构化 Request/Response、媒体双阶段提交、旧自由文本入口 fail-closed；PR #598 清理不可达旧 helper | MISSING / DEVICE UNKNOWN | E4B 文字/图片/音频场景、实际 backend、每轮 TRACE、取消/失败不伪成功 |
+| Core-4 四项受限工具执行闭环 | 仅 dosage、solar_terms、yuxiaji_omen、sanshan_lingqian；显式确认、one-shot claim、结果读回与 UNKNOWN 不重放有自动化覆盖 | MISSING | 真实工具调用 TRACE、参数确认、实际结果、重复请求/中断不重放 |
+| Core-5 跨层应用流程 | 20 轮知识追问与一次工具提案/确认/执行/解释的 widget E2E 已通过；使用 fake Native/executor | MISSING / DEVICE UNKNOWN | 真机 E4B 真实模型输出、引用回填、工具结果解释与持久化链路 |
+| AI 数据清理与重启恢复 | 代码及自动化覆盖已合并；不扩大删除范围 | MISSING | 清理前后 AI 数据与非 AI 数据哨兵、强停/重启后复核、失败域报告 |
+| ai_access / Token / Keystore | 云端单一授权 Gate 与协议回归已覆盖；正式发行者材料/合法绑定 Token 不由 CI 伪造 | MISSING；合法生产 Token 未准备时正向授权场景记 BLOCKED | Keystore/设备密钥状态、合法设备绑定 Token 的验签/替换/重启复验；不使用测试密钥绕过 |
+
+记忆层边界：当前已接入的 `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 只是 Native 运行时只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。本地不得把观测值解释为剩余输入预算，不得自行补出 Token 阈值、输出预留或自动压缩结论。所有未执行项维持 MISSING / UNKNOWN / BLOCKED。
+
 #### 7.1 本地执行进度汇报要求
 
 本文件是唯一设备交接单。本地执行者必须直接更新本文件，不得为每个 PR、每个设备场景或每次修复另建交接文档。每次开始、阶段完成、遇到阻塞和结束时，均在本节追加一条进度记录，并同步更新 §7 的 `test-results.md` 对应场景状态。
 
-| 日期/时间 | 本地执行者 | 本轮构建 SHA / APK 版本 | 已完成场景（ID） | 当前状态（PASS/FAIL/BLOCKED/MISSING） | 证据目录/文件 | 缺口或阻塞原因 | 下一步 |
+| 日期/时间 | 本地执行者 | 设备型号 / Android / ColorOS | 实际构建 SHA / APK version+versionCode | 已完成场景（ID） | 当前状态（PASS/FAIL/BLOCKED/MISSING/UNKNOWN） | 证据目录/文件 | 缺口或阻塞原因 | 下一步 |
 |---|---|---|---|---|---|---|---|
-| 待本地首次执行填写 | 本地执行者填写 | 必须填写实际值，不沿用文档历史 SHA | 待填写 | MISSING | `output/find-n2/<run-id>/` | 尚未开始本地实机验收 | 从 §1、§3 开始，先核对设备旧包、签名和最新 master |
+| 待本地首次执行填写 | 本地执行者填写 | 实测值 | 必须填写实际值，不沿用文档历史 SHA | 待填写 | MISSING | `output/find-n2/<run-id>/` | 尚未开始本地实机验收 | 从 §1、§3 开始，先核对设备旧包、签名和最新 master |
 
 **更新规则：**
 - 不覆盖旧记录；每次进度更新追加新行，保留时间顺序。
@@ -639,10 +657,26 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 
 以上 7 份名称直接匹配 handoff/handover/acceptance 的文件中，只有本文件是当前活动交接单；其余 6 份是历史审计、历史结果或专项验收 runbook。不得把历史/操作规范当成重复交接文档删除。
 
-### 16.4 本轮执行状态
+### 16.4 历史复核状态（master 1d79bc2f628fde789c5b5602cee889f844972c23）
 
 - **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；LocalAiService 旧非结构化包装方法已删除，Native 旧文本入口 fail-closed。当前主线 HEAD 已继续推进至 `1d79bc2f628fde789c5b5602cee889f844972c23`。
 - **当前 master 合并后 CI：** 在 `1d79bc2f628fde789c5b5602cee889f844972c23` 上，Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS；三项均对应当前表内同一 SHA。
 - **Core-1 / Core-4 / Core-5 云端边界：** Native transcript/KV 隔离与请求状态有自动化覆盖；当前 Native KV Cache token 数、模型声明 maxContextTokens 有只读观测，但 App 可用输入预算状态仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不代表自动预算治理已完成；四项 ACTION_PROPOSAL capability 的能力级输入、副作用、幂等及结果回读审计已记录；20 轮知识追问与一次工具动作的 Flutter 回归已合入。fake service/executor 不代表真实 E4B 或真机 TRACE。
 - **本地：** `LOCAL ONLY / NOT RUN`；本文件 §7.1 首行仍待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。Debug APK/ABI/JVM/Widget 结果不等于 Find N2 正式 Release 安装或真实设备验证。
 - **文档归并：** 当前唯一设备进度入口仍为本文件；历史验收记录和专项 runbook 已分类保留，不另建 PR/GPU/CPU/媒体/知识解读/授权专属交接单。
+
+### 16.5 2026-11-27 当前运行时代码基线与云端收尾复核（PR #598）
+
+- **运行时代码基线：** `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`，PR #598 merge commit。该提交删除 Native 中已无调用点的 `sendLocalImage()` / `sendLocalAudio()` 旧自由文本媒体推理 helper；保留旧 `sendImage` / `sendAudio` MethodChannel 的 fail-closed 响应，结构化 `sendReasoningAttachmentMessage` 图片/音频路径未改。
+- **精确 SHA CI：** Flutter tests run `45993861676` SUCCESS；Flutter Quality Gate run `45993861611` SUCCESS；Fork License run `45993861643` SUCCESS。Flutter tests 的 Android arm64/JVM job `140491798547` SUCCESS；Flutter Quality Gate 的 Android native/JVM/arm64 debug build job `140488210528` SUCCESS。Branch validation job `140488213234` 为 SKIPPED，不计 PASS。
+- **Native 模型入口门禁：** 新增静态防回归检查覆盖 8 个真实模型调用入口，均要求 `requiresAiAccess=true`；共享 `runAiTask` 强制经过唯一 `AiModelAccessGate`。旧拒绝路由不进入模型推理。此项是源码/自动化证据，不是设备授权 Gate 实测。
+- **Core-0：** 五层契约、DTO、数据所有权、失败语义和当前源码/测试映射已冻结；不为形式拆层新增服务、Agent、数据库或权限门禁。
+- **Core-1：** Native 多轮云端确定性治理包括有界成功 transcript、临时 RAG/SessionState/reasoning/media 上下文隔离、SessionState 会话归属与 provenance、请求 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED Ledger、UNKNOWN 不重放，以及 KV Cache token 数/模型 maxContextTokens 只读观测。App 可用 Token/input budget 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，自动预算治理/压缩不得在缺少设备校准时猜测实现；GPU/CPU 多轮、state:7、Activity/process restart 与真实 token 数均为 DEVICE UNKNOWN。
+- **Core-2：** 约定范围的 CandidateEvidence、多源聚合、独立 RankedEvidenceSet/KEEP-DROP 决策及黄金检索回归已落地；保留既有查询、匹配、顺序与来源限额，不新增无证据评分、Embedding 或 Reranker。
+- **Core-3：** 五种主文本模式和图片/音频附件使用 ReasoningRequest/Response v1 与 Native 双阶段提交；旧 Dart 包装接口和 Native 不可达媒体 helper 已退役，旧路由 fail-closed；辅助 intent、八字槽位、症状整理、问项理解继续使用各自窄 DTO。
+- **Core-4：** 生产 ACTION_PROPOSAL 白名单仅四项：`dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian`。显式确认、one-shot claim、结果安全读回及 UNKNOWN 不重放有自动化覆盖，不扩展其他 Headless 工具权限。
+- **Core-5：** 20 轮知识追问与一次工具提案/确认/执行/结果解释的应用层 E2E 已合入；使用 fake Native service/executor，不能证明真实 E4B 或 Find N2 已通过。
+- **工作流 H：** 本轮可由云端完成的代码、自动化、架构映射、执行台账和 CI 收尾已达到当前约定范围；整体仍标 PARTIAL，只因 Find N2 本地证据尚未执行，不得把设备状态写为 PASS，也不得反过来以设备未测阻塞云端既定工作。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不作为当前五层收尾门槛。
+- **唯一设备交接：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动交接单。专项折叠屏、品牌图标、AI TRACE、GPU/CPU 清单均为操作规范；所有本地进度、场景状态、证据目录、缺口和下一步统一回填该文件 §7.1。未实测仍为 MISSING / UNKNOWN / BLOCKED。
+- **执行要求：** 本文件和专项 runbook 均不预填设备结果。执行前必须同步最新 `origin/master`；本节 SHA 是本次运行时代码复核快照，不替代本地构建时的实时 HEAD。
