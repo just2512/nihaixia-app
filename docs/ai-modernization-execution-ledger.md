@@ -15,7 +15,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `f34b12573e16a790032a1450afb245d67891d680` | 当前 master HEAD（PR #599，文档同步；未改运行时代码）。同一 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前 Native/AI 运行时代码基线仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。 |
+| 本轮最近一次云端验证代码树/文档同步点 | `57fbad291c3266966e4a8e477dee64e8b6b0b837` | PR #600 文档同步 merge commit；与已通过 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 的 Git tree 完全一致。该 PR 的 Flutter regression run `46005551188` SUCCESS、Fork License run `46005551170` SUCCESS、Android arm64 CI APK + JVM unit tests job `140530639898` SUCCESS；Branch validation `140527670767` 为 SKIPPED，不计 PASS。该次合并仅改 3 份 docs，Native/AI 运行时代码基线仍为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。PR #600 合并后 master 重跑：Fork License `46007115092` SUCCESS；Flutter tests `46007115215`、Flutter Quality Gate `46007115001` 在本次记录时仍 IN_PROGRESS，不写作 PASS。 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前 `master` 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，7 个变更文件全部位于 `docs/`，相对运行时代码基线仅增加文档提交；未改 Dart/Kotlin/Native 运行时代码）。该 SHA 对应 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前运行时代码基线为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598），五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。本轮交接同步不改变运行时、业务规则、模型行为或权限边界。Native KV Cache token 数与模型声明最大上下文长度仅为只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，App 可用 Token/input budget、输出预留、动态预算裁剪和自动压缩均未配置。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理与 TRACE 仍为 LOCAL ONLY / MISSING / UNKNOWN；本地执行前必须重新读取届时最新 `origin/master` SHA、CI、APK 和签名信息，不能沿用本表 SHA 直接构建。
+**核验基线说明：** 运行时代码最后一次变更仍是 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；PR #600 在该代码树之上只做三份文档同步，合并点为 `57fbad291c3266966e4a8e477dee64e8b6b0b837`，与 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 的 Git tree 完全相同。PR #600 HEAD 的 Flutter regression、Fork License、Android arm64 CI APK 与 JVM unit tests 均 SUCCESS；Branch validation 为 SKIPPED。合并后的 master Fork License 已 SUCCESS；master Flutter tests 与 Flutter Quality Gate 在此快照记录时仍 IN_PROGRESS，不能记为 PASS。五层运行时集成锚点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。Native KV Cache token 数及模型声明最大上下文仅只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，App 可用 Token/input budget、输出预留、动态预算裁剪和自动压缩均未配置。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理与 TRACE 仍为 LOCAL ONLY / MISSING / UNKNOWN；本地执行前必须重新读取届时最新 `origin/master` SHA、CI、APK 和签名信息，不能沿用此历史快照直接构建。
 
 ## 2. 状态定义
 
@@ -4980,7 +4980,7 @@ PR HEAD 门禁证据：
 - **记忆层后续边界：** 在获得真实 Find N2 token/context/长会话测量前，不增加臆测的 App 输入 Token 限值、动态压缩、自动摘要或 KV Cache 持久化逻辑。缺少设备数据属于 UNKNOWN / DEVICE ONLY，不允许为追求全部 PASS 而降低验收门槛。
 
 
-## 132. 2026-11-27 PR #599 合并后最新主线、五层云端状态与统一设备交接复核
+## 132. 2026-11-27 PR #599 合并后主线基线与五层云端状态快照（PR #600 文档同步前）
 
 - **最新 master 文档基线：** `f34b12573e16a790032a1450afb245d67891d680`。PR #599 只修改 7 份文档，未修改 Dart、Kotlin、Native 运行时代码、业务规则、模型行为、数据库或权限边界。
 - **运行时代码基线：** 仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；AI 五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。当前 App 版本仍为 `2.0.0+8048`。
@@ -4992,3 +4992,15 @@ PR HEAD 门禁证据：
 - **工作流 H：** 本轮约定的 Core-0～Core-5 云端代码、自动化、文档与 CI 范围已完成当前批次收口；总体状态保持 PARTIAL，剩余为只能由 Find N2 产生的设备证据，不构成云端阻塞。
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不作为本轮收尾条件。
 - **下一步：** 云端不再为了形式拆层新增服务、Agent、数据库、第二套授权 Gate、Embedding、向量数据库或 Reranker；不扩展四项 ACTION_PROPOSAL 白名单。设备验收统一留到最后，本地执行前刷新最新 master 并按唯一交接单运行；任何未实际执行项继续 MISSING / UNKNOWN。
+
+
+## 133. 2026-11-27 PR #600 合并后验证代码树与唯一 Find N2 交接入口复核
+
+- **PR #600 合并：** 合并提交 `57fbad291c3266966e4a8e477dee64e8b6b0b837`；PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 与合并提交的 Git tree 完全一致。变更仅为 `docs/ai-layered-runtime-architecture.md`、`docs/ai-modernization-execution-ledger.md`、`docs/local-real-device-acceptance-handoff.md` 三份文档；无 Dart/Kotlin/Native 运行时代码变更。
+- **PR HEAD 云端验收：** Flutter regression run `46005551188` SUCCESS（静态分析、AI 合同、Native 状态/生命周期、会话恢复、统一助手、SQLite、工具参数/重试、知识引用、检索黄金快照及全仓旧入口审计均成功；全量 Dart regression suite SUCCESS）；Fork License run `46005551170` SUCCESS；Android arm64 CI verification APK、ABI/SHA 检查、Android local unit tests 和签名保护验证 job `140530639898` SUCCESS。Branch validation job `140527670767` 为 SKIPPED，不计 PASS。
+- **合并后 master 重跑：** Fork License run `46007115092` SUCCESS。Flutter tests run `46007115215` 与 Flutter Quality Gate run `46007115001` 在本节核验时仍 IN_PROGRESS；本节不将其标记为 PASS。PR HEAD 已运行的适用门禁均为 SUCCESS，且 merge tree 与 PR HEAD tree 相同。
+- **当前运行时代码基线：** 仍为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598）；五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。PR #600 没有改变业务逻辑、数据库、模型行为、Native 会话策略或权限边界。
+- **Core-1/2/3/4/5 复核结论：** Core-1 Native 临时 RAG/SessionState/媒体上下文与成功 transcript 隔离、finalize/reject 后的会话重建及 UNKNOWN 不重放符合代码/测试；Core-2 多源候选聚合与独立 KEEP/DROP ranker 分离，6,500 UTF-16 字符只作为呈现预算，不是模型 Token 预算；Core-3 v1 结构化协议与五模式路由、附件结果校验、证据引用约束及旧入口退役有源码/自动化证据；Core-4 四项 capability 显式确认、先 claim 后 dispatch、终态回读及 UNKNOWN 不重放有自动化覆盖；Core-5 20 轮知识追问 + 单次工具确认/执行/解释的 Widget E2E 使用 fake Native/executor，不证明真实 E4B 质量或设备运行。
+- **唯一交接：** 仍只使用 `docs/local-real-device-acceptance-handoff.md` §7.1。Find N2 GPU/CPU、多轮真实 E4B、图片/音频、Activity/process restart、覆盖升级、签名/授权、数据清理及 TRACE 全部保持 MISSING / UNKNOWN / LOCAL ONLY；§7.1 的“待本地首次执行填写”未修改，等待真实本地执行者按日期、设备、构建 SHA、APK 版本、场景、证据目录、缺口和下一步追加记录。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动。
+- **后续约束：** 文档中的 SHA 是本轮已验证代码树/交接快照，不承诺等于之后每次 docs-only commit 的 HEAD。设备实际构建前必须 `git fetch origin` 并读取届时最新 `origin/master`、版本、CI 终态和签名条件；不得沿用历史 SHA。
