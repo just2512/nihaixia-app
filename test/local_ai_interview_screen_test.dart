@@ -759,10 +759,10 @@ class _TextSendService extends LocalAiService {
   @override
   Future<void> restoreConversation({
     required int conversationId,
-    required String transcript,
+    required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
   }) async {
-    restoredTranscripts.add(transcript);
+    restoredTranscripts.add(restore.transcript);
   }
 
   @override
