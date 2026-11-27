@@ -14,8 +14,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583 的 Core-3 图片/音频结构化推理与 PR #585 的 Core-5 20 轮/工具回流 E2E 均已合并；本轮以此为运行时代码审计基线 |
-| 本轮最新文档核验基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583 已同步媒体协议与设备交接内容；本轮文档更新分支从该应用代码基线创建，集中修订架构映射、执行台账和唯一 Find N2 本地验收交接单 |
+| AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
+| 本轮最新主线/文档核验基线 | `922285573e263ecd08a1eed535d4adec771a5979` | 当前 master HEAD；PR #586 的 About 页面/项目更新说明调整已在此主线，当前 AI 文档 PR 从该 SHA 派生，仅更改四份 AI 架构/审计/设备交接文档 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前运行时代码基线为 `master@45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮后续 PR 只修改架构映射、执行台账和唯一 Find N2 本地验收交接单，不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 当前仓库 master HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`；其中 PR #586 是 About 页面/项目更新说明整理，不改变五层 AI 运行时代码。AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮 PR 只更新架构映射、执行台账、能力审计和唯一 Find N2 本地验收交接单，不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -4808,7 +4808,7 @@ PR HEAD 门禁证据：
 
 ## 122. 2026-11-27 Core-3 媒体协议与 Core-5 跨层 E2E 合入后的当前状态
 
-- **当前应用代码基线：** `master@45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。PR #583 合并提交 `38d0490a7f11596962825a22161dbc7add0006da`；PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。第 1–121 节保留为历史记录；状态冲突时以本节和当前源码为准。
+- **当前仓库主线 HEAD：** `master@922285573e263ecd08a1eed535d4adec771a5979`；**AI 五层运行时代码集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #583/#585，PR #586 未改 AI 运行时）。PR #583 合并提交 `38d0490a7f11596962825a22161dbc7add0006da`；PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。第 1–121 节保留为历史记录；状态冲突时以本节和当前源码为准。
 - **Core-0：** 本轮同步刷新架构文档当前源码映射、Native 入口清单、测试锚点与剩余断点。仅代表契约/源码映射完成，不等于 Core-1 至 Core-5 运行时全部 PASS。
 - **Core-1：** PR #575 持久化推理 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 生命周期；打开历史会话时无终态请求降为 UNKNOWN，禁止自动重放；FINALIZED 但 transcript 尚未原子写入时按已校验答案重建消息对。SessionStateSnapshot 按 conversation owner 隔离，隐藏 role=tool 推理/业务 Ledger 事件不进入用户记忆。Native Conversation 可从 SQLite transcript 重建，但 LiteRT KV Cache 不持久化；真实 Token/input budget、自动压缩和设备进程恢复 TRACE 仍 UNKNOWN / NOT IMPLEMENTED。
 - **Core-2：当前既定范围已完成。** PR #527 已提供不可变 RankedEvidenceSet（requestId、strategyId/version、逐候选 KEEP/DROP reasonCode/reason、稳定顺序、status/diagnostics）及 6,500 UTF-16 字符预算核算（omitted/truncated IDs）；PR #568 将 Formula、Herb、Acupuncture formula、Acupoint、Neijing 五类本地记录纳入 CandidateEvidence，并进入同一 MultiSourceEvidencePipeline/SourceAwareLegacyEvidenceRanker。当前 AssistantKnowledgeContextResult 同时返回排序前的 metadata-only candidateSnapshot、排序决策和仅包含完整呈现且来源可解析的 rankedEvidence。检索查询生成与内容物化仍由 AssistantKnowledgeContextBuilder 编排；ranker 本身独立消费候选。排序策略刻意保留 legacy 顺序和来源限额，不是语义相关性评分；字符预算不是 Token/input budget。KEEP/DROP 不表示来源真实性或内容正确性。
