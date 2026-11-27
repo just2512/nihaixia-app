@@ -37,7 +37,8 @@ void main() {
           }
         }
 
-        if (rawLocalAiChannel.hasMatch(source)) {
+        if (relativePath != implementation &&
+            rawLocalAiChannel.hasMatch(source)) {
           rawChannelSites.add(relativePath);
         }
       }
