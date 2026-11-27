@@ -113,6 +113,19 @@ class LocalAiTranscriptRestorePolicyTest {
         assertEquals(2, payload.omittedCompletedTurnCount)
         assertEquals(24L, payload.omittedCompletedCharacterCount)
         assertEquals(validMessages, payload.userMessages)
+
+        // An explicitly empty transcript is valid for a session that only
+        // contains unfinished user input; omitted envelope fields are not.
+        val emptyPayload = LocalAiTranscriptRestorePolicy.parsePayload(
+            rawCompletedTurns = emptyList<Any>(),
+            rawOmittedCompletedTurnCount = 0,
+            rawOmittedCompletedCharacterCount = 0L,
+            rawUserMessages = emptyList<String>()
+        )
+        assertTrue(emptyPayload.completedTurns.isEmpty())
+        assertEquals(0, emptyPayload.omittedCompletedTurnCount)
+        assertEquals(0L, emptyPayload.omittedCompletedCharacterCount)
+        assertTrue(emptyPayload.userMessages.isEmpty())
     }
 
     @Test
