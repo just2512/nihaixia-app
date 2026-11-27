@@ -5015,3 +5015,12 @@ PR HEAD 门禁证据：
 - **回归：** 扩展 `test/local_ai_transcript_restore_architecture_test.dart`，断言结构化载荷先校验、恢复调用带快照、恢复路径不再二次调用 recreate，并验证快照装入发生在唯一一次 `createConversationWithHistory` 之前。
 - **边界：** 不增加模型调用、KV Cache 持久化、Token 预算、自动压缩、数据库、Gate、Agent 或工具能力；未改变普通 reset、请求 Ledger 和 UNKNOWN/non-replayable 语义。Find N2 真机 E4B/GPU/CPU、进程恢复和三方 transcript 一致性继续 LOCAL ONLY / UNKNOWN。
 - **CI：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 与 Fork License 结果为准；SKIPPED 不计 PASS。
+
+## 135. 2026-11-27 Core-1 Native reset Engine 释放失败进程级 fail-closed
+
+- **基线：** 从合并后的 `master@7d35ab2d76b8441d497484a57091f482671236e2` 派生独立分支 `fix/native-reset-release-failure-process-health-20261127`；本批只修复 Native 会话 reset/恢复失败时 Engine 释放不确定的进程级隔离边界。
+- **缺陷：** `ConversationResetPolicy` 在关闭旧 Conversation 或创建替代 Conversation 失败后会尝试关闭 Engine；若 `Engine.close()` 再次失败，旧实现仅将释放异常挂到 suppressed。MainActivity 虽清空 Engine/Conversation 引用，但没有标记 `LocalAiProcessExecutor.health`。`loadLocalModel` 本身不检查该健康状态，后续任务仍可能经 executor 初始化另一个 Engine，无法保证上一个 Native Engine 已释放。
+- **修复：** reset policy 要求调用方提供 Engine 释放失败回调；关闭 Conversation、创建替代会话和关闭 Engine 的异常边界统一覆盖 `Throwable`。只有 `Engine.close()` 失败时才调用回调，由 MainActivity 将同一异常写入进程级 `LocalAiProcessExecutor.health`；既有 `LocalAiActivityTaskLifecycle` 在入队前及出队执行前拒绝后续任务，直到进程重启。Engine 释放成功时不污染进程健康状态，既有 fail-closed 处理保持不变。
+- **回归：** 扩展 `ConversationResetPolicyTest`，检查 Engine 释放失败回调、异常 suppressed 关系，并用 `UnsatisfiedLinkError` 验证 Native `Error` 会使 process health 变为 unavailable。正常 reset 及成功释放路径断言不触发回调。
+- **边界：** 不新增存储、数据库、Gate、Agent 或状态服务；复用现有进程健康状态和串行 executor，不改变普通 reset、typed transcript、已验证快照保留、推理 Ledger 或 UNKNOWN/non-replayable 语义。Find N2 真机释放行为和 TRACE 仍属 LOCAL ONLY / UNKNOWN。
+- **CI：** 本节创建时该独立分支自动验收待运行；Flutter regression/analyze、Android arm64/JVM 和 Fork License 必须在最终 PR HEAD 上成功。SKIPPED 不计 PASS。
