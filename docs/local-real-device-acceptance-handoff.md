@@ -1,9 +1,9 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.2  
+> **文档版本：** 1.4  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
-> **当前状态：** **LOCAL ONLY / NOT RUN / WAITING FOR PR #582 CI + MERGE**  
+> **当前状态：** **LOCAL ONLY / NOT RUN / EXECUTE AFTER CLOUD AI CLOSEOUT**  
 > **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
 
 ---
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **当前 master `5dcf91f...`（PR #576 已合并；PR #576 精确 HEAD 的 Flutter/Android CI 已成功）** | PR #582 的最终 HEAD 仍须通过 Flutter/Android CI 并合并；本地执行前重新 `git fetch origin`，记录实际 `origin/master` SHA；不得使用 PR 分支旧 HEAD |
+| 构建基线 | **AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库 master 核验点 `922285573e263ecd08a1eed535d4adec771a5979`** | 45144f6c 标识 #583/#585 的 AI 运行时集成；92228557 是本交接单更新时的最新仓库 HEAD（含 #586 About/项目更新说明调整）。本地执行前必须重新 `git fetch origin` 并以实际最新 `origin/master` SHA 构建，记录构建 SHA 和 CI，不能固定沿用这两个历史锚点 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -285,15 +285,17 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
 
-- **当前构建基线：** `master @ 5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`（PR #576 merge commit）；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最新 master HEAD、APK 元数据、签名证书及设备当前安装版本。
+ - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档更新时的仓库 HEAD：** `master @ 922285573e263ecd08a1eed535d4adec771a5979`（PR #586，About/项目更新说明调整；未改 AI 运行时代码）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
 - **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
 - **Core 云端实现记录：**
   - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
   - PR #495 已合并（`9c7a4c6761a467bb13b0b5381992df2e96cfc3ba`），冻结 Core-0 五层 DTO 字段合同和源码/测试映射；Fork 与 Flutter 检查 SUCCESS（`138948246934`、`138948369724`）。
   - PR #496 已合并（`b62bc101865612c02503bedce8d05cf11390d56d`），Native transcript 只恢复完整成功轮次并限制为最多 12 轮/10,000 UTF-16 code units；精确 HEAD 的 Fork、Flutter、Android arm64/JVM 检查 SUCCESS（`138946470635`、`138946470476`、`138949605374`）。该字符上限不等于 LiteRT-LM token 预算。
   - PR #498 已合并（`82b2474202a33d802722e79560f6ae17670aab9a`），新增候选证据批次与经典候选收集边界；精确 HEAD 的 Fork、Flutter、Android arm64/JVM 检查 SUCCESS（`138955502743`、`138955626207`、`138958765875`）。
-- **PR #576 产品范围纠偏：** PR #576 最终 HEAD `73ece9d25a94c64dcbf57214f2e803881b5c4407` 的 Flutter regression run `45848420924` SUCCESS，其中 Android arm64 CI verification APK + Native JVM tests SUCCESS；Fork license boundary run `45848420961` SUCCESS。Branch validation 为 SKIPPED，不计 PASS。该 PR merge commit 为当前基线 `5dcf91f...`。
-- **本轮最终文档 PR：** PR #582 只更新架构/执行台账/本交接文档，不改运行时代码；其最终 HEAD 的 Flutter regression 与 Android arm64/JVM CI 必须各自取得 SUCCESS 后才可合并。未完成或缺少的检查不得计 PASS；合并后本地仍需重新读取最新 master SHA。
+ - **PR #576 产品范围纠偏（历史记录）：** PR #576 的精确 HEAD 及 CI 结果仍作为该次变更的历史证据；其 merge commit `5dcf91f...` 已被后续主线推进取代，不再是当前应用代码基线。
+ - **Core-3 媒体协议 / PR #583：** 图片、音频附件已接入 ReasoningRequest/Response v1 和 Native 双阶段提交；精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 与 push Branch validation 均 SUCCESS。旧 sendImage/sendAudio Native 入口 fail-closed；音频转写仍是待用户确认草稿。
+- **Core-5 跨层 E2E / PR #585：** 已合并 20 轮知识追问和一次工具动作确认/执行/结果解释 widget 测试。精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 和同 SHA push Branch validation 均 SUCCESS。fake executor 不代表真实 E4B/设备已通过。
+- **当前主线 CI：** 本地执行前再次读取最新 master SHA 和对应 CI 终态。任何未完成、SKIPPED 或其他 SHA 的检查不得计 PASS；本交接文档更新不改变运行时代码。
 - 上述 CI Debug APK/arm64 artifact 只证明 CI 构建、ABI、Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。Branch validation 为 SKIPPED 时不计 PASS。
 - **Fork inventory：** 当前清单记录新增/修改路径共 1,011 个（新增 847、修改 164），删除路径 15 个；分类为 Apache 2.0 + Fork 双层许可 158、Fork 商业授权候选 489、知识库排除 363、第三方排除 1。以 `docs/fork-license-file-inventory.md` 和 JSON 的当前 master 版本为准；自动 license boundary 只证明 inventory/DEP5/SPDX 结构一致，不证明 Fork 自有代码权属。
 - **正式发行仍 BLOCKED：** 正式发行者公钥来源、GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线托管/恢复演练、真实客户签发与密钥轮换均缺少可核验证据。不得使用测试公钥或临时公钥替代。
@@ -363,13 +365,13 @@ test-results.md 每一行按以下格式填写：
  
 ---
  
-## 14. 2026-11-26 PR #576 合并后的统一验收补充
+## 14. 2026-11-27 Core-5 合并后的统一验收补充
  
 > 本节和本文件其他部分共同构成唯一设备交接；不再新增 PR 专属交接单。所有场景目前均为 **NOT RUN / LOCAL ONLY**，须以真实 Find N2 证据更新。
  
 ### 14.1 云端合并与构建前置条件
  
-1. PR #576 已合并到 `master`；其精确 PR HEAD 的 Flutter regression、Android arm64 APK/Manifest/ABI、Native JVM tests 与 Fork license boundary 均 SUCCESS。当前主线基线为 `5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`。PR #582 的最终 HEAD 还必须完成 Flutter 与 Android CI，不能沿用 PR #576 的旧 HEAD 结果。
+  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。交接文档更新时仓库 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`（#586）；#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
 2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
 3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
 4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
@@ -392,6 +394,7 @@ test-results.md 每一行按以下格式填写：
 | P576-05 | 图片附件 | 使用无个人信息的普通知识图片 | 选择、权限、读取、模型处理、展示与消息关联正常；取消/失败不伪装成功 | NOT_RUN |
 | P576-06 | 语音附件 | 使用普通短语音样本 | 录音/选择、转写或模型处理、结果展示与持久化正常；失败状态清楚 | NOT_RUN |
 | P576-07 | 工具结果回流 | 执行一个已有确定性工具 | 只有 App 实际执行并校验的结果进入解释；模型不得伪造结果 | NOT_RUN |
+| P585-01 | 20 轮记忆隔离与单次工具闭环 | 同一会话连续 20 轮知识追问，再发起一次 tools-mode ACTION_PROPOSAL；由用户显式确认 | requestId 唯一；会话记忆携带用户知识上下文但排除隐藏 reasoning/tool Ledger；确认前执行次数为 0；确认后真实执行恰好 1 次；claim/terminal 可回读；解释回合 allowlist 为空且只消费已验证结果 | NOT_RUN |
 | P576-08 | 会话切换 | 在两个会话间分别追问 | 消息、附件和上下文锚点不跨会话污染 | NOT_RUN |
 | P576-09 | 应用重启恢复 | 完成一轮后强制停止并重启 App | 已完成轮次可恢复；未完成轮次不冒充成功；无重复消息 | NOT_RUN |
 | P576-10 | TRACE（可选 Debug） | 显式启用本地 Debug TRACE 并执行代表场景 | trace_id、阶段、实际 backend、消息和持久化记录可关联；仅导出脱敏 allowlist 元数据 | NOT_RUN |

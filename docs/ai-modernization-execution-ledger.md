@@ -5,7 +5,7 @@
 > 若历史台账条目与产品定位文件冲突，以产品定位文件及审计规范当前有效章节为准。历史条目保留为当时决策轨迹，不自动构成当前待办。
 > 状态必须由实际源码、测试、CI 或设备记录更新。不得根据计划、代码文件存在或模型回复推定完成。
 
-> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前集成状态以第 121 节为准。
+> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前集成状态以第 122 节为准。
 
 ## 1. 当前核验基线
 
@@ -14,8 +14,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `5dcf91f350996f6f8a9bd215cae482ff8b5dc46a` | PR #576 merge commit；已删除生产临床 RedFlag Gate/Preflight、Native boundary 和专用测试夹具。PR #582 仅修改文档，不改运行时代码 |
-| 本轮最新文档核验基线 | `5dcf91f350996f6f8a9bd215cae482ff8b5dc46a` | 当前 master 文档基线；PR #582 在此基础上更新架构映射、执行台账和唯一 Find N2 本地验收交接文档 |
+| AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
+| 本轮最新主线/文档核验基线 | `922285573e263ecd08a1eed535d4adec771a5979` | 当前 master HEAD；PR #586 的 About 页面/项目更新说明调整已在此主线，当前 AI 文档 PR 从该 SHA 派生，仅更改五份 AI 架构/审计/设备交接文档 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前应用代码与文档共同基线为 `master@5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`。PR #576 已完成临床门禁退役并通过其精确 PR HEAD 的 Flutter、Android arm64/JVM 与 Fork license CI；本轮 PR #582 仅更新架构映射、执行台账和唯一 Find N2 设备交接文档，不修改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍须按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 当前仓库 master HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`；其中 PR #586 是 About 页面/项目更新说明整理，不改变五层 AI 运行时代码。AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮 PR 只更新架构映射、执行台账、能力审计、Native 多轮专项审计和唯一 Find N2 本地验收交接单（共五份文档），不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -4804,3 +4804,21 @@ PR HEAD 门禁证据：
 - **本轮文档交付 / PR #582：** 基于最新 master，仅更新分层运行架构、执行台账和唯一设备验收交接文档，不改变运行时代码。PR #503 的有效云端 CI/基线信息已并入交接文档 §6.5；PR #560 的 P0 知识解读与 P1 键盘避让场景已并入 §15；原 PR #503、#560、#581 均已关闭，避免重复/过期交接入口。PR #582 分支直接从当前 master `5dcf91f...` 创建，未落后当前基线；合并前再次核对 base/head SHA 与文件差异，并以最终 HEAD 的 Flutter 和 Android CI 终态作为合并依据。
 - **设备交接：** 唯一入口为 `docs/local-real-device-acceptance-handoff.md`。该文件统一汇总远端已提交的 Find N2/E4B 设备验收内容；不新增多个交接文档，不把交接文档拆成修复任务。设备实测由本地执行者完成，不由 CI 代报，也不阻塞云端文档 PR。
 - **通用工程边界继续有效：** 输入/附件结构校验、AI access 权限、工具参数与用户确认、确定性业务结果、来源/协议校验、历史会话归属与恢复状态、未知状态不伪装成功。这些不属于临床红旗门禁。
+
+
+## 122. 2026-11-27 Core-3 媒体协议与 Core-5 跨层 E2E 合入后的当前状态
+
+- **当前仓库主线 HEAD：** `master@922285573e263ecd08a1eed535d4adec771a5979`；**AI 五层运行时代码集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #583/#585，PR #586 未改 AI 运行时）。PR #583 合并提交 `38d0490a7f11596962825a22161dbc7add0006da`；PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。第 1–121 节保留为历史记录；状态冲突时以本节和当前源码为准。
+- **Core-0：** 本轮同步刷新架构文档当前源码映射、Native 入口清单、测试锚点与剩余断点；Native 多轮专项审计第 10 节同步到 #117/#119/#120/#565/#575/#585 的当前代码状态。仅代表契约/源码映射与审计记录更新，不等于设备 TRACE 已 PASS。
+- **Core-1：** PR #117/#119 完成 SQLite 成功轮次原子持久化与 task/transcript TRACE 分类；PR #565 跟踪 RAG、SessionState、reasoning metadata 和媒体输入对 Live LiteRT KV cache 的污染，并在下一请求前仅对 dirty cache 从有界成功 transcript 重建 Conversation；PR #575 持久化推理 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 生命周期，打开历史会话时无终态请求降为 UNKNOWN 且禁止自动重放。SessionStateSnapshot 按 conversation owner 隔离，隐藏 role=tool 推理/业务 Ledger 事件不进入用户记忆。Native `LocalAiConversationHistory` 保留最多 12 个完整成功轮次和 10,000 UTF-16 code units；#120 由进程级串行 executor 协调 Activity teardown/reload，释放失败 fail-closed。Native Conversation 从 SQLite transcript 重建，但 LiteRT KV Cache 不持久化；字符上限不是 Token/input budget，自动压缩、真实 GPU/CPU、多媒体和 Activity/process restart TRACE 仍为 DEVICE UNKNOWN。
+- **Core-2：当前既定范围已完成。** PR #527 已提供不可变 RankedEvidenceSet（requestId、strategyId/version、逐候选 KEEP/DROP reasonCode/reason、稳定顺序、status/diagnostics）及 6,500 UTF-16 字符预算核算（omitted/truncated IDs）；PR #568 将 Formula、Herb、Acupuncture formula、Acupoint、Neijing 五类本地记录纳入 CandidateEvidence，并进入同一 MultiSourceEvidencePipeline/SourceAwareLegacyEvidenceRanker。当前 AssistantKnowledgeContextResult 同时返回排序前的 metadata-only candidateSnapshot、排序决策和仅包含完整呈现且来源可解析的 rankedEvidence。检索查询生成与内容物化仍由 AssistantKnowledgeContextBuilder 编排；ranker 本身独立消费候选。排序策略刻意保留 legacy 顺序和来源限额，不是语义相关性评分；字符预算不是 Token/input budget。KEEP/DROP 不表示来源真实性或内容正确性。
+- **Core-3：** PR #573 将 automatic、consultation、learning、tools、metaphysics 五种主文本模式接入 ReasoningRequest/Response v1。PR #583 将 image/audio 附件接入同一结构化协议，通过 `sendReasoningAttachmentMessage` 和 Native 串行队列/唯一 ai_access Gate；错误/错配附件响应被拒绝，旧 `sendImage` / `sendAudio` Native 入口 fail-closed。音频 transcriptDraft 是待用户确认草稿，不作为已确认用户记忆。intent、Bazi slot、symptom、单题问项继续按独立窄任务 DTO 管理。
+- **Core-4：** PR #561/#566 已形成工具模式生产闭环：Gate/Adapter 校验 requestId、能力 allowlist 和参数；用户显式确认后持久化 one-shot claim，再调用既有 HeadlessToolDispatcher；终态经 AssistantToolInvocationLedger 安全读回，只有已验证 SUCCEEDED 结果进入下一轮只读解释请求，新 requestId 且 allowlist 为空。当前只开放四个既有 plan-eligible capability；不是 Router 全部能力开放。UNKNOWN 不自动重放。
+- **Core-5：** PR #585 已合并。Widget 测试覆盖同一会话连续 20 轮知识追问、唯一 requestId、conversation owner、排除隐藏 Native/工具 Ledger、一次 ACTION_PROPOSAL、明确确认、一次 fake executor 调用、持久化 claim/terminal、验证结果只读解释和 source UI。测试使用内存 store/Native service 替身与测试执行器；只证明 Flutter/应用层合同，不声称真实 E4B Native 推理、GPU/CPU 性能、Activity/process restart 或 Find N2 TRACE 通过。
+- **PR #583 精确 HEAD 验收：** `dbd3778c1431ddad5d4eb3a57948c2667bb87957`；Flutter regression + Dart static analysis run `45910733517` SUCCESS；Android arm64/JVM job `140221144009` SUCCESS；Fork license run `45910733489` SUCCESS；push Branch validation job `140218249448` SUCCESS。仅对应 #583 精确 HEAD。
+- **PR #585 精确 HEAD 验收：** `6d9bb0549bed768d66cb2fe6b6fcdeecb6ef369d`；Flutter regression run `45943407178` SUCCESS，Android arm64/JVM job `140324524005` SUCCESS；Fork license run `45943407188` SUCCESS；同一精确 HEAD 的 push Branch validation job `140322618176` SUCCESS。PR event 的 push-only Branch validation 为 SKIPPED；同 SHA push run 已覆盖。
+- **合并后 master CI（#585 merge SHA）：** `master@45144f6c3d140d259ac51f8cfbb886c19c10e0a3` 的 Fork License run `45945725725` SUCCESS；Flutter Quality Gate run `45945725714` SUCCESS；Flutter tests run `45945725710` SUCCESS，其中 Android arm64 APK + JVM job `140332002888` SUCCESS。Branch validation job `140329842706` 为 SKIPPED，不计 PASS，也不影响上述已完成检查。
+- **后续 master CI（#586 后 HEAD）：** `master@922285573e263ecd08a1eed535d4adec771a5979` 的 Flutter tests run `45946971805` SUCCESS，其中 Android arm64 APK + unit tests job `140333786893` SUCCESS；Flutter Quality Gate run `45946971864` SUCCESS；Fork License run `45946971771` SUCCESS。该结果证明 #586 后的仓库主线已通过云端工作流，不替代当前文档 PR 精确 HEAD 的验收。
+- **工作流 H：** 当前核心主线按 Core-0→Core-5 推进；Native 多轮属于 Core-1，持续保留 request ledger、session owner、隐藏事件隔离和 UNKNOWN 不重放。后续只在已证实缺口上拆独立工作流，继续采用主线基线、独立分支、小批量 PR、精确 HEAD 自动验收。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT AUTHORIZED。不新增知识源、Embedding、向量数据库、Reranker、第二套会话数据库或第二套 AI access Gate。
+- **设备验收顺序：** Find N2 真实 E4B/GPU/CPU、连续 20 轮与工具结果解释、多媒体附件、会话切换、Activity recreation / force-stop 恢复、AI 数据清理、签名覆盖升级、Native Gate 和脱敏 TRACE 留到所有云端改造/CI/文档收尾后，由本地按照唯一 `docs/local-real-device-acceptance-handoff.md` 执行。设备缺少、未连接或未执行不阻塞云端工作，也不能将 MISSING/UNKNOWN 写成 PASS。
