@@ -608,3 +608,19 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - 新增 `test/local_ai_service_legacy_entrypoint_audit_test.dart`：递归扫描全部 `lib/**/*.dart`，在明确引用 LocalAiService 的文件中检查旧包装方法调用，并检查原始 local AI MethodChannel 是否被其他生产文件直接创建。
 - 该测试只用于补全静态调用点证据，不负责删除接口，也不把测试合同误判为生产调用。必须以该测试和最新 HEAD CI 终态为准；在此之前不移除任何兼容 API。Native 辅助 intent、八字槽位、症状整理、单题理解继续使用各自窄任务协议。
 - 本节不改变 ReasoningRequest/Response、Native 会话历史、访问门禁或模型行为。
+
+
+### 5.7 Core-3 旧非结构化入口退役后的当前状态（2026-11-27）
+
+> 本节以 PR #594 合并后的主线为准，覆盖 §5.5 Native 入口清单和 §5.6 旧兼容入口审计中的过期状态；前述章节保留为审计历史。
+
+- **当前 master：** `11ac0c5918e5c25754b44e71f0ba48c82bea6669`（PR #594 merge commit）；PR #594 精确 HEAD：`85e77de947d144fd52902690094ba84de4d248c8`。
+- **旧 Dart 包装接口已退役：** `LocalAiService` 不再公开 `sendMessage`、`sendMessageWithTrace`、`sendMessageWithContext`、`sendMessageWithContextAndTrace`、`sendImage`、`sendImageWithTrace`、`sendAudio`、`sendAudioWithTrace`，以及只服务这些包装层的私有自由文本/媒体转发实现。
+- **Native 兼容路由 fail-closed：** `MainActivity` 的旧 `sendMessage` MethodChannel 名称仍保留为兼容拒绝入口，固定返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`，不调用模型、不进入推理业务处理；`sendImage` / `sendAudio` 继续返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`。这些旧路由不是生产模型调用入口。
+- **生产主路径保持不变：** 五种助手模式的主文本仍走 `sendReasoningMessage`，图片/音频仍走 `sendReasoningAttachmentMessage` 和 ReasoningRequest/Response v1 双阶段提交；response 校验失败仍 reject，不将未验证输出记为成功轮次。
+- **辅助窄任务保持独立：** `resolveAssistantIntent`、`extractBaziSlots`、`extractSymptoms`、`understandTcmInterviewAnswer` 继续使用各自窄 DTO、候选约束和 App 侧校验，不并入主聊天协议。
+- **全仓静态防回归：** PR #591 新增的 `test/local_ai_service_legacy_entrypoint_audit_test.dart` 已扩展为扫描 `lib/` 与 `test/` Dart 源码，检查旧包装调用点；同时断言 Service 不再暴露旧方法，并检查 Native 旧文本路由 fail-closed。直接创建原始 local-AI MethodChannel 的生产 Dart 文件仍受扫描约束。该测试是仓库静态合同，不是对仓库外部二进制消费者的兼容承诺。
+- **精确 HEAD CI：** PR #594 Flutter regression run `45968674159` SUCCESS；Android arm64 APK/JVM job `140406700872` SUCCESS（22/22 steps）；Fork License run `45968674271` SUCCESS。PR 事件 Branch validation 为 SKIPPED，不计 PASS。合并后 master push 的 Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 在本节编写时仍为 IN_PROGRESS；其终态须按各自 SHA 记录，不能提前继承 PR 结果。
+- **分层判定：** Core-3 旧自由文本包装入口退役已完成；结构化文本/媒体推理保持原协议。Core-1 请求账本、会话归属、隐藏 Ledger 隔离与 UNKNOWN 不重放没有因本次退役改变。Core-4 白名单仍只有既有四项能力；Core-5 20 轮/单次工具闭环仍是应用层测试，不等于真实 E4B/设备测试。
+- **边界：** 不新增第二套会话存储、Native access Gate、Agent/DAG、Embedding、向量数据库或 Reranker；工作流 I 用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED。
+

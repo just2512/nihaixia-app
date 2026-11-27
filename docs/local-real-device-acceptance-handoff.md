@@ -1,6 +1,6 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.4  
+> **文档版本：** 1.5  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
 > **当前状态：** **LOCAL ONLY / NOT RUN / EXECUTE AFTER CLOUD AI CLOSEOUT**  
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库 master 核验点 `d024d2e277e80bb960b8986dc01d860eb7f7670f`** | 45144f6c 标识 #583/#585 的 AI 运行时集成；92228557 是本交接单更新时的最新仓库 HEAD（含 #586 About/项目更新说明调整）。本地执行前必须重新 `git fetch origin` 并以实际最新 `origin/master` SHA 构建，记录构建 SHA 和 CI，不能固定沿用这两个历史锚点 |
+| 构建基线 | **PR #594 合并后的 master 核验点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`；AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`** | 11ac0c59 包含 Core-3 旧非结构化入口退役；45144f6c 仍是 #583/#585 的五层运行时集成锚点。本交接单更新时的 master push CI：Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 尚在 IN_PROGRESS，Fork License run `45970274615` SUCCESS。执行前必须重新 `git fetch origin` 并读取届时最新 `origin/master` SHA 及其 CI 终态；不能固定沿用历史锚点 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -294,6 +294,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
   - PR #498 已合并（`82b2474202a33d802722e79560f6ae17670aab9a`），新增候选证据批次与经典候选收集边界；精确 HEAD 的 Fork、Flutter、Android arm64/JVM 检查 SUCCESS（`138955502743`、`138955626207`、`138958765875`）。
  - **PR #576 产品范围纠偏（历史记录）：** PR #576 的精确 HEAD 及 CI 结果仍作为该次变更的历史证据；其 merge commit `5dcf91f...` 已被后续主线推进取代，不再是当前应用代码基线。
  - **Core-3 媒体协议 / PR #583：** 图片、音频附件已接入 ReasoningRequest/Response v1 和 Native 双阶段提交；精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 与 push Branch validation 均 SUCCESS。旧 sendImage/sendAudio Native 入口 fail-closed；音频转写仍是待用户确认草稿。
+- **Core-3 旧兼容接口退役 / PR #594：** 精确 HEAD `85e77de947d144fd52902690094ba84de4d248c8` 已合并为 master `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。LocalAiService 旧 sendMessage*/sendImage*/sendAudio* 包装方法已移除；Native 旧 sendMessage 保留为返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED` 的 fail-closed 兼容入口。Flutter regression run `45968674159`、Android arm64 APK/JVM job `140406700872`（22/22 steps）与 Fork License run `45968674271` 均 SUCCESS；PR Branch validation 为 SKIPPED，不计 PASS。
 - **Core-5 跨层 E2E / PR #585：** 已合并 20 轮知识追问和一次工具动作确认/执行/结果解释 widget 测试。精确 HEAD 的 Flutter regression、Android arm64/JVM、Fork license 和同 SHA push Branch validation 均 SUCCESS。fake executor 不代表真实 E4B/设备已通过。
 - **当前主线 CI：** 本地执行前再次读取最新 master SHA 和对应 CI 终态。任何未完成、SKIPPED 或其他 SHA 的检查不得计 PASS；本交接文档更新不改变运行时代码。
 - 上述 CI Debug APK/arm64 artifact 只证明 CI 构建、ABI、Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。Branch validation 为 SKIPPED 时不计 PASS。
@@ -619,21 +620,29 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 | `docs/local-device-acceptance-handoff-2026-11-24.md` | 不存在（404） | 不作为当前交接文件 |
 | PR #576 临时交接内容 | 已在本文件中保留对应场景与执行约束 | 只更新本文件，不另建临时文件 |
 
-### 16.3 配套规范与交接单的区别
+### 16.3 配套规范、历史验收记录与唯一交接单的区别
 
-以下文件是专项操作规范或产品/架构规范，不是独立交接单，继续保留引用，不重复复制成多份进度文档：
+本次按文件名包含 `handoff` / `handover` / `acceptance` 的路径复核，并将历史记录、专项 runbook 与当前活动交接入口区分如下。它们不是多份平行进度交接单，不需要复制内容或删除有用的操作步骤：
 
-- `docs/local-android-release-checklist.md`
-- `docs/find-n2-real-device-acceptance.md`
-- `docs/local-ai-e4b.md`
-- `docs/find-n2-local-ai-acceptance-checklist.md`
-- `docs/find-n2-ai-trace-acceptance-plan.md`
-- `docs/yanji-visual-design-system.md`
-- `docs/brand-identity.md`
-- `docs/pro-edition-architecture-constraints.md`
+| 文件 | 分类 | 处理口径 |
+|---|---|---|
+| `docs/2026-11-04-unified-assistant-acceptance-audit.md` | 历史助手验收审计 | 保留为历史审计记录，不作为当前实机进度表 |
+| `docs/find-n2-acceptance-2026-11-02.md` | 历史设备验收记录 | 保留当时结果，不替代当前 master 的验收 |
+| `docs/find-n2-real-device-acceptance.md` | Find N2 实机验收操作规范 | 保留操作步骤，进度统一回填本文件 §7.1 |
+| `docs/find-n2-real-device-brand-acceptance.md` | 品牌/安装/更新专项验收操作规范 | 保留操作步骤，结果回填本文件 §7.1 |
+| `docs/find-n2-local-ai-acceptance-checklist.md` | E4B 本地 AI 验收清单 | 保留操作步骤，不单独建立进度交接单 |
+| `docs/find-n2-ai-trace-acceptance-plan.md` | TRACE 专项验收计划 | 保留采集与核对规范，结果回填本文件 §7.1 |
+| `docs/local-real-device-acceptance-handoff.md` | 当前唯一活动设备交接单 | 唯一记录当前基线、场景状态、证据、缺口和本地进度 |
+| `docs/local-android-release-checklist.md` | Android 本地发行操作规范 | 保留，不作为并行交接单 |
+| `docs/local-ai-e4b.md` | E4B 模型导入与运行操作规范 | 保留，不作为并行交接单 |
+| `docs/yanji-visual-design-system.md`、`docs/brand-identity.md`、`docs/pro-edition-architecture-constraints.md` | 设计/品牌/授权架构规范 | 保留为约束依据，不复制为设备进度表 |
+
+以上 7 份名称直接匹配 handoff/handover/acceptance 的文件中，只有本文件是当前活动交接单；其余 6 份是历史审计、历史结果或专项验收 runbook。不得把历史/操作规范当成重复交接文档删除。
 
 ### 16.4 本轮执行状态
 
-- 远端：统一交接文档已补充当前 master 基线与本地进度回报规则；具体设备场景仍未执行。
-- 本地：`LOCAL ONLY / NOT RUN`；本文件 §7.1 首行待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。
-- 云端 CI：最近有明确终态的父基线 `922285573e263ecd08a1eed535d4adec771a5979` 的 Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS；当前文档同步提交 `d024d2e277e80bb960b8986dc01d860eb7f7670f` 的 post-merge CI 未取得可核验终态，记 UNKNOWN。
+- **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；旧自由文本包装入口已退役，Native 旧文本入口 fail-closed。应用版本、包名和模型身份未因本轮改造改变。
+- **PR #594 精确 HEAD 云端验收：** `85e77de947d144fd52902690094ba84de4d248c8` 的 Flutter regression run `45968674159` SUCCESS；Android arm64 APK/JVM job `140406700872` SUCCESS；Fork License run `45968674271` SUCCESS。PR Branch validation 为 SKIPPED，不计 PASS。
+- **合并后 master CI：** `11ac0c5918e5c25754b44e71f0ba48c82bea6669` 的 Fork License run `45970274615` SUCCESS；Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 在本交接单编写时仍为 IN_PROGRESS。读取最新 master 后必须复核两项 run 的终态，不能把 PR HEAD 的 PASS 代替合并后 master CI。
+- **本地：** `LOCAL ONLY / NOT RUN`；本文件 §7.1 首行待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。云端 Debug APK/ABI/JVM 结果不等于 Find N2 正式 Release 安装或真实设备验证。
+- **文档归并：** 当前唯一设备进度入口仍为本文件；历史验收记录和专项 runbook 已分类保留，不另建 PR/GPU/CPU/媒体/知识解读/授权专属交接单。

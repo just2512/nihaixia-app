@@ -4884,3 +4884,41 @@ PR HEAD 门禁证据：
 - **Core-4：** 保持四项 plan-eligible capability 白名单不变；逐项复核 schema、副作用、幂等、取消/超时与 UNKNOWN，不扩权。
 - **Core-5：** 现有 20 轮 + 一次工具执行 fake-executor/widget 回归继续作为云端应用层证据，不等价于真实 E4B Native / Find N2。
 - **范围冻结：** 工作流 I Markdown 书架继续 DEFERRED；不增加 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker；产品定位继续是学习辅助工具。
+
+
+## 125. 2026-11-27 Core-3 旧非结构化接口退役与 CI 收口（PR #594）
+
+- **主线基线：** PR #591 合并后的 `master@1646762e0a3355219a23c023988c01ceed5dc8ad`。PR #594 以独立工作分支实施，最终 HEAD `85e77de947d144fd52902690094ba84de4d248c8`，合并提交 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。
+- **前置调用点证据：** PR #591 的全仓静态审计扫描 `lib/` 与 `test/` Dart 文件；生产代码没有旧 `LocalAiService.sendMessage* / sendImage* / sendAudio*` 调用，测试中的旧引用属于待退役 API 的合同测试或负向架构断言。代码搜索索引不可用时，不以搜索空结果作为证据。
+- **退役内容：** 删除 `LocalAiService` 旧文本/媒体包装 API 和仅供这些 API 使用的转发实现；删除只验证旧包装行为的 MethodChannel 合同测试，但保留 `importModel` 合同测试。同步移除 widget fake 上已失效的旧方法 override，避免接口退役后留下无意义的测试替身。
+- **Native 边界：** `MainActivity` 旧 `sendMessage` MethodChannel 名称保留为 fail-closed 兼容入口，返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`，不调用模型；旧媒体 `sendImage` / `sendAudio` 仍 fail-closed。新的结构化主文本与媒体入口未改动。
+- **静态防回归：** `test/local_ai_service_legacy_entrypoint_audit_test.dart` 扫描 `lib/` 与 `test/`；`test/native_ai_access_gate_architecture_test.dart` 明确区分“旧入口立即拒绝、不执行模型”与“可执行模型推理的 handler 必须通过唯一 ai_access Gate”；`test/reasoning_attachment_architecture_test.dart` 保留媒体旧调用负向断言，并避免源码扫描误判。
+- **精确 HEAD 自动验收：** Flutter tests run `45968674159` SUCCESS；Android arm64 APK/JVM job `140406700872` SUCCESS（22/22 steps，包括 Release-signing guard、ABI、Manifest、Android unit tests 与 XML 报告）；Fork License run `45968674271` SUCCESS。PR Branch validation 为 SKIPPED，不计 PASS。此前第一次全量回归暴露的 2 个架构测试失败已逐项修正；最终 HEAD 全量回归通过。
+- **合并后主线检查：** master merge SHA `11ac0c5918e5c25754b44e71f0ba48c82bea6669` 的 Fork License run `45970274615` SUCCESS。Flutter tests run `45970274621` 与 Flutter Quality Gate run `45970274579` 在本节记录时仍为 IN_PROGRESS；状态更新必须以这两个 run 的终态为准，不把 PR 的 PASS 复制为 master 的 PASS。
+- **保持不变：** ReasoningRequest/Response v1、Native 串行队列、唯一 ai_access Gate、两阶段 finalize/reject、Native transcript 恢复、持久化推理 turn ledger、UNKNOWN/non-replayable 语义及四项现有 ACTION_PROPOSAL capability allowlist。辅助窄任务 DTO 继续独立。
+- **结论：** Core-3 旧未结构化包装接口退役已合并；Native 旧文本端点已从可执行推理变为拒绝兼容路由。未改变 AI 产品行为或业务规则。Find N2 实机验收仍为 LOCAL ONLY / NOT RUN。
+
+## 126. 2026-11-27 Core-4 四项 plan-eligible capability 能力级约束复核
+
+- **审计边界：** 只复核 `ReasoningActionProposalGate` 当前允许的四项能力：`dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian`。Headless Dispatcher 注册的其余本地工具不因此进入模型可提案白名单；不扩大 allowlist、不改业务算法。
+- **逐项能力约束：**
+
+| capability | 输入合同 | 执行与数据来源 | 副作用 / 幂等性 | 取消、超时与补偿 |
+|---|---|---|---|---|
+| `dosage` | 仅接受现有 `value`、`unit` 与允许的可选 `standard`；由 `ToolArgumentSupport.validateDosageArguments` 做专项校验 | 复用本地 `DosageConversionService.convert` 与既有转换因子 | 确定性纯换算；不写业务数据库/文件、不访问网络；同一规范化参数重复计算结果相同 | 同步计算，无执行中协作取消或单独 deadline；无持久副作用，补偿不适用 |
+| `solar_terms` | 仅允许 `term`；显式值须命中 24 节气名称；缺省时读取当前节气 | 复用本地节气服务与知识资产 | 只读；显式 term 查询稳定；缺省查询依赖本地当前时间，跨节气边界重复请求可得到不同结果 | 本地知识读取没有独立协作取消/超时合同；无业务写入，补偿不适用 |
+| `yuxiaji_omen` | 参数必须为空；模型不得指定时辰、签次或其他输入 | App 读取本地当前时间，映射时辰后读取本地 `kYuXiaJiShiChenOmens` | 只读；结果受本地时间/时辰边界影响；同一 invocation 不重放，但新的用户确认请求可按新时刻得出新结果 | 当前没有执行中取消令牌或专用 timeout；无业务写入，补偿不适用 |
+| `sanshan_lingqian` | 参数必须为空；模型不得指定签号、序号或随机种子 | App 在本地 92 签目录中随机抽取 | 不写业务数据；单次调用结果随机；Ledger one-shot claim 防止同一 invocation 因重试重复抽签；新的用户确认 invocation 是新抽签 | 当前没有执行中取消令牌或专用 timeout；没有持久业务副作用，补偿不适用 |
+
+- **统一执行约束：** 用户明确确认后，Coordinator 先持久化 invocation claim，再分派现有 executor；只有 Ledger 终态安全读回且 toolId、实际参数、来源校验通过的 SUCCEEDED 结果，才能进入后续只读解释。重复 claim、异常、进程中断、结果读回不确定均保持 UNKNOWN，不自动重放。Invocation Ledger 是执行审计状态，不是四项工具的业务副作用。
+- **取消/超时事实：** 用户确认前取消不会 dispatch；dispatch 开始后，现有接口没有通用协作取消令牌，也没有统一执行 deadline。不能把 `Future.timeout` 当作真正取消：它只停止等待，底层 Future 仍可能继续执行。当前四项能力均无外部业务写入，因此不需要补偿；未来任何具有外部副作用的能力，在进入 allowlist 前必须逐项明确幂等键、真实取消/超时语义、UNKNOWN 处理及补偿策略。
+- **测试锚点：** `test/reasoning_action_proposal_gate_test.dart`、`test/assistant_tool_execution_coordinator_test.dart`、`test/assistant_tool_invocation_ledger_test.dart`、四项 executor 对应测试。现有测试覆盖能力 allowlist、参数边界、显式确认、claim-before-dispatch、重复/UNKNOWN 不重放与来源验证；本节不将这些应用层测试描述为实机或外部副作用验收。
+- **结论：** 当前四项能力属于受限、确定性/本地只读工具；副作用与补偿对这四项当前不适用，随机或时间依赖行为需以单次 invocation 防重放处理。通用取消和 deadline 尚未实现，不为没有外部副作用的现有能力引入虚假通用框架；后续扩展能力前再按实际副作用定义合同。
+
+## 127. 2026-11-27 本地设备交接文档单一入口复核
+
+- 当前唯一设备执行与进度回报入口是 `docs/local-real-device-acceptance-handoff.md`。
+- 对 docs 下名称包含 handoff / handover / acceptance 的文件做逐项分类后，历史审计、历史验收结果和专项操作规范均保留原位，不作为第二份活动交接单；不存在的旧路径维持 404，不重新创建。
+- 本地所有场景执行状态、证据目录、缺口与下一步统一追加到交接文档 §7.1；不按 PR、GPU/CPU、媒体、知识解读或授权任务拆分新文档。
+- Find N2 的 GPU/CPU、媒体、进程恢复、AI 数据清理、签名覆盖升级与 TRACE 仍为 LOCAL ONLY / NOT RUN，必须由本地执行者实测后回填，禁止将云端 CI 或 Widget 测试代写成实机 PASS。
+
