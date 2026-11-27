@@ -63,15 +63,94 @@ void main() {
       final native = await File(
         'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
       ).readAsString();
-      final legacyTextStart = native.indexOf('"sendMessage" ->');
+
+      // MainActivity is the sole Kotlin owner of LiteRT Engine/Conversation
+      // operations. A future helper in another file must be explicitly
+      // reviewed and added to the architecture map before it can call the API.
+      final nativeModelApi = RegExp(
+        r'\.(?:sendMessage|createConversation|generateResponse)\s*\(',
+      );
+      final nativeModelImports = RegExp(
+        r'^import com\.google\.ai\.edge\.litertlm',
+        multiLine: true,
+      );
+      final unexpectedNativeModelCallSites = <String>[];
+      await for (final entity in Directory(
+        'android/app/src/main/kotlin',
+      ).list(recursive: true, followLinks: false)) {
+        if (entity is! File || !entity.path.endsWith('.kt')) continue;
+        final relativePath = entity.path.replaceAll('\\', '/');
+        if (relativePath ==
+            'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt') {
+          continue;
+        }
+        final source = await entity.readAsString();
+        if (nativeModelApi.hasMatch(source) || nativeModelImports.hasMatch(source)) {
+          unexpectedNativeModelCallSites.add(relativePath);
+        }
+      }
+      expect(
+        unexpectedNativeModelCallSites,
+        isEmpty,
+        reason: 'Native LiteRT Engine/Conversation calls must remain behind '
+            'the audited MainActivity access gate.',
+      );
+      final legacyImageStart = native.indexOf('"sendImage" ->');
+      final legacyAudioStart = native.indexOf('"sendAudio" ->', legacyImageStart);
+      final legacyTextStart = native.indexOf('"sendMessage" ->', legacyAudioStart);
       final reasoningTextStart = native.indexOf('"sendReasoningMessage" ->', legacyTextStart);
-      expect(legacyTextStart, greaterThanOrEqualTo(0));
+      expect(legacyImageStart, greaterThanOrEqualTo(0));
+      expect(legacyAudioStart, greaterThan(legacyImageStart));
+      expect(legacyTextStart, greaterThan(legacyAudioStart));
       expect(reasoningTextStart, greaterThan(legacyTextStart));
+
+      final legacyImageHandler = native.substring(legacyImageStart, legacyAudioStart);
+      final legacyAudioHandler = native.substring(legacyAudioStart, legacyTextStart);
       final legacyTextHandler = native.substring(legacyTextStart, reasoningTextStart);
+      expect(legacyImageHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
+      expect(legacyImageHandler, isNot(contains('runAiTask')));
+      expect(legacyImageHandler, isNot(contains('sendLocalImage(')));
+      expect(legacyAudioHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
+      expect(legacyAudioHandler, isNot(contains('runAiTask')));
+      expect(legacyAudioHandler, isNot(contains('sendLocalAudio(')));
       expect(legacyTextHandler, contains('STRUCTURED_REASONING_PROTOCOL_REQUIRED'));
       expect(legacyTextHandler, isNot(contains('runAiTask')));
       expect(legacyTextHandler, isNot(contains('sendLocalMessage(')));
       expect(native, isNot(contains('private fun sendLocalMessage(')));
+      expect(native, isNot(contains('private fun sendLocalImage(')));
+      expect(native, isNot(contains('private fun sendLocalAudio(')));
+
+      // Every live model-invoking MethodChannel route must opt into the
+      // shared runAiTask authorization check. Old sendMessage/sendImage/
+      // sendAudio routes are intentionally excluded because they fail closed.
+      const modelInferenceRoutes = [
+        'loadModel',
+        'understandTcmInterviewAnswer',
+        'extractSymptoms',
+        'resolveAssistantIntent',
+        'extractBaziSlots',
+        'sendReasoningMessage',
+        'sendReasoningAttachmentMessage',
+        'restoreConversation',
+      ];
+      for (final method in modelInferenceRoutes) {
+        final routeStart = native.indexOf('"$method" ->');
+        expect(routeStart, greaterThanOrEqualTo(0), reason: method);
+        final routeSeparator = String.fromCharCode(10) + '                    "';
+        final nextRoute = native.indexOf(routeSeparator, routeStart + 1);
+        final routeEnd = nextRoute < 0 ? native.length : nextRoute;
+        final route = native.substring(routeStart, routeEnd);
+        expect(
+          route,
+          contains('runAiTask(result, requiresAiAccess = true)'),
+          reason: '$method must require Native AI access before model work.',
+        );
+      }
+      expect(
+        native,
+        contains('if (requiresAiAccess) aiModelAccessGate.requireAccess()'),
+        reason: 'runAiTask must enforce the single process AI access gate.',
+      );
 
       legacyCallSites.sort();
       rawChannelSites.sort();
