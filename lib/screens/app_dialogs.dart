@@ -313,7 +313,7 @@ Future<void> showAboutPage(BuildContext context) async {
             const Text('开源致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
-                '感谢 jangviktor-web/nihaixia-app 原作者提供原始开源项目与代码基础，也感谢其他开源组件作者和社区贡献者。',
+                '感谢原始开源项目 jangviktor-web/nihaixia-app 的作者，感谢 ziwei_core、Flutter / Dart 生态中的开源项目作者，以及所有社区贡献者。',
                 style: TextStyle(color: context.colors.onSurfaceVariant)),
             const SizedBox(height: 16),
             const Divider(),
