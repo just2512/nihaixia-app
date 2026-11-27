@@ -8,7 +8,7 @@ import org.junit.Test
 class LocalAiTranscriptRestorePolicyTest {
 
     @Test
-    fun rejectsMissingOrMalformedRestoreEnvelopeBeforeHistoryMutation() {
+    fun rejectsMissingOrMalformedRestoreEnvelope() {
         val validTurns = listOf(mapOf("user_text" to "问题", "assistant_text" to "回答"))
         val validMessages = listOf("用户自述")
 
@@ -31,6 +31,27 @@ class LocalAiTranscriptRestorePolicyTest {
             )
         }
         assertTrue(missingOmittedCount.message!!.contains("omitted_completed_turn_count"))
+
+        val missingOmittedCharacters =
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                LocalAiTranscriptRestorePolicy.parsePayload(
+                    rawCompletedTurns = validTurns,
+                    rawOmittedCompletedTurnCount = 0,
+                    rawOmittedCompletedCharacterCount = null,
+                    rawUserMessages = validMessages
+                )
+            }
+        assertTrue(missingOmittedCharacters.message!!.contains("omitted_completed_character_count"))
+
+        val invalidTurnsType = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = "not-a-list",
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages
+            )
+        }
+        assertTrue(invalidTurnsType.message!!.contains("completed_turns"))
 
         val invalidNumericType = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             LocalAiTranscriptRestorePolicy.parsePayload(
