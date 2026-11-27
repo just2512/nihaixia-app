@@ -229,5 +229,11 @@ void main() {
       ),
       isFalse,
     );
+    expect(
+      AssistantMessageMetadata.isReplayableForSessionMemory(
+        'schemaVersion=2;replayable=true',
+      ),
+      isFalse,
+    );
   });
 }
