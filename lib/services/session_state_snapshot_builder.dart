@@ -79,8 +79,9 @@ class SessionStateSnapshotBuilder {
       // A durable UNKNOWN/REJECTED reasoning request is visible history, but
       // not a completed conversational fact. Keep it out of session memory
       // until the user explicitly sends it again.
-      if (message.metadata != null &&
-          !AssistantMessageMetadata.decode(message.metadata!).replayable) {
+      if (!AssistantMessageMetadata.isReplayableForSessionMemory(
+        message.metadata,
+      )) {
         partial = true;
         omittedUserMessageCount++;
         continue;
