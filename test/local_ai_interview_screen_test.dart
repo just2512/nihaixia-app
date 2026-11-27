@@ -18,6 +18,7 @@ import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/services/classic_search_service.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
@@ -393,10 +394,10 @@ class _PageToolTraceService extends _TextSendService {
   @override
   Future<void> restoreConversation({
     required int conversationId,
-    required String transcript,
+    required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
   }) async {
-    restoredTranscripts.add(transcript);
+    restoredTranscripts.add(restore.transcript);
   }
 }
 
