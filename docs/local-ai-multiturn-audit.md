@@ -241,9 +241,9 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 
 ---
 
-## 10. 2026-11-27 当前主线复核：Native 多轮记忆边界与请求生命周期已形成云端闭环
+## 10. 2026-11-27 历史主线复核：Native 多轮记忆边界与请求生命周期已形成云端闭环
 
-> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
+> 本节保留 `master@1d79bc2f628fde789c5b5602cee889f844972c23` 时的主线状态快照，历史实现过程不回写；最新运行时代码复核与 CI 状态以第 11 节 `master@04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f` 为准。AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
 
 ### 10.1 当前已落地的 Native / Memory 治理
 
@@ -281,9 +281,9 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 
 
 
-### 10.4 2026-11-27 当前主线 CI 状态同步
+### 10.4 2026-11-27 历史主线 CI 状态同步
 
-- 当前 master HEAD：`1d79bc2f628fde789c5b5602cee889f844972c23`（本次仅文档同步）。
+- 当时 master HEAD：`1d79bc2f628fde789c5b5602cee889f844972c23`（该次仅文档同步）。
 - 同一 SHA 对应的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均为 SUCCESS。
 - PR #594 已将 LocalAiService 旧非结构化包装方法退役；Native 旧 `sendMessage` 保留为 fail-closed 路由，不调用模型。该 Core-3 变更不改变本节 Core-1 的恢复边界。
 - 当前主线已有 KV Cache token 数与模型声明 maxContextTokens 的只读观测；`conversationKvCacheBudgetStatus` 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，因此实测可用 Token/input budget、预算控制/自动压缩并未完成。
