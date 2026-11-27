@@ -1,7 +1,7 @@
 # 本地 AI 多轮稳定性与 Native 生命周期审计
 
 - 历史审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`（2026-11-11）
-- 当前仓库主线复核点：`master@922285573e263ecd08a1eed535d4adec771a5979`（2026-11-27）
+- 当前仓库主线复核点：`master@b978bc95475dcbc58f00be77c5479b26f91e7351`（2026-11-27；Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS）
 - 当前 AI 多轮运行时集成点：`45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 #565/#575 后续集成、#585 跨层 E2E 所在主线）
 - 历史修复分支：`work/ai-transcript-restore-boundary-2026-11-11`
 - 首次审计日期：2026-11-11；当前复核日期：2026-11-27
@@ -243,7 +243,7 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 
 ## 10. 2026-11-27 当前主线复核：Native 多轮记忆边界与请求生命周期已形成云端闭环
 
-> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
+> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
 
 ### 10.1 当前已落地的 Native / Memory 治理
 
@@ -278,3 +278,11 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 
 **当前判定：** Native 多轮的云端确定性代码治理已形成闭环：原子 transcript 持久化、临时 KV 上下文逐轮隔离、结构化请求终态和非 replayable 恢复、Activity executor 失败隔离均有主线实现和自动化证据。A 仍是 **PARTIAL / DEVICE UNKNOWN**，因为真实 Find N2 GPU/CPU、state:7、媒体、Activity/进程恢复、三方 transcript 对照和 Token 预算测量尚未有设备 TRACE。设备验收按唯一 `docs/local-real-device-acceptance-handoff.md` 放在所有云端工作之后，不阻塞云端代码、文档和 CI。
 
+
+
+### 10.4 2026-11-27 当前主线 CI 状态同步
+
+- 当前 master HEAD：`b978bc95475dcbc58f00be77c5479b26f91e7351`。
+- 同一 SHA 对应的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均为 SUCCESS。
+- PR #594 已将 LocalAiService 旧非结构化包装方法退役；Native 旧 `sendMessage` 保留为 fail-closed 路由，不调用模型。该 Core-3 变更不改变本节 Core-1 的恢复边界。
+- 本次只同步当前主线核验点与 CI 证据，未修改 Native 多轮运行时代码。真实 Find N2 GPU/CPU、state:7、媒体、Activity/process restart、Token/input budget 仍按第 10.3 节和唯一设备交接文件执行，继续保持 DEVICE UNKNOWN / NOT RUN。
