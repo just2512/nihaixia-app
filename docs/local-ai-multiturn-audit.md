@@ -3,8 +3,8 @@
 - 历史审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`（2026-11-11）
 - 当前仓库主线复核点：`master@922285573e263ecd08a1eed535d4adec771a5979`（2026-11-27）
 - 当前 AI 多轮运行时集成点：`45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 #565/#575 后续集成、#585 跨层 E2E 所在主线）
-- 修复分支：`work/ai-transcript-restore-boundary-2026-11-11`
-- 审计日期：2026-11-11
+- 历史修复分支：`work/ai-transcript-restore-boundary-2026-11-11`
+- 首次审计日期：2026-11-11；当前复核日期：2026-11-27
 - 范围：Flutter MethodChannel、Native Engine/Conversation、成功轮次历史、GPU→CPU 恢复、历史恢复、SQLite 持久化和资源释放。
 - 历史总结：A = PARTIAL。**当前状态以第 10 节（2026-11-27 主线复核）为准**：SQLite 原子轮次持久化、Native transcript 截断策略、临时上下文逐轮清理、结构化推理请求状态账本和 UNKNOWN 不重放已有代码/自动化覆盖；真机 GPU/CPU 轮次、state:7、Activity/进程恢复及实测 Token 上下文预算仍为 DEVICE UNKNOWN。
 
