@@ -88,6 +88,21 @@ void main() {
     );
     expect(imageHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
     expect(audioHandler, contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'));
+
+    // Legacy free-form text must not bypass the structured Core-3 turn ledger.
+    final legacyTextStart = native.indexOf('"sendMessage" ->');
+    final legacyTextEnd = native.indexOf('"sendReasoningMessage" ->', legacyTextStart);
+    expect(legacyTextStart, greaterThanOrEqualTo(0));
+    expect(legacyTextEnd, greaterThan(legacyTextStart));
+    final legacyTextHandler = native.substring(legacyTextStart, legacyTextEnd);
+    expect(
+      legacyTextHandler,
+      contains('STRUCTURED_REASONING_PROTOCOL_REQUIRED'),
+    );
+    expect(legacyTextHandler, isNot(contains('runAiTask(')));
+    expect(legacyTextHandler, isNot(contains('sendLocalMessage(')));
+    expect(native, isNot(contains('private fun sendLocalMessage(')));
+
     expect(service, contains('sendReasoningAttachmentMessageWithTrace'));
   });
 }
