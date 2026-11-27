@@ -1,6 +1,6 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.6  
+> **文档版本：** 1.7  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
 > **当前状态：** **CLOUD AI CLOSEOUT CI: PASS / DEVICE: LOCAL ONLY / NOT RUN**  
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **当前 master HEAD `b978bc95475dcbc58f00be77c5479b26f91e7351`；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 当前 master 同一 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS。执行前仍必须 `git fetch origin` 并重新读取届时最新 `origin/master` SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
+| 构建基线 | **当前 master HEAD `1d79bc2f628fde789c5b5602cee889f844972c23`；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 当前 master 同一 SHA 的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS。执行前仍必须 `git fetch origin` 并重新读取届时最新 `origin/master` SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -197,7 +197,7 @@ adb install -r $apk
 
 ## 5. E4B 本地 AI 实机验收
 
-完整模型配置和操作细节以 docs/local-ai-e4b.md、docs/find-n2-local-ai-acceptance-checklist.md、docs/find-n2-ai-trace-acceptance-plan.md 为准。本节是本轮最低执行摘要。
+完整模型配置和操作细节以 docs/local-ai-e4b.md、docs/find-n2-local-ai-acceptance-checklist.md、docs/find-n2-ai-trace-acceptance-plan.md 为准。本节是本轮最低执行摘要。当前 Native `LocalAiModelStatus` 已提供 `conversationKvCacheTokens` / `conversationKvCacheObservationStatus` 与 `modelMaxContextTokens` / `modelMaxContextTokensObservationStatus`；这些是运行态只读观测，不是 App 可用输入预算。当前 `conversationKvCacheBudgetStatus` 为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，设备测试不得将观测值自行解释为剩余 Token 数或可用上下文预算。
 
 ### 5.1 模型完整性与离线
 
@@ -215,7 +215,7 @@ GPU、CPU 必须分开建立会话与记录。每组要求：
 - 每个实际 backend 至少连续完成 20 轮文字问答；覆盖上下文追问、实体回指、无检索命中、澄清、工具结果解释。
 - 中间重置会话后再完成至少 3 轮，确认旧上下文不串入。
 - GPU 若实际回退 CPU，该组按 CPU 记录，不计入 GPU 轮数。
-- 记录首次加载时间、每轮耗时、空回复、崩溃、state:7、温度/降频和可观测内存情况。未知错误不得猜测根因。
+- 记录首次加载时间、每轮耗时、空回复、崩溃、state:7、温度/降频和可观测内存情况；同时记录 Native 返回的 `conversationKvCacheTokens`、`conversationKvCacheObservationStatus`、`modelMaxContextTokens`、`modelMaxContextTokensObservationStatus` 与 `conversationKvCacheBudgetStatus`。若观测状态为 UNKNOWN，保留 UNKNOWN 并附错误码/脱敏日志，不猜测根因；即使两项观测均有值，也不得把它们当成 App 可用输入预算。
 
 ### 5.3 图片、语音与恢复
 
@@ -285,7 +285,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
 
- - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档更新时的仓库 HEAD：** `master @ d024d2e277e80bb960b8986dc01d860eb7f7670f`（PR #586，About/项目更新说明调整；未改 AI 运行时代码）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
+ - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档上次基线：** `master @ d024d2e277e80bb960b8986dc01d860eb7f7670f`；**当前复核基线：** `master @ 1d79bc2f628fde789c5b5602cee889f844972c23`（本次仅同步文档；三项主线 CI 均 SUCCESS，详见 §1）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
 - **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
 - **Core 云端实现记录：**
   - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
@@ -387,7 +387,7 @@ test-results.md 每一行按以下格式填写：
  
 ### 14.1 云端合并与构建前置条件
  
-  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。交接文档更新时仓库 HEAD 为 `d024d2e277e80bb960b8986dc01d860eb7f7670f`（#586）；#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
+  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。当前文档复核基线为 `1d79bc2f628fde789c5b5602cee889f844972c23`，对应 Flutter tests、Flutter Quality Gate、Fork License 三项主线 CI 均 SUCCESS；本次仅同步文档。#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
 2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
 3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
 4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
@@ -641,8 +641,8 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 
 ### 16.4 本轮执行状态
 
-- **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；LocalAiService 旧非结构化包装方法已删除，Native 旧文本入口 fail-closed。当前主线 HEAD 已继续推进至 `b978bc95475dcbc58f00be77c5479b26f91e7351`。
-- **当前 master 合并后 CI：** 在 `b978bc95475dcbc58f00be77c5479b26f91e7351` 上，Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS；三项均对应当前表内同一 SHA。
-- **Core-1 / Core-4 / Core-5 云端边界：** Native transcript/KV 隔离与请求状态有自动化覆盖；四项 ACTION_PROPOSAL capability 的能力级输入、副作用、幂等及结果回读审计已记录；20 轮知识追问与一次工具动作的 Flutter 回归已合入。fake service/executor 不代表真实 E4B 或真机 TRACE。
+- **远端代码：** PR #594 已合并至 `master@11ac0c5918e5c25754b44e71f0ba48c82bea6669`；LocalAiService 旧非结构化包装方法已删除，Native 旧文本入口 fail-closed。当前主线 HEAD 已继续推进至 `1d79bc2f628fde789c5b5602cee889f844972c23`。
+- **当前 master 合并后 CI：** 在 `1d79bc2f628fde789c5b5602cee889f844972c23` 上，Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS；三项均对应当前表内同一 SHA。
+- **Core-1 / Core-4 / Core-5 云端边界：** Native transcript/KV 隔离与请求状态有自动化覆盖；当前 Native KV Cache token 数、模型声明 maxContextTokens 有只读观测，但 App 可用输入预算状态仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不代表自动预算治理已完成；四项 ACTION_PROPOSAL capability 的能力级输入、副作用、幂等及结果回读审计已记录；20 轮知识追问与一次工具动作的 Flutter 回归已合入。fake service/executor 不代表真实 E4B 或真机 TRACE。
 - **本地：** `LOCAL ONLY / NOT RUN`；本文件 §7.1 首行仍待本地执行者填写，所有未实测场景继续保持 MISSING / UNKNOWN。Debug APK/ABI/JVM/Widget 结果不等于 Find N2 正式 Release 安装或真实设备验证。
 - **文档归并：** 当前唯一设备进度入口仍为本文件；历史验收记录和专项 runbook 已分类保留，不另建 PR/GPU/CPU/媒体/知识解读/授权专属交接单。

@@ -364,13 +364,13 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.1 当前 master 源码映射与已确认断点（2026-11-27）
 
-**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役，合并提交 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`；PR #590 文档统一已合并为 `62f18244220c073bcd5f7bf802ca48d7714f7aeb`。当前 `master` 核验 HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`，该 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS。以下按已合并代码描述生产能力；其他 SHA 的 CI、SKIPPED 项和本地未执行的 TRACE 不计为当前通过证据。
+**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役，合并提交 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`；PR #590 文档统一已合并为 `62f18244220c073bcd5f7bf802ca48d7714f7aeb`。当前 `master` 核验 HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`；同一 SHA 的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS。本次提交仅同步文档，没有改变五层运行时代码。以下按已合并代码描述生产能力；其他 SHA 的 CI、SKIPPED 项和本地未执行的 TRACE 不计为当前通过证据。
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
 | 知识召回 | ClassicEvidencePipeline、GujiEvidencePipeline、MedicalCaseEvidencePipeline；Formula、Herb、Acupuncture formula、Acupoint、Neijing 结构化资料适配为 CandidateEvidence；AssistantKnowledgeContextBuilder.buildAsync/buildWithEvidenceAsync | **当前约定范围已落地：** #568 将五类本地结构化资料纳入请求级候选，并与经典/医案/古籍候选进入 MultiSourceEvidencePipeline；候选快照保留 query/retrieval provenance 和来源身份，后续由独立 ranker 处理。AssistantKnowledgeContextBuilder 仍编排现有 query/matching 与上下文物化，保留 legacy 命中语义；不代表覆盖全部数据源、独立查询生成器或内容正确性审定。 |
 | 证据排序 | MultiSourceEvidencePipeline.combine、SourceAwareLegacyEvidenceRanker.rank、AssistantKnowledgeContextBuilder.buildWithEvidenceAsync | **当前约定范围已落地：** MultiSourceEvidencePipeline 仅合并并命名空间隔离各来源 CandidateEvidence，不自行排序；SourceAwareLegacyEvidenceRanker 独立接收候选并输出不可变 RankedEvidenceSet（requestId、strategyId/version、逐候选 KEEP/DROP 原因、稳定顺序、状态和诊断）。AssistantKnowledgeContextResult 同时提供排序前的 metadata-only AssistantKnowledgeCandidateSnapshot、完整排序决策，以及仅包含完整呈现且已解析来源的 rankedEvidence；最终 6,500 UTF-16 code units 呈现预算记录 omitted/truncated evidence IDs。**边界：** 当前策略是有意保留的确定性 legacy 来源顺序/每来源上限，不是语义相关性排序；6,500 字符是呈现预算，不是模型 Token/input budget。检索查询和上下文物化仍由 AssistantKnowledgeContextBuilder 编排，但召回/聚合/排序输入输出边界已独立可测。 |
-| 会话记忆 | SessionStateSnapshotBuilder、LocalAiConversationHistory / LocalAiConversationSessionPolicy、Native LocalAiSessionStateInputPolicy、AssistantReasoningTurnLedger、AssistantToolInvocationLedger | **云端代码/测试已落地，仍有设备级缺口：** SessionStateSnapshot 具有 provenance 与 conversation owner 校验；隐藏 role=tool 的推理/执行 Ledger 不进入普通会话记忆。#565 追踪 RAG/SessionState/reasoning metadata/媒体输入是否污染活动 KV，并在下一请求前仅对 dirty cache 从有界成功 transcript 重建；#575 持久化推理 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 状态，未完成请求恢复为 UNKNOWN 且不自动重放。LiteRT KV Cache 本身不持久化；12 轮/10,000 transcript、16,000 SessionState 字符限制不是模型 Token 预算；自动压缩仍未实现，真实进程恢复为 DEVICE UNKNOWN。 |
+| 会话记忆 | SessionStateSnapshotBuilder、LocalAiConversationHistory / LocalAiConversationSessionPolicy、Native LocalAiSessionStateInputPolicy、AssistantReasoningTurnLedger、AssistantToolInvocationLedger | **云端代码/测试已落地，仍有设备级缺口：** SessionStateSnapshot 具有 provenance 与 conversation owner 校验；隐藏 role=tool 的推理/执行 Ledger 不进入普通会话记忆。#565 追踪 RAG/SessionState/reasoning metadata/媒体输入是否污染活动 KV，并在下一请求前仅对 dirty cache 从有界成功 transcript 重建；#575 持久化推理 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 状态，未完成请求恢复为 UNKNOWN 且不自动重放。Native `Conversation.getTokenCount()` 已提供当前 KV Cache token 数只读观测，`ModelInfo.maxContextTokens()` 已提供模型文件声明的最大上下文长度只读观测，二者通过 `LocalAiModelStatus` 暴露；`conversationKvCacheBudgetStatus` 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，因此尚无 App 可用输入预算、剩余预算、预算阈值、安全裁剪或自动压缩机制。LiteRT KV Cache 本身不持久化；12 轮/10,000 transcript、16,000 SessionState 字符限制不是模型 Token 预算；真实设备数值与进程恢复为 DEVICE UNKNOWN。 |
 | 语言推理 | ReasoningRequest / ReasoningResponse v1、ReasoningRequestPromptFormatter、ReasoningResponseCodec、ReasoningKnowledgeAnswerAdapter、LocalAiService；Native sendLocalReasoningMessage / sendLocalReasoningAttachmentMessage、finalizeReasoningTurn / rejectReasoningTurn | **结构化主路径与媒体附件协议已接线；旧包装 API 已退役：** #573 覆盖 automatic、consultation、learning、tools、metaphysics 五种主文本模式，#583 覆盖 image/audio 附件与 Native 双阶段提交。PR #594 删除 LocalAiService 旧 sendMessage*、sendImage*、sendAudio* 包装方法及私有转发实现；Native 旧 `sendMessage` 仅保留 fail-closed 拒绝路由，旧媒体入口继续 fail-closed。图片结果为结构化观察，音频转写在用户确认前仍是待确认草稿。intent、Bazi slot、symptom、单题问项继续使用独立窄任务 DTO。 |
 | 业务执行 | ReasoningActionProposalGate / Adapter、AssistantToolExecutionCoordinator、AssistantToolInvocationLedger、HeadlessToolDispatcher.executePlan、ReasoningExecutionResultAdapter | **四项受限动作提案闭环及能力级审计已完成当前云端范围：** #561/#566 接通请求级 allowlist、App 显式确认、持久化 one-shot claim、Dispatcher、终态安全读回和只读结果解释。当前仅允许 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian` 四项；能力输入、来源、副作用、幂等/时间依赖及补偿适用性已逐项记录（见 `docs/assistant-tool-capability-audit.md` §14 与执行台账 §126）。四项均为纯计算或本地只读，没有外部业务写入；执行中通用协作取消与 deadline 未实现，不把关闭 UI 或 `Future.timeout` 说成底层执行已取消。其他 Router 注册项不因此自动成为模型可调用能力。UNKNOWN 不重放。 |
 
@@ -379,7 +379,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | 层 | 主要回归锚点 | 仍需解决的明确缺口 |
 |---|---|---|
 | Core-0 契约与源码映射 | 本文件 §2 DTO、§3 数据流、§5.1 当前映射；各层现有契约测试 | 本轮只冻结当前代码真实入口、数据所有权和状态，不新增服务、Agent、数据库、模型或权限门禁。 |
-| Core-1 会话记忆 | test/session_state_snapshot_builder_test.dart、test/session_state_snapshot_prompt_formatter_test.dart、reasoning turn ledger 相关测试、Native LocalAiConversationHistoryPolicyTest / LocalAiSessionStateInputPolicyTest | 不持久化 LiteRT KV Cache；Native context 通过 transcript 重建，不等于 KV 状态恢复。模型实际可用 Token/input budget、自动压缩、Find N2 进程恢复 TRACE 仍为 UNKNOWN / NOT IMPLEMENTED。 |
+| Core-1 会话记忆 | test/session_state_snapshot_builder_test.dart、test/session_state_snapshot_prompt_formatter_test.dart、reasoning turn ledger 相关测试、Native LocalAiConversationHistoryPolicyTest / LocalAiSessionStateInputPolicyTest、`test/local_ai_service_test.dart` | `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 已接入只读观测；状态缺失/类型无效/Native 观测失败时保持 UNKNOWN。当前 `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，实际可用输入 Token 预算、输出预留、动态预算策略/安全裁剪、自动压缩仍为 UNKNOWN / NOT IMPLEMENTED；Find N2 进程恢复 TRACE 仍为 DEVICE UNKNOWN。 |
 | Core-2 知识召回/排序 | test/assistant_knowledge_context_test.dart（Formula/Herb/Acupuncture/Acupoint/Neijing/MedicalCase）、test/multi_source_evidence_pipeline_test.dart、test/source_aware_legacy_evidence_ranker_test.dart、test/ai_retrieval_golden_snapshot_test.dart | **已落地：** 五类结构化本地资料与 Classic/Guji/MedicalCase 均进入 CandidateEvidence；候选元数据快照、query/retrieval provenance、完整 KEEP/DROP reason、strategy/version、顺序、状态、诊断和最终字符预算均有结构化输出与回归。**限制：** 仍保留 legacy 查询生成、匹配和来源限额；不提供 Token 预算或语义相关性分数。KEEP/DROP 不是来源真实性、经典权威性或医学正确性判断。 |
 | Core-3 语言推理 | test/reasoning_request_prompt_formatter_test.dart、test/reasoning_response_codec_test.dart、test/reasoning_knowledge_answer_adapter_test.dart、test/local_ai_service_legacy_entrypoint_audit_test.dart、test/reasoning_attachment_architecture_test.dart、test/local_ai_interview_screen_test.dart | 旧 LocalAiService 包装方法已删除；全仓 `lib/` 与 `test/` 静态扫描防止旧调用回归，Native `sendMessage` fail-closed 且不调用模型。主文本/附件继续走结构化协议；音频 transcriptDraft 在用户确认前不得提升为 USER_ORIGINAL 记忆事实。辅助窄任务入口继续独立。 |
 | Core-4 业务执行 | test/reasoning_action_proposal_gate_test.dart、test/reasoning_action_proposal_adapter_test.dart、test/assistant_tool_execution_coordinator_test.dart、test/assistant_tool_invocation_ledger_test.dart、test/assistant_tool_invocation_ledger_storage_test.dart、test/reasoning_execution_result_adapter_test.dart、四项 executor 测试及 `test/local_ai_interview_screen_test.dart` | 四项 plan-eligible capability 的能力级输入、数据来源、副作用、幂等/时间依赖及补偿适用性已逐项复核；显式确认、claim-before-dispatch、终态读回、来源校验和 UNKNOWN 不重放有针对性测试。执行中通用取消/deadline 尚未实现，但当前四项没有外部业务写入，不为此引入虚假的通用取消框架；不扩展其余工具的模型提案权限。 |
@@ -549,16 +549,16 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 
 ### 5.5 当前主线运行态复核与 Native 辅助推理入口映射（2026-11-27）
 
-**AI 运行时复核基线：** PR #585 合并点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库主线 HEAD 为 `d024d2e277e80bb960b8986dc01d860eb7f7670f`（仅文档对齐提交；运行时代码仍以 `922285573e263ecd08a1eed535d4adec771a5979` 及更早的 AI 集成点为准）。本节是当前主线 AI 运行态快照；§5.1–§5.2 描述的 AI 生产入口以 45144f6c 为实现集成锚点，文档与全仓现状以当前 master 为准。历史章节保留当时决策和实现轨迹，不覆盖本节当前状态。当前产品范围仍是中医学习辅助工具，不建设临床 detector、不安排医学审核、不恢复已撤销的临床门禁。
+**AI 运行时复核基线：** PR #585 合并点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库主线 HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`（仅文档同步提交；本次未改运行时代码）。本节是当前主线 AI 运行态快照；§5.1–§5.2 描述的 AI 生产入口以 45144f6c 为实现集成锚点，文档与全仓现状以当前 master 为准。历史章节保留当时决策和实现轨迹，不覆盖本节当前状态。当前产品范围仍是中医学习辅助工具，不建设临床 detector、不安排医学审核、不恢复已撤销的临床门禁。
 
 #### 当前五层状态
 
 | 层 | 当前主线已落地 | 当前仍未闭合 / 不得夸大 |
 |---|---|---|
 | Core-0 契约与源码映射 | 五层 DTO、Native 字段所有权、主要生产入口、失败状态、测试锚点和当前文件责任已形成映射 | 本文档只关闭契约/源码映射工作，不把各层运行时实现统一标记为完成 |
-| Core-1 会话记忆 | #565 dirty-KV flush；#575 持久化请求终态与非 replayable 恢复；SessionState owner 与隐藏 Ledger 隔离；Native transcript 从 SQLite 重建且按 12 轮/10,000 UTF-16 有界 | 不持久化 LiteRT KV Cache；字符上限不等于 Token budget；自动压缩、真实设备进程恢复与 GPU/CPU TRACE 未完成 |
+| Core-1 会话记忆 | #565 dirty-KV flush；#575 持久化请求终态与非 replayable 恢复；SessionState owner 与隐藏 Ledger 隔离；Native transcript 从 SQLite 重建且按 12 轮/10,000 UTF-16 有界；`Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 提供只读观测 | 不持久化 LiteRT KV Cache；观测不等于 App 可用输入预算（当前为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`）；自动预算治理/压缩、真实设备进程恢复与 GPU/CPU TRACE 未完成 |
 | Core-2 知识召回与排序 | #527 建立 RankedEvidenceSet（逐候选 KEEP/DROP 原因、策略版本、有序 ID、预算诊断）；#568 将 Formula、Herb、Acupuncture formula、Acupoint、Neijing 五类结构化资料接入 CandidateEvidence；候选快照与排序结果均由 AssistantKnowledgeContextResult 输出 | **当前既定范围已完成。** 保留 legacy query/matching/order/per-source caps；6,500 UTF-16 code units 为最终呈现字符预算，不是 Token budget。没有语义评分、Embedding 或 Reranker；这些不是当前交付门槛。若以后调整策略，必须冻结同输入候选快照并进行旧/新黄金对照。 |
-| Core-3 语言推理 | #573 五种主文本模式结构化；#583 图片/音频附件使用 sendReasoningAttachmentMessage 和 ReasoningResponse v1，执行 Native 两阶段提交；旧 sendImage/sendAudio fail-closed | 辅助 intent/Bazi/symptom/问项任务仍为独立窄 DTO；旧 sendMessage Native 兼容入口仍存在，需按实际调用者决定后续退役 |
+| Core-3 语言推理 | #573 五种主文本模式结构化；#583 图片/音频附件使用 sendReasoningAttachmentMessage 和 ReasoningResponse v1，执行 Native 两阶段提交；#594 已退役 LocalAiService 旧自由文本/媒体包装 API，Native 旧 sendMessage fail-closed，且有全仓静态防回归测试 | 辅助 intent/Bazi/symptom/问项任务仍为独立窄 DTO；旧 Native 路由仅保留拒绝兼容，不执行模型；真实 E4B/Find N2 行为仍需设备 TRACE |
 | Core-4 业务执行 | #561/#566 已接通 Gate、Request allowlist、显式确认、one-shot claim、现有 Headless Dispatcher、Ledger 安全读回及只读 ExecutionResult 下一轮解释 | 只允许四个既有 plan-eligible capability；不代表其余 Router 能力已开放；UNKNOWN 不重放 |
 | Core-5 端到端验收 | #585 已合入 20 轮知识追问 + 一次工具提案/确认/执行/结果解释的 Flutter widget E2E；同一会话、请求 ID 唯一、Memory 隔离、Ledger 终态与结果回流均有断言 | 使用测试 fake executor，不是 E4B 真模型推理；GPU/CPU、多媒体、应用进程恢复和真实 TRACE 仍为 LOCAL ONLY / NOT RUN |
 
@@ -576,7 +576,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 | `understandTcmInterviewAnswer` | 结构化问诊逐题自然语言补充 | 当前 questionId、题目、合法选项及用户原文上下文是固定输入；Dart 校验 answer 必须逐字匹配选项且 evidence 存在于用户文字，歧义转澄清 | Core-3 辅助单题理解；不决定下一题、不诊断、不代替用户确认 |
 | `sendImage` / `sendAudio` | 旧 Native 自由文本附件兼容入口 | 统一返回 STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED，不启动模型推理；生产助手发送路径不再调用这两个旧入口 | 已 fail-closed；保留旧入口仅为兼容，不可用于新代码 |
 | `restoreConversation` | 历史会话恢复与模型上下文重建 | Native 接收按完整轮次裁剪后的 transcript，reset 后重建 Conversation；提示将历史视为记录而非新指令；只确认 restored，不作为一轮成功答案写入 | Core-1 transcript 到 Native context 的重建入口；不是 KV Cache 持久化 |
-| `sendMessage` | LocalAiService 保留的旧 Native 自由文本兼容接口 | 直接返回文本，不经过 ReasoningRequest/Response v1；当前助手主文本/附件路径使用结构化入口，但兼容接口仍存在 | 兼容入口需按全仓真实调用者审计后再决定移除或封禁；不得作为新主路径 |
+| `sendMessage` | 已无生产 Dart 调用方；Native `MainActivity` 仅保留旧 MethodChannel 名称作拒绝兼容 | 固定返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`；不调用 `runAiTask`、不触发模型、不写入成功 transcript；旧 Service 包装 API 已删除，静态审计测试防止旧调用回归 | 已 fail-closed；不是可执行推理入口，不得恢复为自由文本旁路 |
 | `finalizeReasoningTurn` / `rejectReasoningTurn` | 所有结构化主对话回合，包括媒体附件 | 按 conversationId + requestId 确认 pending turn；finalize 才提交成功答案，reject 清除未验证原始 JSON | Core-1/Core-3 双阶段提交边界，不是独立推理入口 |
 
 补充判断：
@@ -591,8 +591,8 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 
 #### 当前依赖顺序与放行结论
 
-1. Core-0：当前五层契约/源码映射与测试锚点已刷新；AI 运行时实现锚点为 45144f6c，仓库文档/主线 HEAD 已推进到 92228557；代码入口和数据所有权保持可追溯。
-2. Core-1：推理请求账本、UNKNOWN/non-replayable 和 transcript 对账已合入；Token budget/KV Cache/自动压缩保持 UNKNOWN 或 NOT IMPLEMENTED。
+1. Core-0：当前五层契约/源码映射与测试锚点已冻结；AI 运行时代码集成锚点为 45144f6c，当前 master 文档复核基线为 1d79bc2；代码入口和数据所有权保持可追溯。
+2. Core-1：推理请求账本、UNKNOWN/non-replayable 和 transcript 对账已合入；Native `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 已提供 KV Cache token 数/模型声明最大上下文长度只读观测；LiteRT KV Cache 不持久化，App 可用输入 Token 预算仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，自动预算治理/压缩保持 UNKNOWN 或 NOT IMPLEMENTED。
 3. Core-2：当前约定范围已落地：五类结构化资料进入 CandidateEvidence，MultiSourceEvidencePipeline、SourceAwareLegacyEvidenceRanker、候选元数据快照与 RankedEvidenceSet 分层输出；后续维持黄金行为，不新增语义评分/Embedding/Reranker，也不把字符预算写成 Token budget。
 4. Core-3：五种主文本模式与图片/音频附件均通过结构化协议；旧辅助任务与兼容入口按各自边界治理。
 5. Core-4：工具模式既有四项白名单能力完成提案—确认—claim—执行—安全读回—结果解释链；扩展能力前先补足各能力 schema/副作用治理。
