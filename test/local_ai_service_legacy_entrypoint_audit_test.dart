@@ -33,7 +33,7 @@ void main() {
           final source = await entity.readAsString();
           if (serviceImport.hasMatch(source) || serviceType.hasMatch(source)) {
             for (final match in legacyInvocation.allMatches(source)) {
-              final line = source.substring(0, match.start).split('\\n').length;
+              final line = source.substring(0, match.start).split('\n').length;
               legacyCallSites.add('$relativePath:$line');
             }
           }
