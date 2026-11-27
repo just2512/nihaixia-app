@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **最新 master 文档 HEAD `f34b12573e16a790032a1450afb245d67891d680`（PR #599，文档同步）；当前 Native/AI 运行时代码基线 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598）；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 最新 master 文档 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。运行时代码 SHA `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f` 的 Flutter tests run `45993861676`、Flutter Quality Gate run `45993861611`、Fork License run `45993861643`、Android arm64/JVM job `140491798547` / `140488210528` 均 SUCCESS。PR #599 仅变更文档，未改变应用运行时代码。执行前仍必须 git fetch origin 并重新读取届时最新 origin/master SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
+| 构建基线 | **PR #600 文档同步 merge `57fbad291c3266966e4a8e477dee64e8b6b0b837`；其已验收 PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 的 Git tree 完全一致；Native/AI 运行时代码基线 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | PR #600 HEAD Flutter regression `46005551188`、Fork License `46005551170`、Android arm64 CI APK/ABI/JVM unit tests job `140530639898` 均 SUCCESS；Branch validation `140527670767` 为 SKIPPED，不计 PASS。合并后 master Fork License `46007115092` SUCCESS；master Flutter tests `46007115215` 和 Flutter Quality Gate `46007115001` 在此快照记录时仍 IN_PROGRESS。当前 App version 仍以 `pubspec.yaml` 为准（`2.0.0+8048`）。实际构建前必须 fetch 最新 `origin/master` 并重新读取版本、CI 终态、设备已安装版本和原签名；不得按历史 SHA 直接构建 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -685,9 +685,20 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 
 ## 17. 2026-11-27 PR #599 合并后的最新主线同步与本地执行状态
 
-- **最新 master 文档 HEAD：** `f34b12573e16a790032a1450afb245d67891d680`（PR #599，文档同步）；PR #599 修改 7 份文档，没有修改 Dart、Kotlin、Native 运行时代码。
+- **PR #600 文档同步点：** merge `57fbad291c3266966e4a8e477dee64e8b6b0b837`；PR HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` 与 merge commit 的 Git tree 完全一致。PR #600 仅修改三份文档，没有修改 Dart、Kotlin、Native 运行时代码。
 - **本地构建应使用的运行时代码基线：** 当前运行时代码仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`，五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧 LocalAiService 包装 API 退役点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`。本地真正构建前必须再次 fetch 并核验最新 master、CI、版本、设备已安装版本和原签名，不得直接按历史 SHA 构建。
 - **最新 master 精确 SHA CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 是 SKIPPED，不计 PASS。
 - **本地当前进度：** 本轮云端未连接或操作 Find N2，也未产生设备 TRACE。§7.1 仍保留“待本地首次执行填写”；所有安装覆盖升级、GPU/CPU、多轮、媒体、Activity/process restart、授权/Keystore、AI 数据清理、折叠屏布局与真实 E4B 质量场景继续 MISSING / UNKNOWN / LOCAL ONLY。不得把 CI APK、Flutter widget、静态审计或 Android arm64/JVM 构建写成 Find N2 实机 PASS。
 - **唯一交接与进度回填：** 仍只有 `docs/local-real-device-acceptance-handoff.md` 一份活动设备交接单；本地执行者在 §7.1 按实际日期、设备/Android/ColorOS、构建 SHA、APK version/versionCode、场景 ID、状态、证据目录、缺口和下一步追加记录。六份历史验收记录/专项 runbook 保留操作步骤，不建立平行进度表，不按 PR 或功能拆交接文件。
 - **Token 观测边界：** `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，不可根据 `getTokenCount()` 或模型声明上下文长度自行推导 App 可用输入预算；设备校准前不增加自动压缩、推测阈值或 KV Cache 持久化。
+
+
+## 18. 2026-11-27 PR #600 合并后唯一 Find N2 本地交接基线
+
+- **代码树：** PR #600 merge `57fbad291c3266966e4a8e477dee64e8b6b0b837` 与通过适用 PR CI 的 HEAD `2dec56a65eef7140dfa7a5dfaace0a1cba619434` Git tree 完全一致；无运行时代码变更。当前运行时代码最后变更点仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。
+- **PR HEAD 云端检查：** Flutter regression、Fork License、Android arm64 CI APK/ABI/JVM unit tests 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。
+- **合并后 master 重跑：** Fork License SUCCESS；Flutter tests 和 Flutter Quality Gate 在本节快照时仍 IN_PROGRESS。执行者在真正构建前必须重新读取最新主线 SHA 与 CI 终态；不能使用本节历史状态替代。
+- **本地进度：** 本轮未连接或操作 Find N2，没有新增实机 TRACE。§7.1 的“待本地首次执行填写”保持原样；覆盖升级、GPU/CPU、多轮、真实 E4B、图片/音频、Activity/process restart、数据清理、Keystore/授权、折叠屏显示和 TRACE 全部 MISSING / UNKNOWN / LOCAL ONLY。
+- **唯一进度入口：** 只有本文件 `docs/local-real-device-acceptance-handoff.md` §7.1 可追加本地进度。不要再建 PR 专属交接文档或并行进度表；历史验收规范仅保留操作步骤。
+- **本地每次进度记录必填：** 实际执行日期/时间、Find N2 设备及 Android/ColorOS、实际 master SHA、APK version/versionCode、场景 ID、PASS/FAIL/BLOCKED/MISSING/UNKNOWN、证据目录/文件、缺口/原因和下一步。未执行仍写 MISSING；证据不足仍写 UNKNOWN；不得用 CI APK 代替本地 Release 签名覆盖安装。
+- **Token：** `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED` 仍未配置；不按模型声明最大上下文或 KV Cache 当前 token 数推导 App 可用输入预算。
