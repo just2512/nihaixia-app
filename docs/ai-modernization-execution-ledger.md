@@ -4958,7 +4958,7 @@ PR HEAD 门禁证据：
 - **基线：** 从合并后的 `master@74e873fdce46a3c02bce15763d9a09de0ac743cb` 派生独立分支 `core3-remove-dead-native-media-helpers-20261127`；仅修改 Native 入口实现、既有静态防回归测试和本架构矩阵。
 - **源码审计：** 当前 MainActivity 的 `sendImage` / `sendAudio` MethodChannel 分支只返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`，不进入 `runAiTask`；`sendLocalImage()` 与 `sendLocalAudio()` 为私有方法且仓库内无任何调用点，是旧自由文本媒体推理路径的不可达遗留实现。
 - **本批修复：** 删除上述两个无调用点的私有 helper；不改结构化 `sendReasoningAttachmentMessage` 图片/音频主路径，不改 Native Gate、模型配置、会话状态或附件校验规则。旧 MethodChannel 名称继续 fail-closed，不恢复兼容推理。
-- **回归强化：** 扩展 `test/local_ai_service_legacy_entrypoint_audit_test.dart`，除原有旧 Dart 包装 API/Native sendMessage 检查外，还断言旧 sendImage/audio handler 不调用模型且两个私有 helper 不再存在。测试通过前不得将本批次标为已验收。
+- **回归强化：** 扩展 `test/local_ai_service_legacy_entrypoint_audit_test.dart`：除旧 Dart 包装 API/Native sendMessage 检查外，还断言 sendImage/audio handler 不调用模型、两个私有 helper 不存在，并逐项检查 8 个真实模型调用 MethodChannel 入口均设置 `requiresAiAccess=true`，且 `runAiTask` 实际调用唯一 `AiModelAccessGate`。测试通过前不得将本批次标为已验收。
 - **架构映射：** 更新 `docs/ai-layered-runtime-architecture.md` §5.5 与 §6：Core-3 旧拒绝路由不再描述为可用兼容推理入口；Core-1 token 只读观测与未配置 App 输入预算明确分开；Core-4 四项 capability 既有能力审计完成，通用执行中取消/deadline 仍未实现，但不虚构为本轮阻塞。
 - **边界：** 本批不涉及 Find N2 实测；GPU/CPU、E4B、多媒体真实推理和进程恢复仍为 `LOCAL ONLY / UNKNOWN`。不改变工作流 I 的延期状态。
 - **CI 放行：** 本节创建时 PR 精确 HEAD 的 Flutter、Android arm64/JVM 和 Fork License 自动验收尚待执行；只有各适用检查在最终 HEAD 上 SUCCESS 才能合并。SKIPPED 不计 PASS。
