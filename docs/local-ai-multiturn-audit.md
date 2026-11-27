@@ -1,12 +1,12 @@
 # 本地 AI 多轮稳定性与 Native 生命周期审计
 
 - 历史审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`（2026-11-11）
-- 当前仓库主线复核点：`master@b978bc95475dcbc58f00be77c5479b26f91e7351`（2026-11-27；Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS）
+- 当前仓库主线复核点：`master@1d79bc2f628fde789c5b5602cee889f844972c23`（2026-11-27；Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS）
 - 当前 AI 多轮运行时集成点：`45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 #565/#575 后续集成、#585 跨层 E2E 所在主线）
 - 历史修复分支：`work/ai-transcript-restore-boundary-2026-11-11`
 - 首次审计日期：2026-11-11；当前复核日期：2026-11-27
 - 范围：Flutter MethodChannel、Native Engine/Conversation、成功轮次历史、GPU→CPU 恢复、历史恢复、SQLite 持久化和资源释放。
-- 历史总结：A = PARTIAL。**当前状态以第 10 节（2026-11-27 主线复核）为准**：SQLite 原子轮次持久化、Native transcript 截断策略、临时上下文逐轮清理、结构化推理请求状态账本和 UNKNOWN 不重放已有代码/自动化覆盖；真机 GPU/CPU 轮次、state:7、Activity/进程恢复及实测 Token 上下文预算仍为 DEVICE UNKNOWN。
+- 历史总结：A = PARTIAL。**当前状态以第 10 节（2026-11-27 主线复核）为准**：SQLite 原子轮次持久化、Native transcript 截断策略、临时上下文逐轮清理、结构化推理请求状态账本和 UNKNOWN 不重放已有代码/自动化覆盖；Native KV Cache token 数与模型声明 maxContextTokens 已有只读观测，但 App 可用 Token/input budget 尚未配置；真机 GPU/CPU 轮次、state:7、Activity/进程恢复和设备实际观测值仍为 DEVICE UNKNOWN。
 
 ## 1. Native 状态与执行边界
 
