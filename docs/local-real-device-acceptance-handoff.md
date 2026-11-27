@@ -1,6 +1,6 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.3  
+> **文档版本：** 1.4  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
 > **当前状态：** **LOCAL ONLY / NOT RUN / EXECUTE AFTER CLOUD AI CLOSEOUT**  
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **应用代码基线 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #583/#585 已合并）** | 本地执行前重新 `git fetch origin`，记录实际 `origin/master` SHA；只从最终 master 构建，不使用 PR 分支旧 HEAD。本文档后续只做交接信息更新，不改变运行时代码 |
+| 构建基线 | **AI 五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；当前仓库 master 核验点 `922285573e263ecd08a1eed535d4adec771a5979`** | 45144f6c 标识 #583/#585 的 AI 运行时集成；92228557 是本交接单更新时的最新仓库 HEAD（含 #586 About/项目更新说明调整）。本地执行前必须重新 `git fetch origin` 并以实际最新 `origin/master` SHA 构建，记录构建 SHA 和 CI，不能固定沿用这两个历史锚点 |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -285,7 +285,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 / Core 集成证据（不是实机通过证明）
 
- - **当前应用代码基线：** `master @ 45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit；包含 #583 媒体结构化协议）；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最终 master HEAD、APK 元数据、签名证书及设备当前安装版本。
+ - **AI 五层运行时集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #585 merge commit，包含 #583 媒体结构化协议）。**本交接文档更新时的仓库 HEAD：** `master @ 922285573e263ecd08a1eed535d4adec771a5979`（PR #586，About/项目更新说明调整；未改 AI 运行时代码）。本地构建必须重新读取届时最新 master HEAD；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。同时记录 APK 元数据、签名证书及设备当前安装版本。
 - **v1.3 单一授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 独立收费判断）、#491（云端收尾台账/交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
 - **Core 云端实现记录：**
   - PR #493 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），分离瞬时 RAG 正文与 Native 恢复 transcript；Fork、Flutter、Android arm64/JVM 检查均 SUCCESS（run `45541268760` / `45541268723` / Android job `138942270425`）。
@@ -371,7 +371,7 @@ test-results.md 每一行按以下格式填写：
  
 ### 14.1 云端合并与构建前置条件
  
-  1. PR #583 与 #585 已合并到 `master`；应用代码基线为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
+  1. PR #583 与 #585 已合并到 `master`；AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。交接文档更新时仓库 HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`（#586）；#583 已通过媒体结构化协议精确 HEAD 验收，#585 已通过 20 轮跨层 E2E 精确 HEAD 验收。实际设备安装前仍须读取最终 `origin/master` SHA 与对应云端 CI 终态；不得沿用旧 PR SHA 或旧 APK。
 2. 在本地执行 \`git fetch origin\`、\`git checkout master\`、\`git pull --ff-only origin master\`，记录 \`git rev-parse HEAD\` 与 \`git show -s --format=fuller HEAD\`。
 3. 本地构建只使用该最新 master。任何 PR head、旧分支或旧 APK 均不能作为设备验收构建基线。
 4. 构建前重新核对 \`pubspec.yaml\`、applicationId、设备旧版 versionCode、原签名证书和模型 SHA；与 §3 的无损覆盖安装门槛一致。
