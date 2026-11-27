@@ -285,6 +285,35 @@ void main() {
     expect(result.diagnostics, contains('USER_ORIGINAL_MESSAGES_OMITTED:1'));
   });
 
+  test('unknown metadata schema cannot become a SessionState memory fact', () {
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': '执行结果尚未确认的原始请求',
+          'metadata':
+              '{"schemaVersion":2,"replayable":false,'
+              '"reasoningRequestId":"0123456789abcdef0123456789abcdef"}',
+        },
+        {
+          'id': 2,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': '元数据结构损坏的原始请求',
+          'metadata': '{"schemaVersion":1,"replayable":false',
+        },
+      ],
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.facts, isEmpty);
+    expect(result.omittedUserMessageCount, 2);
+    expect(result.diagnostics, contains('USER_ORIGINAL_MESSAGES_OMITTED:2'));
+  });
+
   test('assistant-only display rows do not create restored memory facts', () {
     final result = SessionStateSnapshotBuilder.build(
       sessionId: 7,

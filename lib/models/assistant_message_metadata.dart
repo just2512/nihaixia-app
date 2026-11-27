@@ -135,6 +135,64 @@ class AssistantMessageMetadata {
 
   String encode() => jsonEncode(toJson());
 
+  /// Returns whether a persisted message may be promoted into SessionState
+  /// memory. This is intentionally stricter than [decode], whose general
+  /// fallback remains backward-compatible for UI/history rendering.
+  ///
+  /// Missing metadata remains compatible with historical rows. Recognized
+  /// schema v1 and known legacy semicolon metadata are supported; unknown
+  /// schema versions and malformed/unrecognized payloads fail closed.
+  static bool isReplayableForSessionMemory(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return true;
+    final normalized = raw.trim();
+
+    Object? decoded;
+    try {
+      decoded = jsonDecode(normalized);
+    } on FormatException {
+      if (normalized.startsWith('{') || normalized.startsWith('[')) {
+        return false;
+      }
+      return _isReplayableLegacyMetadata(normalized);
+    } catch (_) {
+      return false;
+    }
+
+    if (decoded is! Map || decoded['schemaVersion'] != 1) {
+      return false;
+    }
+    if (!decoded.containsKey('replayable')) return true;
+    return decoded['replayable'] == true;
+  }
+
+  static bool _isReplayableLegacyMetadata(String raw) {
+    const recognizedKeys = {
+      'mode',
+      'selectedMode',
+      'tool',
+      'tool_choice',
+      'replayable',
+      'attachment',
+      'tcm_task',
+    };
+    final legacy = <String, String>{};
+    for (final part in raw.split(';')) {
+      final separator = part.indexOf('=');
+      if (separator <= 0) return false;
+      final key = part.substring(0, separator).trim();
+      final value = part.substring(separator + 1).trim();
+      if (!recognizedKeys.contains(key) || legacy.containsKey(key)) {
+        return false;
+      }
+      if (key == 'replayable' && value != 'true' && value != 'false') {
+        return false;
+      }
+      legacy[key] = value;
+    }
+    if (legacy.isEmpty) return false;
+    return legacy['replayable'] != 'false';
+  }
+
   factory AssistantMessageMetadata.decode(String raw) {
     try {
       final decoded = jsonDecode(raw);
