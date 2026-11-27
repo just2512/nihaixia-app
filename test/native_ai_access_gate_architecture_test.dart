@@ -37,7 +37,11 @@ void main() {
       'releaseModel',
       'clearRuntimeCache',
     };
-    const legacyMediaClosed = {'sendImage', 'sendAudio'};
+    const legacyClosedErrors = {
+      'sendImage': 'STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED',
+      'sendAudio': 'STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED',
+      'sendMessage': 'STRUCTURED_REASONING_PROTOCOL_REQUIRED',
+    };
     for (var index = 0; index < branches.length; index++) {
       final match = branches[index];
       final name = match.group(1)!;
@@ -46,25 +50,27 @@ void main() {
           : handler.length;
       final body = handler.substring(match.start, end);
       if (maintenanceOnly.contains(name)) continue;
-      if (legacyMediaClosed.contains(name)) {
-        // These compatibility endpoints must fail closed before any model
-        // inference. Only the new typed attachment entrypoint can reach AI.
+      final legacyError = legacyClosedErrors[name];
+      if (legacyError != null) {
+        // Compatibility endpoints are rejected before model inference. The
+        // unified AI access gate is required for every active model handler;
+        // a fail-closed legacy handler has no model access to authorize.
         expect(
           body,
-          contains('STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED'),
-          reason: 'Legacy Native media handler "$name" must fail closed',
+          contains(legacyError),
+          reason: 'Legacy Native handler "$name" must fail closed',
         );
         expect(
           body,
           isNot(contains('runAiTask(')),
-          reason: 'Legacy Native media handler "$name" must not call the model',
+          reason: 'Legacy Native handler "$name" must not call the model',
         );
         continue;
       }
       expect(
         body,
         contains('requiresAiAccess = true'),
-        reason: 'Native AI handler "$name" must require ai_access',
+        reason: 'Active Native AI handler "$name" must require ai_access',
       );
     }
 
