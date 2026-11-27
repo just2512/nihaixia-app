@@ -231,6 +231,24 @@ void main() {
     );
     expect(
       AssistantMessageMetadata.isReplayableForSessionMemory(
+        'mode=consultation;futureFlag=true',
+      ),
+      isFalse,
+    );
+    expect(
+      AssistantMessageMetadata.isReplayableForSessionMemory(
+        'mode=consultation;unstructured-fragment',
+      ),
+      isFalse,
+    );
+    expect(
+      AssistantMessageMetadata.isReplayableForSessionMemory(
+        'mode=consultation;replayable=true;replayable=false',
+      ),
+      isFalse,
+    );
+    expect(
+      AssistantMessageMetadata.isReplayableForSessionMemory(
         'schemaVersion=2;replayable=true',
       ),
       isFalse,
