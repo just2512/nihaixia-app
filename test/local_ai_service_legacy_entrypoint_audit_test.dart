@@ -79,7 +79,7 @@ void main() {
         'android/app/src/main/kotlin',
       ).list(recursive: true, followLinks: false)) {
         if (entity is! File || !entity.path.endsWith('.kt')) continue;
-        final relativePath = entity.path.replaceAll('\\\\', '/');
+        final relativePath = entity.path.replaceAll('\\', '/');
         if (relativePath ==
             'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt') {
           continue;
