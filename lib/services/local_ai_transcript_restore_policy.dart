@@ -17,6 +17,16 @@ class LocalAiTranscriptTurn {
   final String userText;
   final String assistantText;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LocalAiTranscriptTurn &&
+          other.userText == userText &&
+          other.assistantText == assistantText;
+
+  @override
+  int get hashCode => Object.hash(userText, assistantText);
+
   Map<String, String> toMap() => {
         'user_text': userText,
         'assistant_text': assistantText,
