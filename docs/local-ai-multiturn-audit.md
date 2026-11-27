@@ -243,13 +243,14 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 
 ## 10. 2026-11-27 当前主线复核：Native 多轮记忆边界与请求生命周期已形成云端闭环
 
-> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
+> 本节为当前有效状态快照，覆盖第 1–9 节中仍沿用 2026-11-11/13 状态的描述。历史实现过程保留；如有状态冲突，以当前 master 源码和本节为准。当前仓库 HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`；AI 多轮/五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。
 
 ### 10.1 当前已落地的 Native / Memory 治理
 
 | 事项 | 当前主线实现 | 当前结论与边界 |
 |---|---|---|
 | Native 成功轮次历史 | `LocalAiConversationHistory` / `LocalAiConversationHistoryPolicy` | 最多保留 12 个完整 user/model 成功轮次，且累计不超过 10,000 UTF-16 code units；按完整最旧轮次淘汰，保留 omitted turn/character 计数与完整成功轮次总数。不是 Token 预算，不能据此声称满足 E4B context window。 |
+| Native Token/context 只读观测 | `MainActivity.observeConversationTokenCount()` / `Conversation.getTokenCount()`；`MainActivity.inspectModelContextLimit()` / `ModelInfo.maxContextTokens()`；`LocalAiModelStatus` | 主线已暴露当前 Conversation KV Cache token 数与模型文件声明的最大上下文长度，并分别提供观察状态；读取失败/状态重置时回到 UNKNOWN。`conversationKvCacheBudgetStatus` 固定为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，未形成 App 可用输入预算、输出预留、动态预算阈值、安全裁剪或自动压缩。源码与 parser 单测证明接线/解析合同，不替代 Find N2 对实际数值和长会话行为的 TRACE。 |
 | SQLite 成功轮次原子保存 | PR #117 的 `DatabaseHelper.saveAssistantTurn()` / `saveAssistantMessagesAtomically()` | user + assistant 消息同一 SQLite transaction；故障注入验证不留半轮；持久化失败由 UI 显示，不伪装为成功保存。结构化问诊 transcript 批次也原子提交；任务快照与 transcript 的 TRACE 分离由 #119 完成。 |
 | Native transcript 恢复 | `LocalAiTranscriptRestorePolicy`、`MainActivity.restoreLocalConversation()` | 以 UTF-16 字符限制保留最新尾部和显式省略 marker；最近 60 条用户文字输入会传播来源截断状态。只恢复用户/模型成功文本与附件占位说明；不恢复附件原始二进制。 |
 | 请求级临时上下文隔离 | PR #565，merge `da63bafec6e2a38784ba1d7b8a16d36d6b3a5a18` | 跟踪活动 LiteRT Conversation KV cache 是否含 RAG、SessionState、reasoning metadata 或多媒体输入；下一个请求前只在 dirty 时从有界成功 transcript 重建 Conversation。普通纯文本连续轮次不做不必要 rebuild；失败/GPU→CPU retry 保留 dirty 标记。临时 RAG 正文、SessionState 正文、reasoning envelope 和真实附件 payload 不写入恢复 transcript。 |
@@ -273,16 +274,17 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 3. 真实图片/语音多轮输入、附件临时文件清理/保留与用户核对状态；确认结构化 Response、finalize/reject 和 Native dirty-KV flush 在实际 E4B 下行为正确。
 4. Activity recreation、请求中离开页面、App force-stop / process restart；确认旧 Native 资源释放与新 Activity 初始化顺序、SQLite transcript、Flutter UI 和 Native recovered history 三方一致。
 5. state:7 的实际根因；必须有 Find N2 logcat、实际 backend、App SHA、模型 SHA/版本和逐轮 trace_id，不能从 JVM test 推断。
-6. Gemma 4 E4B 的实测 Token/input budget、prompt/context window 与长会话行为。现有 12 轮、10,000 transcript 字符、16,000 SessionState 字符、24,000 reasoning context 字符均为字符/轮次数边界，不是模型 Token 计数，也不能直接相加推定可用预算。
+6. Gemma 4 E4B 在 Find N2 上的实际 KV Cache token 数、模型声明 maxContextTokens 与长会话行为。当前已接入只读 `Conversation.getTokenCount()` 和 `ModelInfo.maxContextTokens()`，但 App budget status 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`；实测可用输入预算、输出预留、预算策略/安全裁剪和自动压缩仍 UNKNOWN。现有 12 轮、10,000 transcript 字符、16,000 SessionState 字符、24,000 reasoning context 字符均为字符/轮次数边界，不是可用 Token 预算，也不能直接相加推定预算。
 7. AI 数据清理后 Native/SQLite/附件/备份副本的不可恢复状态，按唯一设备交接文件执行。
 
-**当前判定：** Native 多轮的云端确定性代码治理已形成闭环：原子 transcript 持久化、临时 KV 上下文逐轮隔离、结构化请求终态和非 replayable 恢复、Activity executor 失败隔离均有主线实现和自动化证据。A 仍是 **PARTIAL / DEVICE UNKNOWN**，因为真实 Find N2 GPU/CPU、state:7、媒体、Activity/进程恢复、三方 transcript 对照和 Token 预算测量尚未有设备 TRACE。设备验收按唯一 `docs/local-real-device-acceptance-handoff.md` 放在所有云端工作之后，不阻塞云端代码、文档和 CI。
+**当前判定：** Native 多轮的云端确定性代码治理已形成闭环：原子 transcript 持久化、临时 KV 上下文逐轮隔离、结构化请求终态和非 replayable 恢复、Activity executor 失败隔离均有主线实现和自动化证据。A 仍是 **PARTIAL / DEVICE UNKNOWN**，因为真实 Find N2 GPU/CPU、state:7、媒体、Activity/进程恢复、三方 transcript 对照、实际观测值及长会话行为尚未有设备 TRACE；App 可用 Token 预算与自动压缩也尚未配置。设备验收按唯一 `docs/local-real-device-acceptance-handoff.md` 放在所有云端工作之后，不阻塞云端代码、文档和 CI。
 
 
 
 ### 10.4 2026-11-27 当前主线 CI 状态同步
 
-- 当前 master HEAD：`b978bc95475dcbc58f00be77c5479b26f91e7351`。
-- 同一 SHA 对应的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均为 SUCCESS。
+- 当前 master HEAD：`1d79bc2f628fde789c5b5602cee889f844972c23`（本次仅文档同步）。
+- 同一 SHA 对应的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均为 SUCCESS。
 - PR #594 已将 LocalAiService 旧非结构化包装方法退役；Native 旧 `sendMessage` 保留为 fail-closed 路由，不调用模型。该 Core-3 变更不改变本节 Core-1 的恢复边界。
-- 本次只同步当前主线核验点与 CI 证据，未修改 Native 多轮运行时代码。真实 Find N2 GPU/CPU、state:7、媒体、Activity/process restart、Token/input budget 仍按第 10.3 节和唯一设备交接文件执行，继续保持 DEVICE UNKNOWN / NOT RUN。
+- 当前主线已有 KV Cache token 数与模型声明 maxContextTokens 的只读观测；`conversationKvCacheBudgetStatus` 仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，因此实测可用 Token/input budget、预算控制/自动压缩并未完成。
+- 本次只同步当前主线核验点、CI 证据和 Token 观测/预算边界，未修改 Native 多轮运行时代码。真实 Find N2 GPU/CPU、state:7、媒体、Activity/process restart、实际 token/context 值与长会话行为仍按第 10.3 节和唯一设备交接文件执行，继续保持 DEVICE UNKNOWN / NOT RUN。
