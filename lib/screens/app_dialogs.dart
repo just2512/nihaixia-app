@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../utils/fold_aware_routes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -242,18 +241,6 @@ Future<void> clearAppCache(BuildContext context) async {
 
 // ==================== 关于 ====================
 
-Future<void> _copyAboutAddress(
-  BuildContext context, {
-  required String label,
-  required String address,
-}) async {
-  await Clipboard.setData(ClipboardData(text: address));
-  if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('$label已复制到剪贴板')),
-  );
-}
-
 Future<void> showAboutPage(BuildContext context) async {
   final info = await PackageInfo.fromPlatform();
   await ChangelogRepository.load();
@@ -288,71 +275,31 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('中医诊疗全过程辅助学习软件',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('项目介绍', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '围绕四诊问诊、信息整理与补问，帮助用户理解辨病、辨证、病机、治法、方剂配伍、针灸取穴，以及经典依据和医案复盘。'
-              '辨病辨证结论由 App 既有确定性业务规则执行，并应关联可追溯的本地知识依据；AI 负责理解、引导和解释，不凭自身推断生成或覆盖业务结论。',
+              '研纪是一款以中医知识学习与诊疗过程辅助为核心的离线优先工具，围绕四诊问诊、证候信息整理、辨证思路、经方配伍、针灸取穴和医案复盘，提供本地知识查阅与学习辅助。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
-            const Text('功能特色', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('主要功能', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '• 六经规则问诊与证候信息整理\n'
-              '• 舌象、脉象等问诊参考信息\n'
-              '• 经方、本草、穴位与经典资料库\n'
-              '• 医案收藏、分享与离线检索\n'
-              '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\n'
+              '• 六经规则问诊、证候信息整理与补问
+'
+              '• 经方、本草、针灸、经典与医案资料库
+'
+              '• 本地知识检索、收藏和医案复盘
+'
+              '• 本地 AI 辅助理解、学习追问与结果解释
+'
               '• 易经、八字、紫微等传统文化工具（非医疗用途）',
             ),
             const SizedBox(height: 16),
-            const Text('项目与版本', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('开发维护：just2512',
-                style: TextStyle(color: context.colors.onSurfaceVariant)),
-            const SizedBox(height: 4),
-            Text('版本信息读取自当前安装包，不引用上游版本号。',
-                style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(height: 8),
-            const Text('本项目仓库', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SelectableText('https://github.com/just2512/nihaixia-app'),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _copyAboutAddress(
-                  context,
-                  label: '本项目仓库地址',
-                  address: 'https://github.com/just2512/nihaixia-app',
-                ),
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('复制本项目地址'),
-              ),
-            ),
-            const Text('上游开源项目', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SelectableText('https://github.com/jangviktor-web/nihaixia-app'),
-            Text(
-              '本仓库保留 GitHub Fork 关系；上游变更按维护策略人工评估、审查和同步。应用版本、更新记录与发行渠道以本仓库为准。',
-              style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _copyAboutAddress(
-                  context,
-                  label: '上游仓库地址',
-                  address: 'https://github.com/jangviktor-web/nihaixia-app',
-                ),
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('复制上游地址'),
-              ),
-            ),
-            const Divider(),
-            const Text('本仓库更新记录', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('版本更新', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              '以下为本仓库已登记的更新记录；当前安装包版本以页面顶部显示为准。',
+              '以下记录仅展示研纪本项目自身的功能与体验更新。',
               style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
             ),
             const SizedBox(height: 8),
@@ -361,11 +308,13 @@ Future<void> showAboutPage(BuildContext context) async {
             else
               ...entries.map((e) => _buildChangelogEntry(context, e)),
             const SizedBox(height: 16),
-            const Text('致谢', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('开源致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
-                '感谢 jangviktor-web/nihaixia-app 原作者提供原始开源项目与代码基础，也感谢其他开源组件作者和社区贡献者。',
-                style: TextStyle(color: context.colors.onSurfaceVariant)),
+            Text(
+              '感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\\n'
+              '感谢原始开源项目作者 jangviktor-web 提供代码基础，也感谢 Flutter 及其他开源组件作者、维护者和社区贡献者。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
