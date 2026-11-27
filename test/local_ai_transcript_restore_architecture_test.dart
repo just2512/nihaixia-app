@@ -13,7 +13,12 @@ void main() {
     expect(end, greaterThan(start));
 
     final restore = source.substring(start, end);
-    expect(restore, contains('LocalAiTranscriptRestorePolicy.historySnapshot'));
+    final validation = restore.indexOf(
+      'LocalAiTranscriptRestorePolicy.historySnapshot',
+    );
+    final reset = restore.indexOf('resetLocalConversation(conversationId)');
+    expect(validation, greaterThanOrEqualTo(0));
+    expect(reset, greaterThan(validation));
     expect(restore, contains('conversationHistory.restore(restoredSnapshot)'));
     expect(restore, contains('recreateCurrentConversationFromHistory()'));
     expect(restore, isNot(contains('sendWithFirstTurnGpuFallback')));
