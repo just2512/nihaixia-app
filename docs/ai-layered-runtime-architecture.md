@@ -558,7 +558,7 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 | Core-0 契约与源码映射 | 五层 DTO、Native 字段所有权、主要生产入口、失败状态、测试锚点和当前文件责任已形成映射 | 本文档只关闭契约/源码映射工作，不把各层运行时实现统一标记为完成 |
 | Core-1 会话记忆 | #565 dirty-KV flush；#575 持久化请求终态与非 replayable 恢复；SessionState owner 与隐藏 Ledger 隔离；Native transcript 从 SQLite 重建且按 12 轮/10,000 UTF-16 有界；`Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 提供只读观测 | 不持久化 LiteRT KV Cache；观测不等于 App 可用输入预算（当前为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`）；自动预算治理/压缩、真实设备进程恢复与 GPU/CPU TRACE 未完成 |
 | Core-2 知识召回与排序 | #527 建立 RankedEvidenceSet（逐候选 KEEP/DROP 原因、策略版本、有序 ID、预算诊断）；#568 将 Formula、Herb、Acupuncture formula、Acupoint、Neijing 五类结构化资料接入 CandidateEvidence；候选快照与排序结果均由 AssistantKnowledgeContextResult 输出 | **当前既定范围已完成。** 保留 legacy query/matching/order/per-source caps；6,500 UTF-16 code units 为最终呈现字符预算，不是 Token budget。没有语义评分、Embedding 或 Reranker；这些不是当前交付门槛。若以后调整策略，必须冻结同输入候选快照并进行旧/新黄金对照。 |
-| Core-3 语言推理 | #573 五种主文本模式结构化；#583 图片/音频附件使用 sendReasoningAttachmentMessage 和 ReasoningResponse v1，执行 Native 两阶段提交；旧 sendImage/sendAudio fail-closed | 辅助 intent/Bazi/symptom/问项任务仍为独立窄 DTO；旧 sendMessage Native 兼容入口仍存在，需按实际调用者决定后续退役 |
+| Core-3 语言推理 | #573 五种主文本模式结构化；#583 图片/音频附件使用 sendReasoningAttachmentMessage 和 ReasoningResponse v1，执行 Native 两阶段提交；#594 已退役 LocalAiService 旧自由文本/媒体包装 API，Native 旧 sendMessage fail-closed，且有全仓静态防回归测试 | 辅助 intent/Bazi/symptom/问项任务仍为独立窄 DTO；旧 Native 路由仅保留拒绝兼容，不执行模型；真实 E4B/Find N2 行为仍需设备 TRACE |
 | Core-4 业务执行 | #561/#566 已接通 Gate、Request allowlist、显式确认、one-shot claim、现有 Headless Dispatcher、Ledger 安全读回及只读 ExecutionResult 下一轮解释 | 只允许四个既有 plan-eligible capability；不代表其余 Router 能力已开放；UNKNOWN 不重放 |
 | Core-5 端到端验收 | #585 已合入 20 轮知识追问 + 一次工具提案/确认/执行/结果解释的 Flutter widget E2E；同一会话、请求 ID 唯一、Memory 隔离、Ledger 终态与结果回流均有断言 | 使用测试 fake executor，不是 E4B 真模型推理；GPU/CPU、多媒体、应用进程恢复和真实 TRACE 仍为 LOCAL ONLY / NOT RUN |
 
@@ -576,7 +576,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 | `understandTcmInterviewAnswer` | 结构化问诊逐题自然语言补充 | 当前 questionId、题目、合法选项及用户原文上下文是固定输入；Dart 校验 answer 必须逐字匹配选项且 evidence 存在于用户文字，歧义转澄清 | Core-3 辅助单题理解；不决定下一题、不诊断、不代替用户确认 |
 | `sendImage` / `sendAudio` | 旧 Native 自由文本附件兼容入口 | 统一返回 STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED，不启动模型推理；生产助手发送路径不再调用这两个旧入口 | 已 fail-closed；保留旧入口仅为兼容，不可用于新代码 |
 | `restoreConversation` | 历史会话恢复与模型上下文重建 | Native 接收按完整轮次裁剪后的 transcript，reset 后重建 Conversation；提示将历史视为记录而非新指令；只确认 restored，不作为一轮成功答案写入 | Core-1 transcript 到 Native context 的重建入口；不是 KV Cache 持久化 |
-| `sendMessage` | LocalAiService 保留的旧 Native 自由文本兼容接口 | 直接返回文本，不经过 ReasoningRequest/Response v1；当前助手主文本/附件路径使用结构化入口，但兼容接口仍存在 | 兼容入口需按全仓真实调用者审计后再决定移除或封禁；不得作为新主路径 |
+| `sendMessage` | 已无生产 Dart 调用方；Native `MainActivity` 仅保留旧 MethodChannel 名称作拒绝兼容 | 固定返回 `STRUCTURED_REASONING_PROTOCOL_REQUIRED`；不调用 `runAiTask`、不触发模型、不写入成功 transcript；旧 Service 包装 API 已删除，静态审计测试防止旧调用回归 | 已 fail-closed；不是可执行推理入口，不得恢复为自由文本旁路 |
 | `finalizeReasoningTurn` / `rejectReasoningTurn` | 所有结构化主对话回合，包括媒体附件 | 按 conversationId + requestId 确认 pending turn；finalize 才提交成功答案，reject 清除未验证原始 JSON | Core-1/Core-3 双阶段提交边界，不是独立推理入口 |
 
 补充判断：
@@ -591,8 +591,8 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 
 #### 当前依赖顺序与放行结论
 
-1. Core-0：当前五层契约/源码映射与测试锚点已刷新；AI 运行时实现锚点为 45144f6c，仓库文档/主线 HEAD 已推进到 92228557；代码入口和数据所有权保持可追溯。
-2. Core-1：推理请求账本、UNKNOWN/non-replayable 和 transcript 对账已合入；Token budget/KV Cache/自动压缩保持 UNKNOWN 或 NOT IMPLEMENTED。
+1. Core-0：当前五层契约/源码映射与测试锚点已冻结；AI 运行时代码集成锚点为 45144f6c，当前 master 文档复核基线为 1d79bc2；代码入口和数据所有权保持可追溯。
+2. Core-1：推理请求账本、UNKNOWN/non-replayable 和 transcript 对账已合入；Native `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 已提供 KV Cache token 数/模型声明最大上下文长度只读观测；LiteRT KV Cache 不持久化，App 可用输入 Token 预算仍为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，自动预算治理/压缩保持 UNKNOWN 或 NOT IMPLEMENTED。
 3. Core-2：当前约定范围已落地：五类结构化资料进入 CandidateEvidence，MultiSourceEvidencePipeline、SourceAwareLegacyEvidenceRanker、候选元数据快照与 RankedEvidenceSet 分层输出；后续维持黄金行为，不新增语义评分/Embedding/Reranker，也不把字符预算写成 Token budget。
 4. Core-3：五种主文本模式与图片/音频附件均通过结构化协议；旧辅助任务与兼容入口按各自边界治理。
 5. Core-4：工具模式既有四项白名单能力完成提案—确认—claim—执行—安全读回—结果解释链；扩展能力前先补足各能力 schema/副作用治理。
