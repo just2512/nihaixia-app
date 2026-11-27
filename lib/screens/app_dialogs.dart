@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../utils/fold_aware_routes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -242,18 +241,6 @@ Future<void> clearAppCache(BuildContext context) async {
 
 // ==================== 关于 ====================
 
-Future<void> _copyAboutAddress(
-  BuildContext context, {
-  required String label,
-  required String address,
-}) async {
-  await Clipboard.setData(ClipboardData(text: address));
-  if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('$label已复制到剪贴板')),
-  );
-}
-
 Future<void> showAboutPage(BuildContext context) async {
   final info = await PackageInfo.fromPlatform();
   await ChangelogRepository.load();
@@ -288,6 +275,8 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
+            const Text('项目介绍', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             const Text('中医诊疗全过程辅助学习软件',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -308,51 +297,11 @@ Future<void> showAboutPage(BuildContext context) async {
               '• 易经、八字、紫微等传统文化工具（非医疗用途）',
             ),
             const SizedBox(height: 16),
-            const Text('项目与版本', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('开发维护：just2512',
-                style: TextStyle(color: context.colors.onSurfaceVariant)),
-            const SizedBox(height: 4),
-            Text('版本信息读取自当前安装包，不引用上游版本号。',
-                style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(height: 8),
-            const Text('本项目仓库', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SelectableText('https://github.com/just2512/nihaixia-app'),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _copyAboutAddress(
-                  context,
-                  label: '本项目仓库地址',
-                  address: 'https://github.com/just2512/nihaixia-app',
-                ),
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('复制本项目地址'),
-              ),
-            ),
-            const Text('上游开源项目', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SelectableText('https://github.com/jangviktor-web/nihaixia-app'),
-            Text(
-              '本仓库保留 GitHub Fork 关系；上游变更按维护策略人工评估、审查和同步。应用版本、更新记录与发行渠道以本仓库为准。',
-              style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _copyAboutAddress(
-                  context,
-                  label: '上游仓库地址',
-                  address: 'https://github.com/jangviktor-web/nihaixia-app',
-                ),
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('复制上游地址'),
-              ),
-            ),
             const Divider(),
-            const Text('本仓库更新记录', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('研纪更新记录', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              '以下为本仓库已登记的更新记录；当前安装包版本以页面顶部显示为准。',
+              '以下仅记录研纪自身版本的功能新增、体验优化与问题修复；当前安装包版本以页面顶部显示为准。',
               style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
             ),
             const SizedBox(height: 8),
@@ -361,10 +310,10 @@ Future<void> showAboutPage(BuildContext context) async {
             else
               ...entries.map((e) => _buildChangelogEntry(context, e)),
             const SizedBox(height: 16),
-            const Text('致谢', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('开源致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
-                '感谢 jangviktor-web/nihaixia-app 原作者提供原始开源项目与代码基础，也感谢其他开源组件作者和社区贡献者。',
+                '感谢原始开源项目 jangviktor-web/nihaixia-app 的作者，感谢 ziwei_core、Flutter / Dart 生态中的开源项目作者，以及所有社区贡献者。',
                 style: TextStyle(color: context.colors.onSurfaceVariant)),
             const SizedBox(height: 16),
             const Divider(),
