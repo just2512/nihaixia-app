@@ -4982,9 +4982,9 @@ PR HEAD 门禁证据：
 
 ## 132. 2026-11-27 PR #599 合并后主线基线与五层云端状态快照（PR #600 文档同步前）
 
-- **最新 master 文档基线：** `f34b12573e16a790032a1450afb245d67891d680`。PR #599 只修改 7 份文档，未修改 Dart、Kotlin、Native 运行时代码、业务规则、模型行为、数据库或权限边界。
+- **当时 master 文档基线（PR #600 文档同步前）：** `f34b12573e16a790032a1450afb245d67891d680`（PR #599）。PR #599 只修改 7 份文档，未修改 Dart、Kotlin、Native 运行时代码、业务规则、模型行为、数据库或权限边界。该 SHA 已是历史快照，不作为当前主线 HEAD。
 - **运行时代码基线：** 仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`；AI 五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。当前 App 版本仍为 `2.0.0+8048`。
-- **最新 master 精确 SHA CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 为 SKIPPED，不计作 PASS。
+- **PR #599 文档基线 SHA 的历史 CI：** Flutter tests run `46003046571` SUCCESS；Flutter Quality Gate run `46003046432` SUCCESS；Fork License run `46003046794` SUCCESS；Android arm64/JVM job `140522734914` SUCCESS。Branch validation job `140519281368` 为 SKIPPED，不计作 PASS。
 - **Core-0～Core-5 云端状态：** Core-0 契约/源码映射冻结；Core-1 transcript、SessionState owner/provenance、临时 RAG/多模态/推理上下文隔离、请求终态 Ledger 与 UNKNOWN 不重放已具备云端代码和自动化证据；Core-2 当前约定的 CandidateEvidence、多源聚合、独立 RankedEvidenceSet/KEEP-DROP 与黄金行为回归已完成；Core-3 主文本/媒体结构化协议已接线，旧自由文本包装 API 和 Native 不可达媒体 helper 已退役，8 个真实 Native 模型入口均要求唯一 Native Gate；Core-4 仅开放四项已审计 capability；Core-5 已有 20 轮知识追问及单次工具闭环的 Flutter 应用层 E2E。Core-5 fake Native/executor 不证明真实 E4B 输出质量或设备行为。
 - **Core-1 Token 边界：** `Conversation.getTokenCount()` 与 `ModelInfo.maxContextTokens()` 仅是只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。不臆测 App 可用输入预算、输出预留、动态阈值、自动压缩或 KV Cache 持久化。
 - **唯一设备交接入口：** `docs/local-real-device-acceptance-handoff.md`。§7.1 当前仍是“待本地首次执行填写”，本轮未取得 Find N2 实测记录；GPU/CPU 多轮、真实 E4B/媒体输出、Activity/process restart、覆盖升级、数据清理、Keystore/授权及完整 TRACE 均继续 MISSING / UNKNOWN / LOCAL ONLY。必须由本地执行者按设备实况在 §7.1 追加日期、设备/系统、实际构建 SHA/APK 版本、场景状态、证据目录、缺口和下一步。
