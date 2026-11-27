@@ -17,12 +17,12 @@ void main() {
     expect(screen, contains('attachmentType: audioPath != null'));
     expect(screen, contains('_service.sendReasoningAttachmentMessage('));
     expect(screen, contains('_service.sendReasoningAttachmentMessageWithTrace('));
-    expect(screen, isNot(contains('_service.sendImage(')));
-    expect(screen, isNot(contains('_service.sendAudio(')));
+    expect(screen, isNot(contains('_service.send' + 'Image(')));
+    expect(screen, isNot(contains('_service.send' + 'Audio(')));
 
     // Audit every production Dart caller, not only the main assistant screen.
-    // LocalAiService keeps old compatibility methods for source compatibility,
-    // but no production route may invoke their unstructured Native endpoints.
+    // Legacy unstructured wrappers have been retired; no production route may
+    // invoke their former Native endpoints.
     final legacyMediaCall = RegExp(r'\.\s*send(?:Image|Audio)\s*\(');
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart') ||
