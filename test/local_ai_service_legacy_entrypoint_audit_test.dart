@@ -88,6 +88,37 @@ void main() {
       expect(native, isNot(contains('private fun sendLocalImage(')));
       expect(native, isNot(contains('private fun sendLocalAudio(')));
 
+      // Every live model-invoking MethodChannel route must opt into the
+      // shared runAiTask authorization check. Old sendMessage/sendImage/
+      // sendAudio routes are intentionally excluded because they fail closed.
+      const modelInferenceRoutes = [
+        'loadModel',
+        'understandTcmInterviewAnswer',
+        'extractSymptoms',
+        'resolveAssistantIntent',
+        'extractBaziSlots',
+        'sendReasoningMessage',
+        'sendReasoningAttachmentMessage',
+        'restoreConversation',
+      ];
+      for (final method in modelInferenceRoutes) {
+        final routeStart = native.indexOf('"$method" ->');
+        expect(routeStart, greaterThanOrEqualTo(0), reason: method);
+        final nextRoute = native.indexOf('\\n                    "', routeStart + 1);
+        final routeEnd = nextRoute < 0 ? native.length : nextRoute;
+        final route = native.substring(routeStart, routeEnd);
+        expect(
+          route,
+          contains('runAiTask(result, requiresAiAccess = true)'),
+          reason: '$method must require Native AI access before model work.',
+        );
+      }
+      expect(
+        native,
+        contains('if (requiresAiAccess) aiModelAccessGate.requireAccess()'),
+        reason: 'runAiTask must enforce the single process AI access gate.',
+      );
+
       legacyCallSites.sort();
       rawChannelSites.sort();
 
