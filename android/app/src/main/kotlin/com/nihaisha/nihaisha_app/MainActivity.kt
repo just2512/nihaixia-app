@@ -1989,11 +1989,9 @@ class MainActivity : FlutterActivity() {
             omittedCompletedCharacterCount = omittedCompletedCharacterCount
         )
 
-        // Deterministic hydration: preserve the original USER/MODEL turn roles
-        // and do not run an extra model request just to acknowledge restoration.
-        resetLocalConversation(conversationId)
-        conversationHistory.restore(restoredSnapshot)
-        recreateCurrentConversationFromHistory()
+        // Deterministic hydration: restore the typed snapshot before creating
+        // the replacement Native Conversation, without an empty intermediate one.
+        resetLocalConversation(conversationId, restoredSnapshot)
 
         // Keep explicit user-authored text in the independent symptom input
         // projection. Incomplete user-only input is never Native successful memory.
@@ -2011,7 +2009,10 @@ class MainActivity : FlutterActivity() {
         )
     }
 
-    private fun resetLocalConversation(conversationId: Long): Map<String, Any> {
+    private fun resetLocalConversation(
+        conversationId: Long,
+        restoredHistory: LocalAiConversationHistorySnapshot? = null
+    ): Map<String, Any> {
         require(conversationId > 0L) { "当前会话标识无效" }
         aiModelAccessGate.requireAccess()
         requireNoPendingReasoningTurn()
@@ -2021,14 +2022,21 @@ class MainActivity : FlutterActivity() {
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         conversationContainsEphemeralContext = false
         conversationHistory.clear()
+        if (restoredHistory != null) {
+            conversationHistory.restore(restoredHistory)
+        }
 
         return try {
             val nextConversation = ConversationResetPolicy.recreateConversation(
                 closePrevious = { previousConversation?.close() },
                 createNext = {
-                    engine.createConversation(
-                        ConversationConfig(systemInstruction = Contents.of(systemInstruction))
-                    )
+                    if (restoredHistory == null) {
+                        engine.createConversation(
+                            ConversationConfig(systemInstruction = Contents.of(systemInstruction))
+                        )
+                    } else {
+                        createConversationWithHistory(engine)
+                    }
                 },
                 closeEngine = { engine.close() }
             )
@@ -2037,7 +2045,6 @@ class MainActivity : FlutterActivity() {
             activeConversationId = conversationId
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistory.clear()
                 modelStatus()
         } catch (error: Exception) {
             // Never retain an Engine without a usable Conversation. A later load
@@ -2048,7 +2055,13 @@ class MainActivity : FlutterActivity() {
             activeConversationId = null
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistory.clear()
+            // Preserve a validated restore snapshot so a later model reload can
+            // reconstruct it after the current Engine has been safely released.
+            if (restoredHistory == null) {
+                conversationHistory.clear()
+            } else {
+                conversationHistory.restore(restoredHistory)
+            }
             activeBackend = "not_loaded"
                 throw error
         }
