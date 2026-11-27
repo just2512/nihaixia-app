@@ -1292,9 +1292,8 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-3 architecture regression asserting image/audio requests use the typed reasoning protocol, preserve the existing Native AI access gate and pending-turn lifecycle, and fail closed on legacy unstructured media routes; ownership evidence required.
 
+Files:
+ test/local_ai_service_legacy_entrypoint_audit_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored source-level static audit test that scans production Dart references to LocalAiService and guards against legacy unstructured text/media calls and duplicate raw MethodChannel ownership; it does not alter runtime behavior; ownership evidence required.
-
-Files:
- test/local_ai_service_legacy_entrypoint_audit_test.dart
