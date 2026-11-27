@@ -1,11 +1,11 @@
 # AI 改造执行台账（约束性跟踪文件）
 
 > 本文件与 [全局 AI 能力审计与改造执行约束](ai-capability-audit.md) 配套使用。
-> [产品定位与开发边界：中医诊疗全过程学习](product-positioning-and-boundaries.md) 是产品定义的权威依据；`ai-capability-audit.md` 将其转化为工程边界与验收标准；本台账记录每一工作流的当前状态、证据、阻塞和下一步。
+> [产品定位与开发边界](product-positioning-and-boundaries.md) 是产品定义的权威依据；`ai-capability-audit.md` 将其转化为工程边界与验收标准；本台账记录每一工作流的当前状态、证据、阻塞和下一步。
 > 若历史台账条目与产品定位文件冲突，以产品定位文件及审计规范当前有效章节为准。历史条目保留为当时决策轨迹，不自动构成当前待办。
 > 状态必须由实际源码、测试、CI 或设备记录更新。不得根据计划、代码文件存在或模型回复推定完成。
 
-> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前集成状态以第 122 节为准。
+> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前五层云端集成状态以第 128 节为准。
 
 ## 1. 当前核验基线
 
@@ -15,7 +15,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `d024d2e277e80bb960b8986dc01d860eb7f7670f` | 当前 master HEAD；该提交仅同步五层架构、执行台账、能力审计、Native 多轮审计和唯一设备交接文档，不改变 AI 运行时代码。父基线 `922285573e263ecd08a1eed535d4adec771a5979` 的 Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS；d024d2e 自身的 post-merge CI 本轮尚未取得可核验终态，记 UNKNOWN，不继承父 SHA 的 PASS |
+| 本轮最新主线/文档核验基线 | `b978bc95475dcbc58f00be77c5479b26f91e7351` | 当前 master HEAD。该 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS；三项均对应同一 SHA。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669` |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前仓库 master HEAD 为 `d024d2e277e80bb960b8986dc01d860eb7f7670f`；该提交仅同步文档，AI 运行时代码审计仍以 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` 为集成点、以 `922285573e263ecd08a1eed535d4adec771a5979` 为最近有明确 CI 终态的主线基线。AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮 PR 只更新架构映射、执行台账、能力审计、Native 多轮专项审计和唯一 Find N2 本地验收交接单（共五份文档），不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 当前仓库 `master` HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`，对应 Flutter tests、Flutter Quality Gate 与 Fork License 三项主线 Push CI 均 SUCCESS（run IDs 见本节基线表）。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；PR #594 的 Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。本轮只校准五层架构、执行台账、Native 多轮审计与唯一 Find N2 本地交接文档中的当前基线和结论，不改运行时代码、业务规则、模型行为或权限边界。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理和 TRACE 仍按唯一本地清单取得设备证据；未实测场景不计 PASS。
 
 ## 2. 状态定义
 
@@ -51,11 +51,11 @@
 | A | P0 本地模型多轮稳定性与生命周期 | `PARTIAL`（云端代码/自动化/CI 已收口；剩余 GPU/CPU 多轮、多媒体、Native 生命周期与进程恢复均为 `UNKNOWN / LOCAL ONLY`） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
 | B | 问诊助手结果解释 | `IN_PROGRESS`（按审计 §14.2 / §16 区分 App 确定性规则结果与 AI 教学解释；完整问诊闭环仍须按对应代码、自动化和本地场景证据判定） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
-| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
+| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（18/23 项 Headless；5 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts/yuxiaji_omen`；保留各自 Page builder | 每项能力按真实用途定义输入/输出契约、权限、错误及副作用语义；不以覆盖数量为目标，也不把 Headless 注册等同于模型提案授权 |
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
-| H | AI 五层核心职责解耦（高优先级） | `IN_PROGRESS`（核心架构规范已冻结；现有代码逐层映射和实现仍待审计/推进） | 当前多轮治理 A 属于会话记忆层并继续优先；Core-0 契约/源码映射可与 A 并行；其余按核心架构依赖小批量推进 | 知识召回、证据排序、会话记忆、语言推理、业务执行五层分别有契约、状态所有权、失败语义、隔离测试和端到端证据；不机械新建五套服务/Agent |
+| H | AI 五层核心职责解耦（高优先级） | `PARTIAL`（Core-0～Core-5 当前约定云端范围已完成代码/测试/CI 收口；Find N2 真实推理、GPU/CPU、多媒体、进程恢复与实测 Token 上下文预算仍为 LOCAL ONLY / UNKNOWN） | Native 多轮治理归属 Core-1；Core-0～Core-5 云端审计按主线基线、小批量独立分支与自动验收推进；设备 TRACE 集中在云端收尾后本地执行 | 五层各自有契约、状态所有权、失败语义和隔离测试；Core-5 云端回归证明应用层跨层闭环，不替代真实 E4B Native/Find N2 证据；不机械新建五套服务/Agent |
 | I | 用户 Markdown 书架本地知识库（未来能力） | `DEFERRED / NOT_AUTHORIZED`（设计已冻结，当前非优先级） | 等待核心五层 Core-0～Core-2 与多轮/证据边界稳定，之后须用户明确恢复书架事项 | 只有核心架构放行后才按书架专项文档实施；其交付不得阻塞核心主线，Find N2 仍需独立 TRACE |
 
 > A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
@@ -4921,4 +4921,18 @@ PR HEAD 门禁证据：
 - 对 docs 下名称包含 handoff / handover / acceptance 的文件做逐项分类后，历史审计、历史验收结果和专项操作规范均保留原位，不作为第二份活动交接单；不存在的旧路径维持 404，不重新创建。
 - 本地所有场景执行状态、证据目录、缺口与下一步统一追加到交接文档 §7.1；不按 PR、GPU/CPU、媒体、知识解读或授权任务拆分新文档。
 - Find N2 的 GPU/CPU、媒体、进程恢复、AI 数据清理、签名覆盖升级与 TRACE 仍为 LOCAL ONLY / NOT RUN，必须由本地执行者实测后回填，禁止将云端 CI 或 Widget 测试代写成实机 PASS。
+
+
+ 
+## 128. 2026-11-27 当前主线五层云端收尾复核（master `b978bc95475dcbc58f00be77c5479b26f91e7351`）
+
+- **当前主线与 CI：** master HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`。同一 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均为 SUCCESS。PR #590 已合并（merge `62f18244220c073bcd5f7bf802ca48d7714f7aeb`）；PR #594 已合并（merge `11ac0c5918e5c25754b44e71f0ba48c82bea6669`）。
+- **Core-0 契约与源码映射：** 五层 DTO、跨层数据流、状态所有权、失败状态和源码/测试锚点已在架构规范中冻结。本轮不新增服务、Agent、数据库或权限门禁。
+- **Core-1 会话记忆 / Native 多轮：** 有界成功 transcript、临时 RAG/SessionState/reasoning/media 上下文 dirty-KV 隔离、SessionState 会话归属与 provenance、推理请求 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 持久化及 UNKNOWN 不重放均有主线代码与自动化测试。Native KV Cache 不持久化；字符/轮数限制不等于 Token 预算，实际 Token 上下文、GPU/CPU 连续推理、媒体、Activity/process restart 和 state:7 根因需 Find N2 TRACE。
+- **Core-2 知识召回与证据排序：** 现有 CandidateEvidence、多源聚合、SourceAwareLegacyEvidenceRanker 和 AI retrieval golden snapshot 维持既有实现。保留 legacy query/matching 行为；不重复建设候选/排序对象，不把 KEEP/DROP 或相关性信号解释为来源真实性、经典权威性或知识结论。
+- **Core-3 语言推理：** 五种主文本模式和图片/音频附件已使用 ReasoningRequest/Response v1 与 Native 双阶段提交。PR #594 移除 LocalAiService 旧 sendMessage*/sendImage*/sendAudio* 包装及私有转发；Native 旧 sendMessage 路由 fail-closed。全仓静态架构测试覆盖 `lib/`、`test/`，辅助 intent、八字槽位、症状整理、单题问项等窄任务保持独立。
+- **Core-4 业务执行：** 生产 ACTION_PROPOSAL 仅开放 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian` 四项。能力级参数、来源、副作用、幂等/时间依赖及补偿适用性已复核；显式确认、claim-before-dispatch、终态安全读回、实际参数/来源校验和 UNKNOWN 不重放有针对性测试。四项均无外部业务写入；执行中通用协作取消和 deadline 未实现，不以 Future.timeout 冒充取消，不为当前无副作用能力引入虚假通用框架。
+- **Core-5 端到端：** `test/local_ai_interview_screen_test.dart` 已有 20 轮知识追问及一次工具提案确认/执行/结果解释云端回归；测试采用 fake Native service / executor。主线 Flutter tests、Quality Gate、Fork License 均通过，但不能据此声称真实 E4B 或 Find N2 已验收。
+- **本地唯一交接入口：** `docs/local-real-device-acceptance-handoff.md`。仓库中只有这一份活动设备交接文档；本地执行者必须在 §7.1 追加日期、构建 SHA/APK 版本、场景 ID、PASS/FAIL/BLOCKED/MISSING、证据目录、缺口和下一步。未实测继续 MISSING / UNKNOWN。
+- **范围冻结：** 工作流 I 用户 Markdown 书架继续 `DEFERRED / NOT_AUTHORIZED`；不新增 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker；不扩展四项 capability allowlist，不改业务算法和问诊规则。研纪定位为学习辅助工具，不是中医诊疗软件。
 
