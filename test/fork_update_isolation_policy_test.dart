@@ -38,7 +38,9 @@ void main() {
     });
   });
   group('About content boundary', () {
-    test('keeps the About page focused on introduction, local updates, and open-source thanks', () {
+    test(
+      'keeps the About page focused on introduction, local updates, and open-source thanks',
+      () {
       final dialogs = File('lib/screens/app_dialogs.dart').readAsStringSync();
       final start = dialogs.indexOf('Future<void> showAboutPage(');
       final end = dialogs.indexOf('/// 关于页中的单条更新日志卡片', start);
@@ -58,9 +60,12 @@ void main() {
       ]) {
         expect(about, isNot(contains(forbidden)));
       }
-    });
+      },
+    );
 
-    test('shows only verified local history and independent product versions', () {
+    test(
+      'shows only verified local history and independent product versions',
+      () {
       final changelogFile = File('assets/data/changelog.json');
       final source = changelogFile.readAsStringSync();
       final decoded = jsonDecode(source) as Map<String, dynamic>;
@@ -82,9 +87,12 @@ void main() {
       expect(source, isNot(contains('上游')));
       expect(source, isNot(contains('upstream')));
       expect(source, isNot(contains('jangviktor-web')));
-    });
+      },
+    );
 
-    test('keeps repository integration details out of the README project introduction', () {
+    test(
+      'keeps repository integration details out of the README project introduction',
+      () {
       final readme = File('README.md').readAsStringSync();
       final start = readme.indexOf('### 项目定位');
       final end = readme.indexOf('### 核心价值主张', start);
@@ -96,7 +104,8 @@ void main() {
       expect(introduction, isNot(contains('上游')));
       expect(introduction, isNot(contains('Fork')));
       expect(readme, isNot(contains('保留 GitHub Fork 关系')));
-    });
+      },
+    );
   });
 
 }
