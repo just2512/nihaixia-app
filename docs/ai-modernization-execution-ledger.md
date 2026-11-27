@@ -15,7 +15,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `922285573e263ecd08a1eed535d4adec771a5979` | 当前 master HEAD；PR #586 的 About 页面/项目更新说明调整已在此主线，当前 AI 文档 PR 从该 SHA 派生，仅更改五份 AI 架构/审计/设备交接文档 |
+| 本轮最新主线/文档核验基线 | `d024d2e277e80bb960b8986dc01d860eb7f7670f` | 当前 master HEAD；该提交仅同步五层架构、执行台账、能力审计、Native 多轮审计和唯一设备交接文档，不改变 AI 运行时代码。父基线 `922285573e263ecd08a1eed535d4adec771a5979` 的 Flutter tests、Flutter Quality Gate、Fork License 均 SUCCESS；d024d2e 自身的 post-merge CI 本轮尚未取得可核验终态，记 UNKNOWN，不继承父 SHA 的 PASS |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前仓库 master HEAD 为 `922285573e263ecd08a1eed535d4adec771a5979`；其中 PR #586 是 About 页面/项目更新说明整理，不改变五层 AI 运行时代码。AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮 PR 只更新架构映射、执行台账、能力审计、Native 多轮专项审计和唯一 Find N2 本地验收交接单（共五份文档），不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 当前仓库 master HEAD 为 `d024d2e277e80bb960b8986dc01d860eb7f7670f`；该提交仅同步文档，AI 运行时代码审计仍以 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` 为集成点、以 `922285573e263ecd08a1eed535d4adec771a5979` 为最近有明确 CI 终态的主线基线。AI 五层运行时集成点为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`，包含 PR #583（Core-3 媒体附件结构化协议）与 PR #585（Core-5 跨层 E2E）。本轮 PR 只更新架构映射、执行台账、能力审计、Native 多轮专项审计和唯一 Find N2 本地验收交接单（共五份文档），不改运行时代码。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等仍按唯一本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -4808,7 +4808,7 @@ PR HEAD 门禁证据：
 
 ## 122. 2026-11-27 Core-3 媒体协议与 Core-5 跨层 E2E 合入后的当前状态
 
-- **当前仓库主线 HEAD：** `master@922285573e263ecd08a1eed535d4adec771a5979`；**AI 五层运行时代码集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #583/#585，PR #586 未改 AI 运行时）。PR #583 合并提交 `38d0490a7f11596962825a22161dbc7add0006da`；PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。第 1–121 节保留为历史记录；状态冲突时以本节和当前源码为准。
+- **当前仓库主线 HEAD：** `master@d024d2e277e80bb960b8986dc01d860eb7f7670f`（文档对齐提交）；**最近有完整 CI 终态的父基线：** `922285573e263ecd08a1eed535d4adec771a5979`；**AI 五层运行时代码集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（PR #583/#585，PR #586 未改 AI 运行时）。PR #583 合并提交 `38d0490a7f11596962825a22161dbc7add0006da`；PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。第 1–121 节保留为历史记录；状态冲突时以本节和当前源码为准。
 - **Core-0：** 本轮同步刷新架构文档当前源码映射、Native 入口清单、测试锚点与剩余断点；Native 多轮专项审计第 10 节同步到 #117/#119/#120/#565/#575/#585 的当前代码状态。仅代表契约/源码映射与审计记录更新，不等于设备 TRACE 已 PASS。
 - **Core-1：** PR #117/#119 完成 SQLite 成功轮次原子持久化与 task/transcript TRACE 分类；PR #565 跟踪 RAG、SessionState、reasoning metadata 和媒体输入对 Live LiteRT KV cache 的污染，并在下一请求前仅对 dirty cache 从有界成功 transcript 重建 Conversation；PR #575 持久化推理 PENDING/FINALIZED/REJECTED/UNKNOWN/SUPERSEDED 生命周期，打开历史会话时无终态请求降为 UNKNOWN 且禁止自动重放。SessionStateSnapshot 按 conversation owner 隔离，隐藏 role=tool 推理/业务 Ledger 事件不进入用户记忆。Native `LocalAiConversationHistory` 保留最多 12 个完整成功轮次和 10,000 UTF-16 code units；#120 由进程级串行 executor 协调 Activity teardown/reload，释放失败 fail-closed。Native Conversation 从 SQLite transcript 重建，但 LiteRT KV Cache 不持久化；字符上限不是 Token/input budget，自动压缩、真实 GPU/CPU、多媒体和 Activity/process restart TRACE 仍为 DEVICE UNKNOWN。
 - **Core-2：当前既定范围已完成。** PR #527 已提供不可变 RankedEvidenceSet（requestId、strategyId/version、逐候选 KEEP/DROP reasonCode/reason、稳定顺序、status/diagnostics）及 6,500 UTF-16 字符预算核算（omitted/truncated IDs）；PR #568 将 Formula、Herb、Acupuncture formula、Acupoint、Neijing 五类本地记录纳入 CandidateEvidence，并进入同一 MultiSourceEvidencePipeline/SourceAwareLegacyEvidenceRanker。当前 AssistantKnowledgeContextResult 同时返回排序前的 metadata-only candidateSnapshot、排序决策和仅包含完整呈现且来源可解析的 rankedEvidence。检索查询生成与内容物化仍由 AssistantKnowledgeContextBuilder 编排；ranker 本身独立消费候选。排序策略刻意保留 legacy 顺序和来源限额，不是语义相关性评分；字符预算不是 Token/input budget。KEEP/DROP 不表示来源真实性或内容正确性。
@@ -4822,3 +4822,52 @@ PR HEAD 门禁证据：
 - **工作流 H：** 当前核心主线按 Core-0→Core-5 推进；Native 多轮属于 Core-1，持续保留 request ledger、session owner、隐藏事件隔离和 UNKNOWN 不重放。后续只在已证实缺口上拆独立工作流，继续采用主线基线、独立分支、小批量 PR、精确 HEAD 自动验收。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT AUTHORIZED。不新增知识源、Embedding、向量数据库、Reranker、第二套会话数据库或第二套 AI access Gate。
 - **设备验收顺序：** Find N2 真实 E4B/GPU/CPU、连续 20 轮与工具结果解释、多媒体附件、会话切换、Activity recreation / force-stop 恢复、AI 数据清理、签名覆盖升级、Native Gate 和脱敏 TRACE 留到所有云端改造/CI/文档收尾后，由本地按照唯一 `docs/local-real-device-acceptance-handoff.md` 执行。设备缺少、未连接或未执行不阻塞云端工作，也不能将 MISSING/UNKNOWN 写成 PASS。
+
+---
+
+## 123. 2026-11-27 当前主线复核与 Core-3 兼容入口审计续项
+
+### 123.1 当前基线与证据边界
+
+- **当前 master HEAD：** `d024d2e277e80bb960b8986dc01d860eb7f7670f`。该提交是五层架构、执行台账、Native 多轮审计和统一设备交接文档的同步提交，不改变 AI 运行时代码。
+- **AI 五层运行时代码集成点：** `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；最近有明确完整主线 CI 终态的仓库基线为 `922285573e263ecd08a1eed535d4adec771a5979`。
+- **已核验父基线 CI：** Flutter tests run `45946971805` SUCCESS（Android arm64 APK + unit tests job `140333786893` SUCCESS）；Flutter Quality Gate run `45946971864` SUCCESS；Fork License run `45946971771` SUCCESS。
+- **当前提交 CI：** 本轮没有取得 `d024d2e277e80bb960b8986dc01d860eb7f7670f` 对应的独立 post-merge workflow 终态。不得将父 SHA 的成功结果继承给 d024d2e；当前提交 CI 状态记为 `UNKNOWN`，后续补查。
+- **分支与集成：** 本轮文档审计分支从 d024d2e 独立创建；本节只记录审计事实和下一切片，不把未完成的全仓调用者盘点写成已完成，也不修改运行时兼容入口。
+
+### 123.2 Core-0 至 Core-5 当前状态
+
+| Core | 当前结论 | 仍需处理的边界 |
+|---|---|---|
+| Core-0 契约与源码映射 | DOC/CODE MAP 已完成 | 随真实主线变化维护，不重复建设现有 DTO/Adapter |
+| Core-1 会话记忆与 Native 多轮 | 云端代码/测试已落地；设备 UNKNOWN | Find N2 GPU/CPU、state:7、媒体、Activity/process restart、三方 transcript 对照及真实 Token/input budget 仍需设备证据；字符上限不等于 Token 预算 |
+| Core-2 知识召回与证据排序 | 当前约定范围已完成 | 保留 legacy 查询/匹配/顺序与黄金行为；不重复实现候选快照、排序决策或字符预算 |
+| Core-3 语言推理 | 五种主文本模式及图片/音频结构化协议已接线 | 继续完成旧 `sendMessage` 兼容入口和辅助窄任务的全仓调用者盘点；未证明无调用前不得删除兼容入口 |
+| Core-4 业务执行 | 四项既有 plan-eligible capability 的受限生产闭环已接通 | 不扩大 allowlist；能力级 schema、副作用、幂等、取消/超时语义按既有审计逐项补齐 |
+| Core-5 端到端验收 | 云端 20 轮 + 单次工具闭环测试已通过 | fake executor / widget 测试不替代真实 E4B、GPU/CPU、媒体与进程恢复设备 TRACE |
+
+### 123.3 Core-3 旧兼容入口静态复核
+
+本轮检查当前 master 的以下源码：
+
+- `lib/screens/local_ai_interview_screen.dart`：五种主文本模式与图片/音频附件主路径调用 `sendReasoningMessage` / `sendReasoningAttachmentMessage`；当前文件未发现调用 `_service.sendMessage`、`_service.sendImage` 或 `_service.sendAudio`。
+- `lib/services/local_ai_service.dart`：仍公开保留 `sendMessage`、`sendMessageWithTrace`、`sendMessageWithContext`、`sendMessageWithContextAndTrace`，以及旧 `sendImage` / `sendAudio` 包装方法。
+- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt`：仍保留 Native `sendMessage` MethodChannel handler；Native `sendImage` / `sendAudio` 已 fail-closed，返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`。
+- 辅助任务 `resolveAssistantIntent`、`extractBaziSlots`、`extractSymptoms`、`understandTcmInterviewAnswer` 继续保持各自窄 DTO / 参数约束，不并入主聊天协议。
+- **审计结论：PARTIAL。** 已确认当前助手主屏不再走旧文本/媒体包装入口，但尚未形成全仓所有 Dart/Kotlin 调用者的完整清单；不能据单个页面未命中就删除公开 Service 方法或 Native `sendMessage` handler。旧媒体 Native handler 已关闭，后续只在确认没有兼容依赖后清理 Dart 包装层。
+
+### 123.4 下一云端切片与验收顺序
+
+1. 对 `LocalAiService.sendMessage*`、`sendImage*`、`sendAudio*`、Native `sendMessage` 的全仓调用者做完整静态盘点，逐个记录调用文件、调用目的、是否生产可达、是否测试专用、是否仍需兼容。
+2. 对每个已证明无调用的入口，先单独移除 Dart wrapper 或 Native handler 的最小切片；保留调用者不明、外部/测试兼容尚未确认的接口。不得一次性删除整组 API。
+3. 对辅助窄任务逐项核对输入 schema、原文 evidence、用户确认和状态持久化；只有发现可复现契约缺口才改代码。
+4. 每个代码切片从当时最新 master 创建独立分支，执行 changed tests、Flutter regression/analyze、Android arm64/JVM、Fork License；合并后重新核对 master CI。
+5. Find N2 真实模型、GPU/CPU、媒体、多轮与进程恢复继续集中留到全部云端工作完成后执行；设备 UNKNOWN 不阻塞以上云端审计。
+
+### 123.5 本轮冻结边界
+
+- 工作流 H 继续按 Core-0→Core-5 推进；Native 多轮属于 Core-1，不另建重复会话记忆系统。
+- 工作流 I 用户 Markdown 书架保持 `DEFERRED / NOT_AUTHORIZED`。
+- 不新增 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker。
+- 不改变产品定位：研纪是学习辅助工具，不是医疗诊断软件。
+- 不把设备未执行、CI 未查到或全仓调用者未盘清的项目标为 PASS。
