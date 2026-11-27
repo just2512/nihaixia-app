@@ -2022,9 +2022,6 @@ class MainActivity : FlutterActivity() {
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         conversationContainsEphemeralContext = false
         conversationHistory.clear()
-        if (restoredHistory != null) {
-            conversationHistory.restore(restoredHistory)
-        }
 
         return try {
             val nextConversation = ConversationResetPolicy.recreateConversation(
@@ -2035,6 +2032,7 @@ class MainActivity : FlutterActivity() {
                             ConversationConfig(systemInstruction = Contents.of(systemInstruction))
                         )
                     } else {
+                        conversationHistory.restore(restoredHistory)
                         createConversationWithHistory(engine)
                     }
                 },
