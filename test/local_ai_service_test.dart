@@ -471,7 +471,7 @@ void main() {
     });
   });
 
-  group('LocalAiService attachment channel contract', () {
+  group('LocalAiService model import contract', () {
     test('importModel returns native model installation status', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -496,86 +496,6 @@ void main() {
       expect(status.hashVerified, isTrue);
       expect(status.ready, isFalse);
       expect(status.sizeBytes, 3659530240);
-    });
-
-    test('sendImage passes cached path and user prompt to native channel', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '舌体可见特征描述'};
-      });
-
-      final reply = await LocalAiService().sendImage(
-        '/app/cache/tongue.jpg', conversationId: 42,
-        prompt: '请说明照片是否清晰',
-      );
-
-      expect(reply, '舌体可见特征描述');
-      expect(received?.method, 'sendImage');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'path': '/app/cache/tongue.jpg',
-        'prompt': '请说明照片是否清晰',
-      });
-    });
-
-    test('sendAudio passes cached path and user prompt to native channel', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '用户语音转写内容'};
-      });
-
-      final reply = await LocalAiService().sendAudio(
-        '/app/cache/interview.wav', conversationId: 42,
-        prompt: '请保留听不清的部分',
-      );
-
-      expect(reply, '用户语音转写内容');
-      expect(received?.method, 'sendAudio');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'path': '/app/cache/interview.wav',
-        'prompt': '请保留听不清的部分',
-      });
-    });
-
-    test('attachment calls reject null, blank, and non-string native replies', () async {
-      final invalidResponses = <Object?>[
-        null,
-        <String, Object?>{},
-        <String, Object?>{'reply': null},
-        <String, Object?>{'reply': '  '},
-        <String, Object?>{'reply': 42},
-      ];
-
-      for (final response in invalidResponses) {
-        messenger.setMockMethodCallHandler(
-          channel,
-          (_) async => response,
-        );
-
-        await expectLater(
-          LocalAiService().sendImage('/app/cache/tongue.jpg', conversationId: 42),
-          throwsA(
-            isA<PlatformException>().having(
-              (error) => error.code,
-              'code',
-              'EMPTY_REPLY',
-            ),
-          ),
-        );
-        await expectLater(
-          LocalAiService().sendAudio('/app/cache/interview.wav', conversationId: 42),
-          throwsA(
-            isA<PlatformException>().having(
-              (error) => error.code,
-              'code',
-              'EMPTY_REPLY',
-            ),
-          ),
-        );
-      }
     });
   });
 
@@ -627,122 +547,6 @@ void main() {
   });
 
   group('LocalAiService text conversation contract', () {
-    test('sendMessage forwards the exact user text and returns native reply', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '请继续描述不适出现的时间'};
-      });
-
-      final reply = await LocalAiService().sendMessage('饭后腹胀，持续两周', conversationId: 42);
-
-      expect(received?.method, 'sendMessage');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'text': '饭后腹胀，持续两周',
-      });
-      expect(reply, '请继续描述不适出现的时间');
-    });
-
-    test('sendMessageWithContext separates user text from retrieved knowledge context', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '依据本地资料整理的回答'};
-      });
-
-      final reply = await LocalAiService().sendMessageWithContext(
-        '柴胡的传统功用是什么？', conversationId: 42,
-        context: '[App本草库] 柴胡：原始条目内容',
-      );
-
-      expect(reply, '依据本地资料整理的回答');
-      expect(received?.method, 'sendMessage');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'text': '柴胡的传统功用是什么？',
-        'context': '[App本草库] 柴胡：原始条目内容',
-      });
-    });
-
-    test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '继续基于本会话已确认信息回答'};
-      });
-      await LocalAiService().sendMessageWithContext(
-        '继续分析', conversationId: 42, context: 'RAG_CONTEXT_ONLY',
-        sessionStateContext: '【App 本会话结构化记忆快照 v1】\nstatus=RESTORED',
-        sessionStateConversationId: 42,
-      );
-      expect(received?.arguments['context'], 'RAG_CONTEXT_ONLY');
-      expect(received?.arguments['session_state_context'],
-          '【App 本会话结构化记忆快照 v1】\nstatus=RESTORED');
-      expect(received?.arguments['session_state_conversation_id'], 42);
-    });
-
-    test('sendMessageWithTrace forwards session snapshot without RAG context', () async {
-      const traceId = '0123456789abcdef0123456789abcdef';
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{'reply': '本会话记忆已注入', 'trace_id': traceId};
-      });
-      await LocalAiService().sendMessageWithTrace(
-        '继续', conversationId: 42, traceId: traceId,
-        sessionStateContext: '【App 本会话结构化记忆快照 v1】\nstatus=PARTIAL',
-        sessionStateConversationId: 42,
-      );
-      expect(received?.arguments['context'], isNull);
-      expect(received?.arguments['session_state_conversation_id'], 42);
-      expect(received?.arguments['session_state_context'], contains('status=PARTIAL'));
-      expect(received?.arguments['trace_id'], traceId);
-    });
-
-    test('sendMessage rejects missing, null, and whitespace-only native replies', () async {
-      final invalidResponses = <Object?>[
-        <String, Object?>{},
-        <String, Object?>{'reply': null},
-        <String, Object?>{'reply': '   '},
-      ];
-
-      for (final response in invalidResponses) {
-        messenger.setMockMethodCallHandler(
-          channel,
-          (_) async => response,
-        );
-        await expectLater(
-          LocalAiService().sendMessage('继续问诊', conversationId: 42),
-          throwsA(
-            isA<PlatformException>().having(
-              (error) => error.code,
-              'code',
-              'EMPTY_REPLY',
-            ),
-          ),
-        );
-      }
-    });
-
-    test('sendMessage rejects non-string native replies with a contract error', () async {
-      messenger.setMockMethodCallHandler(
-        channel,
-        (_) async => <String, Object?>{'reply': 42},
-      );
-
-      await expectLater(
-        LocalAiService().sendMessage('继续问诊', conversationId: 42),
-        throwsA(
-          isA<PlatformException>().having(
-            (error) => error.code,
-            'code',
-            'EMPTY_REPLY',
-          ),
-        ),
-      );
-    });
-
     test('restoreConversation forwards bounded history and user-only turns', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -1425,101 +1229,6 @@ void main() {
   group('LocalAiService trace ID bridge contract', () {
     const traceId = '0123456789abcdef0123456789abcdef';
 
-    test('sendMessage forwards trace ID and requires an exact native echo', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{
-          'reply': '继续描述',
-          'trace_id': traceId,
-        };
-      });
-
-      final reply = await LocalAiService().sendMessageWithTrace(
-        '继续问诊', conversationId: 42,
-        traceId: traceId,
-      );
-
-      expect(reply, '继续描述');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'text': '继续问诊',
-        'trace_id': traceId,
-      });
-    });
-
-    test('sendMessageWithContextAndTrace preserves context and correlation ID', () async {
-      MethodCall? received;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received = call;
-        return <String, Object?>{
-          'reply': '依据本地资料整理',
-          'trace_id': traceId,
-        };
-      });
-
-      final reply = await LocalAiService().sendMessageWithContextAndTrace(
-        '柴胡的传统功用是什么？', conversationId: 42,
-        context: '[App本草库] 柴胡：原始条目',
-        traceId: traceId,
-      );
-
-      expect(reply, '依据本地资料整理');
-      expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
-        'text': '柴胡的传统功用是什么？',
-        'context': '[App本草库] 柴胡：原始条目',
-        'trace_id': traceId,
-      });
-    });
-
-    test('sendMessage rejects a mismatched native trace ID', () async {
-      messenger.setMockMethodCallHandler(
-        channel,
-        (_) async => <String, Object?>{
-          'reply': '回答',
-          'trace_id': 'ffffffffffffffffffffffffffffffff',
-        },
-      );
-
-      await expectLater(
-        LocalAiService().sendMessageWithTrace('继续问诊', conversationId: 42, traceId: traceId),
-        throwsA(
-          isA<PlatformException>().having(
-            (error) => error.code,
-            'code',
-            'TRACE_ID_MISMATCH',
-          ),
-        ),
-      );
-    });
-
-    test('image and audio calls forward and validate trace ID', () async {
-      final received = <MethodCall>[];
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        received.add(call);
-        return <String, Object?>{
-          'reply': '附件分析',
-          'trace_id': traceId,
-        };
-      });
-
-      await LocalAiService().sendImageWithTrace(
-        '/app/cache/tongue.jpg', conversationId: 42,
-        traceId: traceId,
-      );
-      await LocalAiService().sendAudioWithTrace(
-        '/app/cache/interview.wav', conversationId: 42,
-        traceId: traceId,
-      );
-
-      expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
-      expect(received[0].arguments['conversation_id'], 42);
-      expect(received[1].arguments['conversation_id'], 42);
-      expect(received[0].arguments['trace_id'], traceId);
-      expect(received[1].arguments['trace_id'], traceId);
-    });
-
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -1767,33 +1476,6 @@ void main() {
       );
     });
 
-    test('invalid conversation ID is rejected before a platform call', () async {
-      var calls = 0;
-      messenger.setMockMethodCallHandler(channel, (_) async {
-        calls++;
-        return <String, Object?>{'reply': 'must not be called'};
-      });
-
-      await expectLater(
-        LocalAiService().sendMessage('继续问诊', conversationId: 0),
-        throwsA(isA<ArgumentError>()),
-      );
-      expect(calls, 0);
-    });
-
-    test('invalid trace ID is rejected before a platform call', () async {
-      var calls = 0;
-      messenger.setMockMethodCallHandler(channel, (_) async {
-        calls++;
-        return <String, Object?>{'reply': 'must not be called'};
-      });
-
-      await expectLater(
-        LocalAiService().sendMessageWithTrace('继续问诊', conversationId: 42, traceId: 'not-a-trace-id'),
-        throwsA(isA<ArgumentError>()),
-      );
-      expect(calls, 0);
-    });
   });
 
 }

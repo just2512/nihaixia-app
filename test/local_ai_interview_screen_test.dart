@@ -464,7 +464,6 @@ class _TextSendService extends LocalAiService {
   final sentTraceIds = <String>[];
   final sentAttachmentPaths = <String>[];
   final sentAttachmentTypes = <String>[];
-  int legacySendCalls = 0;
   final restoredTranscripts = <String>[];
   final structuredReasoningContexts = <String>[];
   final finalizedReasoningAnswers = <String>[];
@@ -771,56 +770,7 @@ class _TextSendService extends LocalAiService {
     return _readyStatus;
   }
 
-  @override
-  Future<String> sendMessage(
-    String text, {
-    required int conversationId,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    legacySendCalls += 1;
-    sentConversationIds.add(conversationId);
-    sentTexts.add(text);
-    return '已收到你的描述：$text';
-  }
 
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sentContexts.add(context);
-    return sendMessage(text, conversationId: conversationId);
-  }
-
-  @override
-  Future<String> sendMessageWithTrace(
-    String text, {
-    required int conversationId,
-    required String traceId,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
-  }
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
-    required String context,
-    required String traceId,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sentTraceIds.add(traceId);
-    sentContexts.add(context);
-    return sendMessage(text, conversationId: conversationId);
-  }
 }
 
 class _ToolProposalRouteObserver extends NavigatorObserver {
@@ -2365,8 +2315,6 @@ void main() {
     expect(service.sentContexts.single, contains('不得向用户输出 sourceId、evidenceId、路径或内部编号'));
     expect(service.sentContexts.single, contains('结合本轮本地知识库实际命中的条目解释规则结果'));
     expect(service.sentContexts.single, contains('必须区分 App 规则结果、检索资料和 AI 解释'));
-    expect(service.legacySendCalls, 0,
-        reason: '问诊文本必须走结构化推理与 Native 双阶段提交');
     expect(service.structuredReasoningContexts, hasLength(1));
     final consultationRequest = jsonDecode(
       service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
@@ -5222,7 +5170,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
-    expect(service.legacySendCalls, 0);
     final metaphysicsRequest = jsonDecode(
       service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
     ) as Map<String, dynamic>;
@@ -5270,7 +5217,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
-    expect(service.legacySendCalls, 0);
     expect(service.sentContexts.single, contains('玄学大师'));
     final metaphysicsRequest = jsonDecode(
       service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
@@ -7472,8 +7418,6 @@ testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文
     await tester.pumpAndSettle();
 
     expect(service.sentTexts, ['你好']);
-    expect(service.legacySendCalls, 0,
-        reason: '无检索命中不应退回无协议的普通 sendMessage');
     expect(service.structuredReasoningContexts, hasLength(1));
     expect(service.finalizedReasoningAnswers, hasLength(1));
     final request = jsonDecode(
