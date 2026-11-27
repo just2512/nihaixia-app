@@ -2036,7 +2036,10 @@ class MainActivity : FlutterActivity() {
                         createConversationWithHistory(engine)
                     }
                 },
-                closeEngine = { engine.close() }
+                closeEngine = { engine.close() },
+                onEngineReleaseFailure = { releaseError ->
+                    LocalAiProcessExecutor.health.markReleaseFailure(releaseError)
+                }
             )
             aiConversation = nextConversation
             observeConversationTokenCount(nextConversation)
