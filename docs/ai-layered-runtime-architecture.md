@@ -600,3 +600,11 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 
 **工作流 I（用户 Markdown 书架）继续 DEFERRED / NOT AUTHORIZED。** 本轮没有引入新的检索源、Embedding、向量数据库、Reranker 或第二套会话/授权存储。
 
+### 5.6 Core-3 旧 LocalAiService 入口调用点审计（2026-11-27）
+
+- 当前基线：`master@62f18244220c073bcd5f7bf802ca48d7714f7aeb`。
+- 直接检查 `LocalAiInterviewScreen`：生产主文本与附件发送均调用 `sendReasoningMessage` / `sendReasoningAttachmentMessage`；未见旧 `sendMessage*`、`sendImage*`、`sendAudio*` 调用。
+- 旧 Dart 包装方法仍保留在 `LocalAiService`；Native `MainActivity` 仍有活动的 `sendMessage` handler。媒体 Native handler 已 fail-closed，返回 `STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED`。
+- 新增 `test/local_ai_service_legacy_entrypoint_audit_test.dart`：递归扫描全部 `lib/**/*.dart`，在明确引用 LocalAiService 的文件中检查旧包装方法调用，并检查原始 local AI MethodChannel 是否被其他生产文件直接创建。
+- 该测试只用于补全静态调用点证据，不负责删除接口，也不把测试合同误判为生产调用。必须以该测试和最新 HEAD CI 终态为准；在此之前不移除任何兼容 API。Native 辅助 intent、八字槽位、症状整理、单题理解继续使用各自窄任务协议。
+- 本节不改变 ReasoningRequest/Response、Native 会话历史、访问门禁或模型行为。
