@@ -5,7 +5,7 @@
 > 若历史台账条目与产品定位文件冲突，以产品定位文件及审计规范当前有效章节为准。历史条目保留为当时决策轨迹，不自动构成当前待办。
 > 状态必须由实际源码、测试、CI 或设备记录更新。不得根据计划、代码文件存在或模型回复推定完成。
 
-> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前五层云端集成状态以第 128 节为准。
+> **2026-11-27 当前范围纠偏：** 本台账第 1–119 节按时间保留历史状态；其中临床 RedFlag detector、医学词表/阈值/处置文案医学签审、医生审批记录、五模式临床门禁及相关 `PARTIAL / RELEASE BLOCKED` 结论均已由第 120 节撤销。旧行即使仍保留原文，也不是当前缺口、待办、依赖或发布条件。当前项目是中医学习辅助工具，不是医疗诊断或临床分诊软件；不建设临床 detector、不安排医学背景人员审核、不恢复原 B 项。当前产品范围以第 120 节为准，当前五层云端集成状态以第 129 节为准。
 
 ## 1. 当前核验基线
 
@@ -15,7 +15,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `b978bc95475dcbc58f00be77c5479b26f91e7351` | 当前 master HEAD。该 SHA 的 Flutter tests run `45971505009`、Flutter Quality Gate run `45971505000`、Fork License run `45971505047` 均 SUCCESS；三项均对应同一 SHA。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669` |
+| 本轮最新主线/文档核验基线 | `1d79bc2f628fde789c5b5602cee889f844972c23` | 当前 master HEAD（仅文档同步）。同一 SHA 的 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均 SUCCESS。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669` |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前仓库 `master` HEAD 为 `b978bc95475dcbc58f00be77c5479b26f91e7351`，对应 Flutter tests、Flutter Quality Gate 与 Fork License 三项主线 Push CI 均 SUCCESS（run IDs 见本节基线表）。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；PR #594 的 Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。本轮只校准五层架构、执行台账、Native 多轮审计与唯一 Find N2 本地交接文档中的当前基线和结论，不改运行时代码、业务规则、模型行为或权限边界。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理和 TRACE 仍按唯一本地清单取得设备证据；未实测场景不计 PASS。
+**核验基线说明：** 当前仓库 `master` HEAD 为 `1d79bc2f628fde789c5b5602cee889f844972c23`，对应 Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 三项主线 Push CI 均 SUCCESS，三项均指向同一 SHA。五层运行时代码集成点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；PR #594 的 Core-3 旧包装 API 退役合并点为 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`。本轮只校准五层架构、执行台账、Native 多轮审计与唯一 Find N2 本地交接文档中的当前基线和证据边界，不改运行时代码、业务规则、模型行为或权限边界。Native KV Cache token 数及模型声明最大上下文长度已有只读观测；App 可用 Token/input budget 仍未配置，不能将观测值写成预算。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理和 TRACE 仍按唯一本地清单取得设备证据；未实测场景不计 PASS。
 
 ## 2. 状态定义
 
@@ -55,7 +55,7 @@
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
-| H | AI 五层核心职责解耦（高优先级） | `PARTIAL`（Core-0～Core-5 当前约定云端范围已完成代码/测试/CI 收口；Find N2 真实推理、GPU/CPU、多媒体、进程恢复与实测 Token 上下文预算仍为 LOCAL ONLY / UNKNOWN） | Native 多轮治理归属 Core-1；Core-0～Core-5 云端审计按主线基线、小批量独立分支与自动验收推进；设备 TRACE 集中在云端收尾后本地执行 | 五层各自有契约、状态所有权、失败语义和隔离测试；Core-5 云端回归证明应用层跨层闭环，不替代真实 E4B Native/Find N2 证据；不机械新建五套服务/Agent |
+| H | AI 五层核心职责解耦（高优先级） | `PARTIAL`（Core-0～Core-5 当前约定云端范围已完成代码/测试/CI 收口；Native KV Cache token 数与模型声明 maxContextTokens 已有只读观测，但 App 输入预算/动态治理未配置；Find N2 真实推理、GPU/CPU、多媒体和进程恢复仍为 LOCAL ONLY / UNKNOWN） | Native 多轮治理归属 Core-1；Core-0～Core-5 云端审计按主线基线、小批量独立分支与自动验收推进；设备 TRACE 集中在云端收尾后本地执行 | 五层各自有契约、状态所有权、失败语义和隔离测试；Core-5 云端回归证明应用层跨层闭环，不替代真实 E4B Native/Find N2 证据；不机械新建五套服务/Agent |
 | I | 用户 Markdown 书架本地知识库（未来能力） | `DEFERRED / NOT_AUTHORIZED`（设计已冻结，当前非优先级） | 等待核心五层 Core-0～Core-2 与多轮/证据边界稳定，之后须用户明确恢复书架事项 | 只有核心架构放行后才按书架专项文档实施；其交付不得阻塞核心主线，Find N2 仍需独立 TRACE |
 
 > A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
@@ -4936,3 +4936,18 @@ PR HEAD 门禁证据：
 - **本地唯一交接入口：** `docs/local-real-device-acceptance-handoff.md`。仓库中只有这一份活动设备交接文档；本地执行者必须在 §7.1 追加日期、构建 SHA/APK 版本、场景 ID、PASS/FAIL/BLOCKED/MISSING、证据目录、缺口和下一步。未实测继续 MISSING / UNKNOWN。
 - **范围冻结：** 工作流 I 用户 Markdown 书架继续 `DEFERRED / NOT_AUTHORIZED`；不新增 Agent/DAG、第二套会话数据库、第二套 AI access Gate、Embedding、向量数据库或 Reranker；不扩展四项 capability allowlist，不改业务算法和问诊规则。研纪定位为学习辅助工具，不是中医诊疗软件。
 
+
+
+## 129. 2026-11-27 当前 master、五层云端收尾与 Core-1 Token 观测边界复核
+
+- **当前主线基线：** `master@1d79bc2f628fde789c5b5602cee889f844972c23`。该提交仅同步分层架构、执行台账、Native 多轮审计与唯一 Find N2 交接文档，不修改 AI 运行时代码、业务规则、模型行为或权限边界。
+- **精确 SHA CI：** Flutter tests run `45976217087`、Flutter Quality Gate run `45976217173`、Fork License run `45976217114` 均为 SUCCESS，三项均对应 `1d79bc2f628fde789c5b5602cee889f844972c23`。不得用其他 SHA 的结果替代当前 SHA。
+- **Core-0：** 五层 DTO、跨层数据流、状态所有权、失败语义和当前源码/测试映射已冻结；不为形式上的五层拆分新增服务、Agent、数据库或权限门禁。
+- **Core-1：** Native 成功 transcript、SessionState owner/provenance、dirty-KV 隔离、reasoning turn 生命周期和 UNKNOWN 不重放已有云端代码与自动化覆盖。当前主线还提供两项只读观测：活动 Native Conversation 的 `Conversation.getTokenCount()`（当前 KV Cache token 数），以及模型文件 `ModelInfo.maxContextTokens()`（模型声明最大上下文长度）；对应状态和值通过 `LocalAiModelStatus` 暴露。当前 `conversationKvCacheBudgetStatus` 明确为 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，因此不能把两项观测解释为 App 可用输入预算、剩余预算、输出预留、动态阈值、安全裁剪或自动压缩。Native KV Cache 不持久化；12 轮/10,000 UTF-16 transcript 与 16,000/24,000 UTF-16 字符上限仍不等于 Token 预算。Find N2 实际数值、GPU/CPU 长会话、媒体和 Activity/process restart 仍需设备 TRACE。
+- **Core-2：** 当前约定 CandidateEvidence、多源聚合、独立 RankedEvidenceSet/排序决策与黄金回归已落地；维持 legacy query/matching/order，不为追求分层重复建设或引入无证据评分、Embedding、Reranker。
+- **Core-3：** 五种主文本模式与图片/音频附件使用 ReasoningRequest/Response v1 和 Native 双阶段提交；PR #594 已移除 LocalAiService 旧包装方法，Native 旧 `sendMessage` fail-closed；辅助 intent、八字槽位、症状草稿和单题理解继续保持窄任务 DTO。
+- **Core-4：** ACTION_PROPOSAL 白名单仅为 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian` 四项；显式用户确认、持久 one-shot claim、执行结果安全读回及 UNKNOWN 不重放已有针对性测试，不扩权。
+- **Core-5：** 同会话 20 轮知识追问与一次工具确认/执行/结果只读解释已有 Flutter 应用层 E2E；fake Native/fake executor 只证明应用层合同，不代表真实 E4B 质量、GPU/CPU 性能、多媒体或进程恢复。
+- **工作流 H：** 云端约定范围代码/自动化/文档/CI 已完成当前批次收口；总状态保持 `PARTIAL`，原因是 Find N2 设备证据尚未执行，而不是设备阻塞云端。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不作为当前五层收尾阻塞项。
+- **统一本地交接：** 唯一入口为 `docs/local-real-device-acceptance-handoff.md`。本地执行者在该文件 §7.1 追加每次进度，并更新对应场景状态；旧验收清单作为操作规范保留，不另建平行进度表。所有未执行场景保持 `MISSING / UNKNOWN / LOCAL ONLY`。
