@@ -131,6 +131,22 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
       .toList(growable: false);
 
   @override
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
+  }) async {
+    if (limit <= 0 ||
+        limit > AssistantConversationStore.maxSessionStateReadRows) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and ${AssistantConversationStore.maxSessionStateReadRows}',
+      );
+    }
+    return const [];
+  }
+
+  @override
   Future<void> saveTcmInterviewTaskState({
     required int conversationId,
     required TcmInterviewTaskState state,

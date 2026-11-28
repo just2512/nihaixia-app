@@ -18,6 +18,7 @@ import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/services/classic_search_service.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/session_state_snapshot_builder.dart';
 import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
@@ -48,6 +49,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
   int _nextMessageId = 1;
   int createConversationCalls = 0;
   int taskStateSaveCalls = 0;
+  int? lastSessionStateMessageLimit;
   bool failNextMessageBatch = false;
   bool failNextSingleMessageSave = false;
   bool failNextTaskStateSave = false;
@@ -172,6 +174,29 @@ class _MemoryConversationStore implements AssistantConversationStore {
     required int conversationId,
   }) async =>
       List<Map<String, Object?>>.from(_messages[conversationId] ?? const []);
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
+  }) async {
+    lastSessionStateMessageLimit = limit;
+    if (limit <= 0 ||
+        limit > AssistantConversationStore.maxSessionStateReadRows) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and ${AssistantConversationStore.maxSessionStateReadRows}',
+      );
+    }
+    final visibleRows = (_messages[conversationId] ?? const [])
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .toList()
+      ..sort((left, right) =>
+          (left['id'] as int).compareTo(right['id'] as int));
+    final start = visibleRows.length > limit ? visibleRows.length - limit : 0;
+    return visibleRows.sublist(start);
+  }
 
   @override
   Future<void> saveTcmInterviewTaskState({
@@ -6270,6 +6295,11 @@ void main() {
     expect(finalMetadata.reasoningRequestId, resultEnvelope['requestId']);
     expect(finalMetadata.toolId, 'yuxiaji_omen');
     expect(finalMetadata.toolStatus, 'SUCCEEDED');
+    expect(
+      store.lastSessionStateMessageLimit,
+      SessionStateSnapshotBuilder.maxSessionMessages + 1,
+      reason: '每轮推理只应读取有界的最近可见会话消息',
+    );
     expect(
       service.sentSessionStateConversationIds.every(
         (id) => id == conversationId,

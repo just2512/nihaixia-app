@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
@@ -257,6 +258,141 @@ void main() {
     expect(cancelled.toolId, 'ziwei');
     expect(cancelled.toolStatus, 'CANCELLED');
     expect(cancelled.toolArguments, const {'date': '2000-08-16'});
+  });
+
+  test('SessionState message reads return only the newest visible rows in chronological order', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '第一轮用户输入',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'tool',
+      content: 'REASONING_TURN_PENDING',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '第一轮回答',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'system',
+      content: '仅展示层系统记录',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '第二轮用户输入',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '第二轮回答',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'tool',
+      content: 'TOOL_INVOCATION_TERMINAL',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '第三轮用户输入',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '第三轮回答',
+    );
+
+    final bounded = await store.getAssistantMessagesForSessionState(
+      conversationId: conversationId,
+      limit: 3,
+    );
+
+    expect(bounded, hasLength(3));
+    expect(
+      bounded.map((row) => row['role']).toList(),
+      ['assistant', 'user', 'assistant'],
+    );
+    expect(
+      bounded.map((row) => row['content']).toList(),
+      ['', '第三轮用户输入', ''],
+      reason: 'SessionState reads user text only; assistant body text is not projected',
+    );
+
+    // Full-history consumers (history UI and ReasoningTurnLedger) retain the
+    // original unrestricted persistence API.
+    final allRows = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(allRows, hasLength(9));
+    final allVisibleRows = allRows
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .toList(growable: false);
+    expect(
+      bounded.map((row) => row['id']).toList(),
+      allVisibleRows.skip(allVisibleRows.length - 3).map((row) => row['id']).toList(),
+    );
+    expect(
+      bounded.first['id'] as int,
+      lessThan(bounded.last['id'] as int),
+      reason: 'bounded reads are returned in chronological order',
+    );
+  });
+
+  test('SessionState SQL projection bounds message bodies and metadata payloads', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: List<String>.filled(4000, 'u').join(),
+      metadata: List<String>.filled(30000, 'm').join(),
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: List<String>.filled(50000, 'a').join(),
+      metadata: List<String>.filled(30000, 'n').join(),
+    );
+
+    final rows = await store.getAssistantMessagesForSessionState(
+      conversationId: conversationId,
+      limit: 2,
+    );
+
+    await expectLater(
+      store.getAssistantMessagesForSessionState(
+        conversationId: conversationId,
+        limit: AssistantConversationStore.maxSessionStateReadRows + 1,
+      ),
+      throwsArgumentError,
+    );
+
+    expect(rows, hasLength(2));
+    expect(rows.first['role'], 'user');
+    expect((rows.first['content'] as String).length, 1201);
+    expect((rows.first['content'] as String).length, greaterThan(1200));
+    expect((rows.first['metadata'] as String).length, 16001);
+    expect(rows.last['role'], 'assistant');
+    expect(rows.last['content'], '');
+    expect((rows.last['metadata'] as String).length, 16001);
+
+    // The persisted history remains complete; only the SessionState projection
+    // is bounded.
+    final fullHistory = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect((fullHistory.first['content'] as String).length, 4000);
+    expect((fullHistory.last['content'] as String).length, 50000);
+    expect((fullHistory.first['metadata'] as String).length, 30000);
   });
 
   test('默认历史列表不截断超过 100 条的会话', () async {

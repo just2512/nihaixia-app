@@ -9,6 +9,8 @@ import '../models/tcm_interview_task_state.dart';
 /// message row is independently checked against the requested ID before any
 /// fact/reference is admitted. A mismatch invalidates the entire snapshot.
 class SessionStateSnapshotBuilder {
+  static const int maxSessionMessages = 128;
+  static const int maxEvidenceMetadataCharacters = 16000;
   static const int maxUserOriginalMessages = 8;
   static const int maxUserMessageCharacters = 1200;
   static const int maxEvidenceReferences = 64;
@@ -19,6 +21,7 @@ class SessionStateSnapshotBuilder {
     required List<Map<String, Object?>> messages,
     TcmInterviewTaskState? taskState,
     int? taskOwnerSessionId,
+    bool olderMessagesOmitted = false,
   }) {
     if (sessionId <= 0) {
       return _mismatch(sessionId, 'INVALID_SESSION_ID');
@@ -28,9 +31,10 @@ class SessionStateSnapshotBuilder {
     }
 
     final validMessages = <_SessionMessage>[];
-    var partial = false;
+    var partial = olderMessagesOmitted;
     var omittedUserMessageCount = 0;
-    var omittedEvidenceReferenceCount = 0;
+    var evidenceMetadataOmitted = false;
+    var evidenceReferencesTruncated = false;
     var omittedFactCount = 0;
     var maxMessageId = 0;
 
@@ -76,11 +80,21 @@ class SessionStateSnapshotBuilder {
         .toList(growable: false);
     final eligibleUserMessages = <_SessionMessage>[];
     for (final message in userMessages) {
+      // Reject oversized metadata before any JSON decoder touches it. The SQL
+      // projection returns a bounded sentinel prefix for oversized values.
+      final rawMetadata = message.metadata;
+      if (rawMetadata != null &&
+          rawMetadata.length > maxEvidenceMetadataCharacters) {
+        partial = true;
+        evidenceMetadataOmitted = true;
+        omittedUserMessageCount++;
+        continue;
+      }
       // A durable UNKNOWN/REJECTED reasoning request is visible history, but
       // not a completed conversational fact. Keep it out of session memory
       // until the user explicitly sends it again.
       if (!AssistantMessageMetadata.isReplayableForSessionMemory(
-        message.metadata,
+        rawMetadata,
       )) {
         partial = true;
         omittedUserMessageCount++;
@@ -119,48 +133,73 @@ class SessionStateSnapshotBuilder {
 
     final evidenceReferences = <SessionEvidenceReference>[];
     final seenReferenceKeys = <String>{};
+
+    void addReference({
+      required String sourceId,
+      String? evidenceId,
+      String? chunkId,
+    }) {
+      final normalizedSourceId = sourceId.trim();
+      if (normalizedSourceId.isEmpty) return;
+      final normalizedEvidenceId = _nonEmpty(evidenceId);
+      final normalizedChunkId = _nonEmpty(chunkId);
+      final key = '$normalizedSourceId|${normalizedEvidenceId ?? ''}|'
+          '${normalizedChunkId ?? ''}';
+      if (seenReferenceKeys.contains(key)) return;
+      if (evidenceReferences.length >= maxEvidenceReferences) {
+        evidenceReferencesTruncated = true;
+        return;
+      }
+      seenReferenceKeys.add(key);
+      evidenceReferences.add(
+        SessionEvidenceReference(
+          sourceId: normalizedSourceId,
+          sourceVersion: 'UNKNOWN',
+          evidenceId: normalizedEvidenceId,
+          chunkId: normalizedChunkId,
+        ),
+      );
+    }
+
     for (final message in validMessages) {
+      if (evidenceReferencesTruncated) break;
       // Hidden tool-role invocation ledger events are execution state, not
       // user/assistant memory or retrieval provenance. They are consumed only
       // by AssistantToolInvocationLedger and must never enter Native prompts.
       if (message.role != 'user' && message.role != 'assistant') continue;
       final rawMetadata = message.metadata;
       if (rawMetadata == null || rawMetadata.trim().isEmpty) continue;
+      if (rawMetadata.length > maxEvidenceMetadataCharacters) {
+        evidenceMetadataOmitted = true;
+        partial = true;
+        continue;
+      }
       final metadata = AssistantMessageMetadata.decode(rawMetadata);
       for (final sourceId in metadata.sourceIds) {
-        _addReference(
-          evidenceReferences,
-          seenReferenceKeys,
-          sourceId: sourceId,
-        );
+        addReference(sourceId: sourceId);
+        if (evidenceReferencesTruncated) break;
       }
+      if (evidenceReferencesTruncated) break;
+
       final contextSourceId = metadata.contextRef['sourceId'];
       if (contextSourceId is String && contextSourceId.trim().isNotEmpty) {
-        _addReference(
-          evidenceReferences,
-          seenReferenceKeys,
+        addReference(
           sourceId: contextSourceId,
           evidenceId: _stringValue(metadata.contextRef['anchorId']),
           chunkId: _stringValue(metadata.contextRef['chunkId']),
         );
       }
+      if (evidenceReferencesTruncated) break;
+
       for (final step in metadata.toolPlanSteps) {
         for (final sourceId in step.sourceIds) {
-          _addReference(
-            evidenceReferences,
-            seenReferenceKeys,
-            sourceId: sourceId,
-          );
+          addReference(sourceId: sourceId);
+          if (evidenceReferencesTruncated) break;
         }
+        if (evidenceReferencesTruncated) break;
       }
     }
-    if (evidenceReferences.length > maxEvidenceReferences) {
-      omittedEvidenceReferenceCount =
-          evidenceReferences.length - maxEvidenceReferences;
-      evidenceReferences.removeRange(
-        maxEvidenceReferences,
-        evidenceReferences.length,
-      );
+    if (evidenceMetadataOmitted || evidenceReferencesTruncated) {
       partial = true;
     }
 
@@ -281,8 +320,12 @@ class SessionStateSnapshotBuilder {
         if (omittedUserMessageCount > 0)
           'USER_ORIGINAL_MESSAGES_OMITTED:$omittedUserMessageCount',
         if (omittedFactCount > 0) 'SESSION_FACTS_OMITTED:$omittedFactCount',
-        if (omittedEvidenceReferenceCount > 0)
-          'SESSION_EVIDENCE_REFERENCES_OMITTED:$omittedEvidenceReferenceCount',
+        if (evidenceMetadataOmitted)
+          'SESSION_EVIDENCE_METADATA_OMITTED_OVERSIZED',
+        if (evidenceReferencesTruncated)
+          'SESSION_EVIDENCE_REFERENCES_TRUNCATED',
+        if (olderMessagesOmitted)
+          'SESSION_STATE_OLDER_MESSAGES_OMITTED',
         if (taskState == null) 'TCM_TASK_STATE_NOT_PRESENT',
       ],
     );
@@ -335,30 +378,6 @@ class SessionStateSnapshotBuilder {
 
   static String? _stringValue(Object? value) =>
       value is String && value.trim().isNotEmpty ? value : null;
-
-  static void _addReference(
-    List<SessionEvidenceReference> references,
-    Set<String> seenKeys, {
-    required String sourceId,
-    String? evidenceId,
-    String? chunkId,
-  }) {
-    final normalizedSourceId = sourceId.trim();
-    if (normalizedSourceId.isEmpty) return;
-    final normalizedEvidenceId = _nonEmpty(evidenceId);
-    final normalizedChunkId = _nonEmpty(chunkId);
-    final key = '$normalizedSourceId|${normalizedEvidenceId ?? ''}|'
-        '${normalizedChunkId ?? ''}';
-    if (!seenKeys.add(key)) return;
-    references.add(
-      SessionEvidenceReference(
-        sourceId: normalizedSourceId,
-        sourceVersion: 'UNKNOWN',
-        evidenceId: normalizedEvidenceId,
-        chunkId: normalizedChunkId,
-      ),
-    );
-  }
 
   static String? _nonEmpty(String? value) {
     final trimmed = value?.trim();
