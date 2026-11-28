@@ -604,7 +604,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         await _restorePendingHistory();
       }
     } on PlatformException catch (error) {
-      await _refreshStatusAfterLoadFailure(error.message ?? '模型加载失败');
+      final accessMessage = aiAccessFailureMessage(error);
+      if (accessMessage != null) {
+        // Authorization denial is not a model malfunction; keep the raw code
+        // visible for diagnosis instead of surfacing a generic load failure.
+        await _refreshStatusAfterLoadFailure('$accessMessage（${error.code}）');
+      } else {
+        await _refreshStatusAfterLoadFailure(error.message ?? '模型加载失败');
+      }
     } catch (error) {
       await _refreshStatusAfterLoadFailure('模型加载失败：$error');
     } finally {
@@ -10212,7 +10219,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final nativeCommitUnknown =
             error.code == 'REASONING_FINALIZE_ACK_UNKNOWN' ||
             error.code == 'REASONING_REJECT_ACK_UNKNOWN';
-        final message = error.message ?? '本地推理失败';
+        // Authorization denial must not be reported as a model failure; keep
+        // the raw Native code visible for diagnosis.
+        final accessMessage = aiAccessFailureMessage(error);
+        final message = accessMessage != null
+            ? '$accessMessage（${error.code}）'
+            : error.message ?? '本地推理失败';
         _error = nativeCommitUnknown
             ? 'Native 提交确认状态未知：本轮未自动重放，也未写入成功历史。'
                 '请先确认会话状态后再继续。'
