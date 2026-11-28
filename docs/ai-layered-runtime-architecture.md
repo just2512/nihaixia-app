@@ -669,3 +669,13 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - 边界按 Native 最终保存格式计算，包含每条固定来源标签 `用户文字自述：`：格式化后每条最多 2,000 UTF-16 code units，合计最多 16,000 UTF-16 code units。超长单条只按完整 UTF-16 代理对边界裁剪，数量/单条/总量发生裁剪时统一将 `user_messages_truncated=true` 随载荷传给 Native。
 - Native `parsePayload` 必须收到显式 Boolean 截断状态，并再次验证最多 60 条、每条及总量（均包含来源标签）；缺失、类型错误或超界在当前 Conversation reset 之前以 `INVALID_RESTORE_PAYLOAD` 拒绝。成功恢复后，`userReportedInputsTruncated` 由显式状态初始化，继续进入既有症状来源完整性提示；不再接收无界列表后静默丢弃旧条目。
 - 本边界不改变成功 transcript 最近 12 个完整轮次 / 10,000 UTF-16 上限、SessionState memory admission、UNKNOWN/non-replayable 规则、RAG 隔离、LiteRT KV Cache 或 App Token budget。上述均为 UTF-16 字符数/条目数，不是 Token 预算。
+
+
+### 5.14 2026-11-28 Core-3 ReasoningResponse v1 schemaVersion 严格整数校验
+
+- **基线：** 从 PR #610 合并后的 `master@bcfa2e36440689d7d5cd12abfd80cf191c6d66dc` 重基 Core-3 独立协议修复；原始独立切片提交为 `dfb0d7aae3555f8ba47bbfa09118e16b13e29b82`，只涉及 ReasoningResponse decoder 与对应负向测试。
+- **问题：** JSON 数值 `1.0` 在 Dart 中是 `double`，但仅比较数值时可能与整数 `1` 相等。v1 解码器若只比较数值，会把类型不符合版本合同的载荷作为受支持 schema 接受。
+- **修复：** `ReasoningResponseCodec.decode` 先要求 `payload['schemaVersion'] is int`，再要求值严格等于 `schemaVersion == 1`。未知字段、缺失字段、版本不支持以及类型不符均保持 `PARSE_FAILED` / fail-closed；不改变通用 JSON 读取或其他 DTO 的兼容规则。
+- **回归：** `test/reasoning_response_codec_test.dart` 覆盖整数 v1 正常路径、缺失/未知字段、不支持版本 `2`，以及浮点版本 `1.0` 必须拒绝。
+- **边界：** 不改变 ReasoningRequest、requestId/evidence ID 校验、响应 kind/status、ACTION_PROPOSAL 确认/执行门禁、Native 调用链、业务白名单或记忆层；本修复不是 Core-3 所有设备行为的证明。Find N2 真实 E4B/媒体/多轮结果仍留在最终设备验收，未知状态继续 MISSING / UNKNOWN。
+- **验收：** 以该独立 PR 最终 HEAD 的 Flutter 静态分析/全量回归、Android arm64/JVM 和 Fork License 为准；SKIPPED 不计 PASS。

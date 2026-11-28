@@ -88,7 +88,8 @@ class ReasoningResponseCodec {
         'REASONING_RESPONSE_REQUIRED_FIELD_MISSING:${missing.join(',')}',
       );
     }
-    if (payload['schemaVersion'] != schemaVersion) {
+    if (payload['schemaVersion'] is! int ||
+        payload['schemaVersion'] != schemaVersion) {
       return _failure(
         ReasoningResponseStatus.parseFailed,
         'REASONING_RESPONSE_SCHEMA_VERSION_UNSUPPORTED',
