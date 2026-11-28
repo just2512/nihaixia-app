@@ -528,7 +528,7 @@ void main() {
     expect((await repository.getModelConfig('legacy-e4b-text'))?.enabled, isFalse);
   });
 
-  test('migrates schema v8 to v9 and preserves existing user settings',
+  test('migrates v8 to v9 and preserves data across rollback/re-upgrade',
       () async {
     final legacyPath = directory.path + '/legacy.db';
     final legacy = await databaseFactoryFfi.openDatabase(
@@ -555,12 +555,14 @@ void main() {
     );
     final upgraded = await DatabaseHelper.instance.database;
     expect(await upgraded.getVersion(), 9);
-    final rows = await upgraded.query(
-      'user_settings',
-      where: 'key = ?',
-      whereArgs: ['migration-sentinel'],
+    expect(
+      (await upgraded.query(
+        'user_settings',
+        where: 'key = ?',
+        whereArgs: ['migration-sentinel'],
+      )).single['value'],
+      'preserve-me',
     );
-    expect(rows.single['value'], 'preserve-me');
     final tables = await upgraded.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'ai_%'",
     );
@@ -572,6 +574,69 @@ void main() {
         'ai_model_configs',
         'ai_task_model_selections',
       ]),
+    );
+    await upgraded.insert('ai_provider_configs', {
+      'provider_id': 'migration-provider',
+      'display_name': 'Migration Provider',
+      'protocol_adapter_id': 'chat-completions-v1',
+      'base_url': 'https://example.test/v1',
+      'credential_ref': 'aicred:v1:opaque-migration-reference',
+      'enabled': 1,
+      'created_at': '2026-11-28T00:00:00.000Z',
+      'updated_at': '2026-11-28T00:00:00.000Z',
+      'config_schema_version': 1,
+    });
+    await DatabaseHelper.closeTestDatabase();
+
+    // Simulate opening the v9 database with an older v8 app. The old app does
+    // not know these tables and must leave them and their rows untouched.
+    final rolledBack = await databaseFactoryFfi.openDatabase(
+      legacyPath,
+      options: OpenDatabaseOptions(version: 8),
+    );
+    expect(await rolledBack.getVersion(), 8);
+    expect(
+      (await rolledBack.query(
+        'user_settings',
+        where: 'key = ?',
+        whereArgs: ['migration-sentinel'],
+      )).single['value'],
+      'preserve-me',
+    );
+    expect(
+      (await rolledBack.query(
+        'ai_provider_configs',
+        where: 'provider_id = ?',
+        whereArgs: ['migration-provider'],
+      )),
+      hasLength(1),
+    );
+    await rolledBack.close();
+
+    // Re-upgrading must be idempotent: CREATE TABLE/INDEX IF NOT EXISTS keeps
+    // the v9 rows instead of failing on objects left by the v8 app.
+    DatabaseHelper.configureTestDatabase(
+      'legacy.db',
+      factory: databaseFactoryFfi,
+      directoryPath: directory.path,
+    );
+    final reupgraded = await DatabaseHelper.instance.database;
+    expect(await reupgraded.getVersion(), 9);
+    expect(
+      (await reupgraded.query(
+        'user_settings',
+        where: 'key = ?',
+        whereArgs: ['migration-sentinel'],
+      )).single['value'],
+      'preserve-me',
+    );
+    expect(
+      (await reupgraded.query(
+        'ai_provider_configs',
+        where: 'provider_id = ?',
+        whereArgs: ['migration-provider'],
+      )),
+      hasLength(1),
     );
   });
 }

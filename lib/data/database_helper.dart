@@ -332,7 +332,7 @@ class DatabaseHelper implements AssistantConversationStore {
     // API secrets must never be stored in SQLite. Provider rows only retain
     // an opaque credentialRef owned by the platform Credential Vault.
     await db.execute('''
-      CREATE TABLE ai_provider_configs(
+      CREATE TABLE IF NOT EXISTS ai_provider_configs(
         provider_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
         protocol_adapter_id TEXT NOT NULL,
@@ -345,7 +345,7 @@ class DatabaseHelper implements AssistantConversationStore {
       )
     ''');
     await db.execute('''
-      CREATE TABLE ai_local_model_assets(
+      CREATE TABLE IF NOT EXISTS ai_local_model_assets(
         local_asset_id TEXT PRIMARY KEY,
         model_identifier TEXT NOT NULL,
         task_kind TEXT NOT NULL CHECK(task_kind IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
@@ -379,7 +379,7 @@ class DatabaseHelper implements AssistantConversationStore {
       )
     ''');
     await db.execute('''
-      CREATE TABLE ai_model_configs(
+      CREATE TABLE IF NOT EXISTS ai_model_configs(
         model_config_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
         task_kind TEXT NOT NULL CHECK(task_kind IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
@@ -413,7 +413,7 @@ class DatabaseHelper implements AssistantConversationStore {
       )
     ''');
     await db.execute('''
-      CREATE TABLE ai_task_model_selections(
+      CREATE TABLE IF NOT EXISTS ai_task_model_selections(
         task_key TEXT PRIMARY KEY CHECK(task_key IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
         model_config_id TEXT,
         selection_mode TEXT NOT NULL CHECK(selection_mode IN ('explicit', 'inherit_text_reasoning', 'deterministic_unconfigured')),
@@ -421,13 +421,13 @@ class DatabaseHelper implements AssistantConversationStore {
       )
     ''');
     await db.execute(
-      'CREATE INDEX ai_model_configs_provider_idx ON ai_model_configs(provider_id)',
+      'CREATE INDEX IF NOT EXISTS ai_model_configs_provider_idx ON ai_model_configs(provider_id)',
     );
     await db.execute(
-      'CREATE INDEX ai_model_configs_local_asset_idx ON ai_model_configs(local_asset_id)',
+      'CREATE INDEX IF NOT EXISTS ai_model_configs_local_asset_idx ON ai_model_configs(local_asset_id)',
     );
     await db.execute(
-      'CREATE INDEX ai_task_model_selections_model_idx ON ai_task_model_selections(model_config_id)',
+      'CREATE INDEX IF NOT EXISTS ai_task_model_selections_model_idx ON ai_task_model_selections(model_config_id)',
     );
   }
 
