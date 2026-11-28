@@ -250,6 +250,14 @@ void main() {
     );
     expect(
       ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'neijing-reading',
+        asset: r'assets/neijing/sub\\01_上古天真论.md',
+      ),
+      isNull,
+      reason: 'A reader asset path containing a backslash is not canonical.',
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
         moduleId: 'shanghan',
         asset: 'assets/shanghan/clause_001.md',
       ),
