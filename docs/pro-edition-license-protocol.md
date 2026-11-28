@@ -1,6 +1,6 @@
 # 研纪专业版永久授权协议（v1.3）
 
-> 状态：协议实现规范；**尚未达到商业发行条件**。本文件与 `docs/pro-edition-architecture-constraints.md` v1.3 配套。若细节与架构约束冲突，以架构约束为准。测试密钥与测试向量不得用于生产。
+> 状态：协议实现规范；**尚未达到商业发行条件**。Token wire format 与 protocol_revision 仍为 v1.3/v2；AI 使用范围按 `docs/pro-edition-architecture-constraints.md` v1.4 §18 扩展。本文件定义签名授权载荷，架构文档定义运行时覆盖范围。若细节冲突，以当前架构约束为准。测试密钥与测试向量不得用于生产。
 
 | 项目 | 值 |
 |---|---|
@@ -20,7 +20,7 @@
 
 | Feature ID | 含义 | 修订 2 |
 |---|---|---|
-| `ai_access` | 全部 Native LiteRT 模型加载与推理访问权 | 唯一允许签发及授权的 Feature |
+| `ai_access` | App 全部获准 AI 模型调用资格（本地/云端生成模型、多模态、Embedding、Reranker） | 唯一允许签发及授权的 Feature；具体运行时和任务配置由架构 v1.4 管理 |
 
 协议修订 1 的历史 Feature `ai_advanced`、`contextual_assistant` 仍作为兼容输入识别，不再作为独立权益：
 - 修订 1 Token 只要包含其中任意一个已签名 AI Feature，即映射为单一 `ai_access`；
@@ -207,3 +207,14 @@ Verifier 至少区分：
 ## 8. 尚未完成的发布条件
 
 本规范及测试向量通过不等于允许生产发行。生产发行仍需：真实发行者 Key Ring 和私钥离线备份/恢复演练、Release fail-closed 行为测试、权属证据、隐私/用户协议和发行渠道审查。所有尚无源码、CI 或设备证据的项目继续保持 MISSING / UNKNOWN。
+
+## 9. 2026-11-28 v1.4 AI 使用范围补充（不改变 Token 协议）
+
+本节记录 v1.4 架构对唯一 AI Feature 使用范围的扩展。它不修改 Token 前缀、canonical payload、签名输入、protocol_revision、旧 Token 兼容映射、Key Ring、设备绑定或 TokenStore 格式。
+
+- 修订 2 仍只签发 ai_access；修订 1 仍按第 1 节兼容映射到同一 ai_access。没有 cloud_ai_access、embedding_access、reranker_access 或其他按模型任务拆分的签名权益。
+- ai_access 表示本 App 全部获准 AI 模型调用的专业版资格，包括用户配置的本地/云端生成模型、多模态模型、Embedding 和 Reranker；用户实际选择哪些模型/供应商由专业版架构 v1.4 的任务模型配置管理。
+- 运行时调用必须同时满足已验证的 ai_access 与用户保存的统一 AI 总开关开启。该开关只是用户偏好，不写入 Token、不独立授予权益；授权无效时即使偏好保留为 true，也必须 fail-closed。
+- Android Native LiteRT 的模型访问继续由 AiModelAccessGate 在 Native 模型边界实施；云端 HTTP、云端多模态和云端 Embedding/Reranker 通过受控 Model Gateway 在每次请求前检查同一 EntitlementService 状态与用户开关。Provider Adapter 不能成为绕过 Gate 的可直接调用入口。
+- 模型能力探测、模型名推断、供应商间/本地与云端自动切换均不属于协议或授权职责；实际任务错误由所选模型调用返回。
+- AI 开关关闭或授权失效不删除 Token、模型、供应商凭证、索引或用户历史；禁止新调用，并按架构 v1.4 规定处理正在执行中的 Native/HTTP 请求状态。
