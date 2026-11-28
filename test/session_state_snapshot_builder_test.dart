@@ -261,6 +261,116 @@ void main() {
   });
 
 
+  test('an omitted older message prefix makes SessionState explicitly PARTIAL', () {
+    final messages = [
+      for (var id = 120; id < 128; id++)
+        {
+          'id': id,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': 'recent-$id',
+        },
+    ];
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: messages,
+      olderMessagesOmitted: true,
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.facts, hasLength(8));
+    expect(result.facts.first.value, 'recent-120');
+    expect(result.facts.last.value, 'recent-127');
+    expect(
+      result.diagnostics,
+      contains('SESSION_STATE_OLDER_MESSAGES_OMITTED'),
+    );
+  });
+
+  test('evidence references are capped at 64 without retaining overflow keys', () {
+    final metadata = AssistantMessageMetadata(
+      sourceIds: List.generate(80, (index) => 'source:$index'),
+    ).encode();
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'assistant',
+          'content': '带有多来源的历史答复',
+          'metadata': metadata,
+        },
+      ],
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.evidenceReferences, hasLength(64));
+    expect(result.evidenceReferences.first.sourceId, 'source:0');
+    expect(result.evidenceReferences.last.sourceId, 'source:63');
+    expect(
+      result.diagnostics,
+      contains('SESSION_EVIDENCE_REFERENCES_TRUNCATED'),
+    );
+  });
+
+  test('oversized message metadata is omitted from evidence projection', () {
+    final oversizedMetadata = List<String>.filled(
+      SessionStateSnapshotBuilder.maxEvidenceMetadataCharacters + 1,
+      'x',
+    ).join();
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'assistant',
+          'content': '历史答复',
+          'metadata': oversizedMetadata,
+        },
+      ],
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.evidenceReferences, isEmpty);
+    expect(
+      result.diagnostics,
+      contains('SESSION_EVIDENCE_METADATA_OMITTED_OVERSIZED'),
+    );
+  });
+
+  test('oversized user metadata is rejected before replayability decoding', () {
+    final oversizedMetadata = List<String>.filled(
+      SessionStateSnapshotBuilder.maxEvidenceMetadataCharacters + 1,
+      'x',
+    ).join();
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': '这条用户消息的来源元数据过大',
+          'metadata': oversizedMetadata,
+        },
+      ],
+    );
+
+    expect(result.status, SessionStateStatus.partial);
+    expect(result.facts, isEmpty);
+    expect(result.omittedUserMessageCount, 1);
+    expect(
+      result.diagnostics,
+      contains('USER_ORIGINAL_MESSAGES_OMITTED:1'),
+    );
+    expect(
+      result.diagnostics,
+      contains('SESSION_EVIDENCE_METADATA_OMITTED_OVERSIZED'),
+    );
+  });
+
   test('non-replayable interrupted request is visible history but not a session memory fact', () {
     final result = SessionStateSnapshotBuilder.build(
       sessionId: 7,

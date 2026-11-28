@@ -303,6 +303,29 @@ class _MemoryConversationStore implements AssistantConversationStore {
       List<Map<String, Object?>>.from(messages[conversationId] ?? const []);
 
   @override
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
+  }) async {
+    if (limit <= 0 ||
+        limit > AssistantConversationStore.maxSessionStateReadRows) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and ${AssistantConversationStore.maxSessionStateReadRows}',
+      );
+    }
+    final visibleRows = (messages[conversationId] ?? const [])
+        .where((row) => row['role'] == 'user' || row['role'] == 'assistant')
+        .map((row) => Map<String, Object?>.from(row))
+        .toList()
+      ..sort((left, right) =>
+          (left['id'] as int).compareTo(right['id'] as int));
+    final start = visibleRows.length > limit ? visibleRows.length - limit : 0;
+    return visibleRows.sublist(start);
+  }
+
+  @override
   Future<void> saveTcmInterviewTaskState({
     required int conversationId,
     required TcmInterviewTaskState state,

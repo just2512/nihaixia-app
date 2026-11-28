@@ -117,6 +117,32 @@ class InMemoryAssistantConversationStore implements AssistantConversationStore {
   }
 
   @override
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
+  }) async {
+    if (limit <= 0 ||
+        limit > AssistantConversationStore.maxSessionStateReadRows) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and ${AssistantConversationStore.maxSessionStateReadRows}',
+      );
+    }
+    final visibleRows = (_messages[conversationId] ?? const [])
+        .where((row) {
+          final role = row['role'];
+          return role == 'user' || role == 'assistant';
+        })
+        .map((row) => Map<String, Object?>.from(row))
+        .toList()
+      ..sort((left, right) =>
+          (left['id'] as int).compareTo(right['id'] as int));
+    final start = visibleRows.length > limit ? visibleRows.length - limit : 0;
+    return visibleRows.sublist(start);
+  }
+
+  @override
   Future<void> saveTcmInterviewTaskState({
     required int conversationId,
     required TcmInterviewTaskState state,

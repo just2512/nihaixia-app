@@ -15,6 +15,8 @@ class AssistantMessageDraft {
 
 /// Persistence boundary for the unified assistant's conversation history.
 abstract interface class AssistantConversationStore {
+  static const int maxSessionStateReadRows = 129;
+
   Future<int> createAssistantConversation({
     String title = '新对话',
     String mode = 'general',
@@ -52,6 +54,15 @@ abstract interface class AssistantConversationStore {
 
   Future<List<Map<String, Object?>>> getAssistantMessages({
     required int conversationId,
+  });
+
+  /// Reads only the newest visible user/assistant rows for the bounded
+  /// SessionState projection. Results are returned oldest-to-newest.
+  /// The unrestricted history API above remains available to the UI and
+  /// durable reasoning-turn ledger.
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
   });
 
   Future<void> saveTcmInterviewTaskState({

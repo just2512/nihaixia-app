@@ -1142,9 +1142,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<SessionStateSnapshot> _buildSessionStateSnapshot(int conversationId) async {
     SessionStateSnapshot snapshot;
     try {
-      final messages = await _conversationStore.getAssistantMessages(
+      final fetchedMessages =
+          await _conversationStore.getAssistantMessagesForSessionState(
         conversationId: conversationId,
+        limit: SessionStateSnapshotBuilder.maxSessionMessages + 1,
       );
+      final olderMessagesOmitted = fetchedMessages.length >
+          SessionStateSnapshotBuilder.maxSessionMessages;
+      final messages = olderMessagesOmitted
+          ? fetchedMessages.sublist(
+              fetchedMessages.length -
+                  SessionStateSnapshotBuilder.maxSessionMessages,
+            )
+          : fetchedMessages;
       TcmInterviewTaskState? taskState;
       var taskStateReadFailed = false;
       try {
@@ -1159,6 +1169,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         messages: messages,
         taskState: taskState,
         taskOwnerSessionId: taskState == null ? null : conversationId,
+        olderMessagesOmitted: olderMessagesOmitted,
       );
       snapshot = taskStateReadFailed
           ? SessionStateSnapshot(

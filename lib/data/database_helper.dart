@@ -609,6 +609,45 @@ class DatabaseHelper implements AssistantConversationStore {
   }
 
   @override
+  Future<List<Map<String, Object?>>> getAssistantMessagesForSessionState({
+    required int conversationId,
+    required int limit,
+  }) async {
+    if (limit <= 0 ||
+        limit > AssistantConversationStore.maxSessionStateReadRows) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and ${AssistantConversationStore.maxSessionStateReadRows}',
+      );
+    }
+    final db = await database;
+    final newestFirst = await db.rawQuery(
+      '''
+      SELECT
+        id,
+        conversation_id,
+        role,
+        CASE
+          WHEN role = 'user' THEN substr(content, 1, 1201)
+          ELSE ''
+        END AS content,
+        CASE
+          WHEN metadata IS NOT NULL AND length(metadata) > 16000
+            THEN substr(metadata, 1, 16001)
+          ELSE metadata
+        END AS metadata
+      FROM assistant_messages
+      WHERE conversation_id = ? AND role IN (?, ?)
+      ORDER BY id DESC
+      LIMIT ?
+      ''',
+      [conversationId, 'user', 'assistant', limit],
+    );
+    return newestFirst.reversed.toList(growable: false);
+  }
+
+  @override
   Future<void> saveTcmInterviewTaskState({
     required int conversationId,
     required TcmInterviewTaskState state,
