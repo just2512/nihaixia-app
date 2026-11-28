@@ -165,6 +165,140 @@ void main() {
     );
   });
 
+  test('keeps referenced local asset identity immutable', () async {
+    final asset = await saveEmbeddingAsset();
+    await repository.saveModelConfig(
+      AiModelConfig(
+        modelConfigId: 'local-embedding-1',
+        displayName: 'Local embedding',
+        taskKind: AiTaskKind.embedding,
+        runtimeKind: AiRuntimeKind.local,
+        modelIdentifier: asset.modelIdentifier,
+        localAssetId: asset.localAssetId,
+        modelFingerprint: asset.sha256,
+        maxInputTokens: 512,
+        embeddingDimension: 384,
+        embeddingNormalization: 'l2',
+        maxBatchItems: 16,
+        tokenizerId: 'tokenizer-1',
+        tokenizerRevision: 'rev-1',
+      ),
+    );
+
+    final replacement = AiLocalModelAsset(
+      localAssetId: asset.localAssetId,
+      modelIdentifier: asset.modelIdentifier,
+      taskKind: asset.taskKind,
+      runtimeAdapterId: asset.runtimeAdapterId,
+      modelFormat: asset.modelFormat,
+      privateRelativePath: asset.privateRelativePath,
+      byteLength: asset.byteLength,
+      sha256: List.filled(64, 'b').join(),
+      manifestJson: '{"schema":1,"revision":"replacement"}',
+      installStatus: 'installed',
+      maxInputTokens: 512,
+      embeddingDimension: 768,
+      embeddingNormalization: 'l2',
+      maxBatchItems: 16,
+      tokenizerId: 'tokenizer-1',
+      tokenizerRevision: 'rev-1',
+    );
+
+    await expectLater(
+      repository.saveLocalAsset(replacement),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      (await repository.getLocalAsset(asset.localAssetId))?.sha256,
+      asset.sha256,
+    );
+
+    // Operational status can change without changing the model identity.
+    final missing = AiLocalModelAsset(
+      localAssetId: asset.localAssetId,
+      modelIdentifier: asset.modelIdentifier,
+      taskKind: asset.taskKind,
+      runtimeAdapterId: asset.runtimeAdapterId,
+      modelFormat: asset.modelFormat,
+      privateRelativePath: asset.privateRelativePath,
+      byteLength: asset.byteLength,
+      sha256: asset.sha256,
+      manifestJson: asset.manifestJson,
+      installStatus: 'missing',
+      maxInputTokens: 512,
+      embeddingDimension: 384,
+      embeddingNormalization: 'l2',
+      maxBatchItems: 16,
+      tokenizerId: 'tokenizer-1',
+      tokenizerRevision: 'rev-1',
+    );
+    await repository.saveLocalAsset(missing);
+    expect(
+      (await repository.getLocalAsset(asset.localAssetId))?.installStatus,
+      'missing',
+    );
+  });
+
+  test('validates Local ModelConfig against its referenced asset metadata',
+      () async {
+    final asset = await saveEmbeddingAsset();
+
+    AiModelConfig localEmbedding({
+      String? modelIdentifier,
+      String? modelFingerprint,
+      int embeddingDimension = 384,
+      String embeddingNormalization = 'l2',
+      String? tokenizerId = 'tokenizer-1',
+      String? tokenizerRevision = 'rev-1',
+      int maxInputTokens = 512,
+      int maxBatchItems = 16,
+    }) =>
+        AiModelConfig(
+          modelConfigId: 'local-embedding-validation',
+          displayName: 'Local embedding validation',
+          taskKind: AiTaskKind.embedding,
+          runtimeKind: AiRuntimeKind.local,
+          modelIdentifier: modelIdentifier ?? asset.modelIdentifier,
+          localAssetId: asset.localAssetId,
+          modelFingerprint: modelFingerprint ?? asset.sha256,
+          maxInputTokens: maxInputTokens,
+          embeddingDimension: embeddingDimension,
+          embeddingNormalization: embeddingNormalization,
+          maxBatchItems: maxBatchItems,
+          tokenizerId: tokenizerId,
+          tokenizerRevision: tokenizerRevision,
+        );
+
+    await expectLater(
+      repository.saveModelConfig(
+        localEmbedding(modelIdentifier: 'different-model-id'),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(localEmbedding(modelFingerprint: null)),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(localEmbedding(embeddingDimension: 768)),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(
+        localEmbedding(embeddingNormalization: 'none'),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(localEmbedding(tokenizerId: 'other-tokenizer')),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(localEmbedding(maxInputTokens: 1024)),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('blocks deletion while Provider, Model or Asset is referenced', () async {
     await repository.saveProvider(
       AiProviderConfig(

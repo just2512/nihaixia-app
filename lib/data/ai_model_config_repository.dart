@@ -112,13 +112,13 @@ class AiModelConfigRepository {
     await db.transaction((txn) async {
       final existing = await txn.query(
         'ai_local_model_assets',
-        columns: ['created_at', 'task_kind'],
         where: 'local_asset_id = ?',
         whereArgs: [asset.localAssetId],
         limit: 1,
       );
-      if (existing.isNotEmpty &&
-          existing.single['task_kind'] != asset.taskKind.key) {
+      final row = asset.toDatabaseRow();
+      if (existing.isNotEmpty) {
+        final previous = existing.single;
         final usedByModels = await txn.query(
           'ai_model_configs',
           columns: ['model_config_id'],
@@ -127,13 +127,45 @@ class AiModelConfigRepository {
           limit: 1,
         );
         if (usedByModels.isNotEmpty) {
-          throw StateError('AI_LOCAL_ASSET_TASK_KIND_IN_USE');
+          // An asset ID identifies one immutable model/embedding space. Only
+          // install status may change while ModelConfigs reference this row.
+          // A new SHA, manifest, tokenizer, dimension or model must get a new
+          // localAssetId so later IndexGenerations cannot inherit stale IDs.
+          const immutableFields = [
+            'model_identifier',
+            'task_kind',
+            'asset_source',
+            'runtime_adapter_id',
+            'model_format',
+            'private_relative_path',
+            'byte_length',
+            'sha256',
+            'manifest_json',
+            'model_revision',
+            'tokenizer_id',
+            'tokenizer_revision',
+            'max_input_tokens',
+            'context_window_tokens',
+            'max_output_tokens',
+            'embedding_dimension',
+            'embedding_normalization',
+            'max_batch_items',
+            'max_candidates',
+            'output_protocol_id',
+            'license_id',
+            'license_url',
+            'notice',
+          ];
+          for (final field in immutableFields) {
+            if (previous[field] != row[field]) {
+              throw StateError('AI_LOCAL_ASSET_IDENTITY_IN_USE_CREATE_NEW_ASSET');
+            }
+          }
         }
+        row['created_at'] = previous['created_at'];
+      } else {
+        row['created_at'] = asset.createdAt.toIso8601String();
       }
-      final row = asset.toDatabaseRow();
-      row['created_at'] = existing.isEmpty
-          ? asset.createdAt.toIso8601String()
-          : existing.single['created_at'];
       await txn.insert(
         'ai_local_model_assets',
         row,
@@ -228,13 +260,49 @@ class AiModelConfigRepository {
         if (assets.isEmpty) {
           throw StateError('AI_MODEL_LOCAL_ASSET_NOT_FOUND');
         }
-        if (assets.single['task_kind'] != config.taskKind.key) {
+        final asset = assets.single;
+        if (asset['task_kind'] != config.taskKind.key) {
           throw StateError('AI_MODEL_LOCAL_ASSET_TASK_KIND_MISMATCH');
         }
-        final assetSha = assets.single['sha256'] as String;
-        if (config.modelFingerprint != null &&
-            config.modelFingerprint!.toLowerCase() != assetSha.toLowerCase()) {
-          throw StateError('AI_MODEL_LOCAL_ASSET_FINGERPRINT_MISMATCH');
+        if (asset['model_identifier'] != config.modelIdentifier) {
+          throw StateError('AI_MODEL_LOCAL_ASSET_MODEL_IDENTIFIER_MISMATCH');
+        }
+        final assetSha = (asset['sha256'] as String).toLowerCase();
+        if (config.modelFingerprint == null ||
+            config.modelFingerprint!.toLowerCase() != assetSha) {
+          throw StateError('AI_MODEL_LOCAL_ASSET_FINGERPRINT_REQUIRED_OR_MISMATCH');
+        }
+        if (asset['model_revision'] != config.modelRevision ||
+            asset['tokenizer_id'] != config.tokenizerId ||
+            asset['tokenizer_revision'] != config.tokenizerRevision) {
+          throw StateError('AI_MODEL_LOCAL_ASSET_REVISION_OR_TOKENIZER_MISMATCH');
+        }
+
+        switch (config.taskKind) {
+          case AiTaskKind.embedding:
+            if (asset['max_input_tokens'] != config.maxInputTokens ||
+                asset['embedding_dimension'] != config.embeddingDimension ||
+                asset['embedding_normalization'] !=
+                    config.embeddingNormalization ||
+                asset['max_batch_items'] != config.maxBatchItems) {
+              throw StateError('AI_LOCAL_EMBEDDING_ASSET_METADATA_MISMATCH');
+            }
+            break;
+          case AiTaskKind.reranking:
+            if (asset['max_input_tokens'] != config.maxInputTokens ||
+                asset['max_candidates'] != config.maxCandidates ||
+                asset['output_protocol_id'] != config.outputProtocolId) {
+              throw StateError('AI_LOCAL_RERANKING_ASSET_METADATA_MISMATCH');
+            }
+            break;
+          case AiTaskKind.textReasoning:
+          case AiTaskKind.imageUnderstanding:
+          case AiTaskKind.audioUnderstanding:
+            if (asset['context_window_tokens'] != config.contextWindowTokens ||
+                asset['max_output_tokens'] != config.maxOutputTokens) {
+              throw StateError('AI_LOCAL_GENERATION_ASSET_METADATA_MISMATCH');
+            }
+            break;
         }
       }
 
