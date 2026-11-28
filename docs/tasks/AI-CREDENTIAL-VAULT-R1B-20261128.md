@@ -37,7 +37,7 @@ Implement only the Stage 1 Credential Vault boundary:
 ## Evidence and acceptance
 
 1. Pin a compatible secure-storage dependency and record its license/platform/SDK constraints.
-2. Tests cover create/read/delete, random reference uniqueness, malformed and unknown references, storage failure propagation, overwrite/rotation semantics, and ensure no plaintext secret is exposed through public values/errors.
+2. Tests cover create/read/exists/delete, random reference uniqueness, malformed and unknown references, empty stored values, storage read/write/delete failures, overwrite/rotation semantics, and ensure no plaintext secret is exposed through public values/errors.
 3. Android backup rules exclude the plugin's encrypted preferences and wrapped-key material without disabling unrelated app backup or dropping existing exclusions.
 4. Flutter analyze + focused tests + full Flutter regression + Branch validation + Android arm64/JVM + PR required gate + Fork License all SUCCESS on the final integrated PR HEAD; SKIPPED is not PASS.
 5. Final integration is folded into the single Stage 1 configuration PR (#629); do not open a second public PR for R1B.
@@ -63,15 +63,10 @@ Remove the Vault integration only after any stored secrets have been explicitly 
 - Credential references use the versioned `aicred:v1:` prefix plus 256 bits from `Random.secure()`. Only opaque references are intended to leave the Vault.
 - Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
 - Vault operations are serialized across instances within the Dart isolate. This compensates for the pinned Windows federated implementation version predating its upstream concurrent read/write fix; a cross-instance concurrency regression test guards the boundary.
-- Focused tests cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, injected read/write/delete failures with typed errors and no underlying exception leakage, empty stored values, explicit overwrite semantics, unsupported platforms, cross-Vault-instance operation serialization within one Dart isolate, and Android cloud-backup/device-transfer exclusions for all three namespaced SharedPreferences files. The Android KeyStore-loss branch is configured with `resetOnError: false` and remains a real-device UNKNOWN until Find N2 testing.
-- **Exact final integrated HEAD validation (2026-11-28):** `5cb53c35c1668334259081b71cd3489089bb14d4`.
-  - Branch validation: SUCCESS; 36 changed-file regression tests passed, including the Vault concurrency and Android backup-rule tests.
-  - Flutter regression: SUCCESS; the full suite reported 2,279 passed and 15 skipped. The 15 skips are existing Yunqi oracle comparisons blocked by the external fixture `D:\tools\yunqi_ref.json` being unavailable in GitHub CI; they were not converted to passes.
-  - Android arm64/JVM: SUCCESS; CI verification APK contains only `arm64-v8a`, merged manifest references both backup-rule files, and 131 Android unit tests passed with 0 failures/errors/skips.
-  - PR required gate: SUCCESS; all three prerequisite jobs succeeded.
-  - Fork License: SUCCESS in its independent workflow on the same HEAD.
-  - These results apply only to the SHA above. A later PR HEAD must rerun the five gates before merge.
-  - Local Dart/Flutter execution on the user's workstation and Find N2 KeyStore/backup/restore evidence remain UNKNOWN; no local/device PASS is asserted.
+- Focused tests cover create/read/exists/delete, random-reference uniqueness and collision handling, malformed/unknown references, injected read/write/delete failures with typed errors and no underlying exception leakage, empty stored values, explicit overwrite semantics, unsupported platforms, cross-Vault-instance operation serialization within one Dart isolate, and Android cloud-backup/device-transfer exclusions for all three namespaced SharedPreferences files. The Android KeyStore-loss branch is configured with `resetOnError: false` and remains a real-device UNKNOWN until Find N2 testing.
+- **Previous candidate validation (historical; no longer sufficient for merge):** `a6b91223cd773047ac51ba84494c5ff2f96f4505` passed all five Stage 1 gates on 2026-11-28 (Branch validation, Flutter regression, Android arm64/JVM, PR required gate, and Fork License). Flutter regression reported 2,279 passed and 15 existing Yunqi oracle skips because the external fixture `D:\tools\yunqi_ref.json` is unavailable in GitHub CI. Android verification was arm64-only and 131 JVM tests passed with zero failures/errors/skips.
+- This task-card update adds the explicit Vault `exists(credentialRef)` contract and corresponding tests. Therefore the previous SHA's five green gates do not apply to the new HEAD. All five gates must rerun and reach SUCCESS on the exact new integrated HEAD; SKIPPED is not PASS.
+- Local Dart/Flutter execution on the user's workstation and Find N2 KeyStore-loss/backup/restore evidence remain UNKNOWN; no local/device PASS is asserted.
 
 
 ## Integration-owned follow-up (not Remote R1B scope)

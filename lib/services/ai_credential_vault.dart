@@ -199,6 +199,22 @@ class AiCredentialVault {
         return value;
       });
 
+  /// Checks whether a credential reference resolves to a stored, non-empty value.
+  ///
+  /// This performs a local secure-store read only; it does not expose the
+  /// secret to the caller or make a network request. Unknown references return
+  /// false. Malformed references and storage failures remain typed failures.
+  Future<bool> exists(String reference) =>
+      _serialize(() async {
+        final key = _storageKeyFor(reference);
+        final value = await _readStoredValue(key);
+        if (value == null) return false;
+        if (value.trim().isEmpty) {
+          throw const AiCredentialVaultInvalidStoredValueException();
+        }
+        return true;
+      });
+
   /// Replaces the value behind an existing reference.
   ///
   /// The reference remains unchanged, so the provider configuration does not

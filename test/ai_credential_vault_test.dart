@@ -63,6 +63,10 @@ void main() {
         vault.deleteCredential('credential-ref-1'),
         throwsA(isA<AiCredentialVaultInvalidReferenceException>()),
       );
+      await expectLater(
+        vault.exists('../plaintext'),
+        throwsA(isA<AiCredentialVaultInvalidReferenceException>()),
+      );
       expect(storage.readCalls, 0);
     });
 
@@ -95,6 +99,17 @@ void main() {
         vault.readCredential(reference),
         throwsA(isA<AiCredentialVaultUnknownReferenceException>()),
       );
+    });
+
+    test('checks reference existence without returning the secret', () async {
+      const secret = 'existence-check-secret-must-stay-private';
+      final reference = await vault.createCredential(secret);
+      final readsBeforeCheck = storage.readCalls;
+
+      expect(await vault.exists(reference), isTrue);
+      expect(await vault.exists(_referenceForAllZeroBytes()), isFalse);
+      expect(storage.readCalls, readsBeforeCheck + 2);
+      expect(storage.values.values, contains(secret));
     });
 
     test('replacement rotates the value without changing its reference',
@@ -178,6 +193,15 @@ void main() {
         AiCredentialVaultOperation.read,
       );
       expect(readError.toString(), isNot(contains(marker)));
+      final existsError = await _captureException(
+        () => vault.exists(reference),
+      );
+      expect(existsError, isA<AiCredentialVaultStorageException>());
+      expect(
+        (existsError as AiCredentialVaultStorageException).operation,
+        AiCredentialVaultOperation.read,
+      );
+      expect(existsError.toString(), isNot(contains(marker)));
 
       storage.readFailure = null;
       storage.deleteFailure = StateError(marker);
@@ -200,6 +224,10 @@ void main() {
 
       await expectLater(
         vault.readCredential(reference),
+        throwsA(isA<AiCredentialVaultInvalidStoredValueException>()),
+      );
+      await expectLater(
+        vault.exists(reference),
         throwsA(isA<AiCredentialVaultInvalidStoredValueException>()),
       );
     });
