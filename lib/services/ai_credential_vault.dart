@@ -82,8 +82,8 @@ class AiCredentialVaultStorageException extends AiCredentialVaultException {
 /// platforms, including web, fail closed. Android uses a dedicated plugin
 /// namespace and disables the plugin's destructive reset-on-error behavior;
 /// Windows delegates key protection to the plugin's Windows implementation.
-class AiCredentialVault()
-    : this._(
+class AiCredentialVault {
+  AiCredentialVault() : this._(
         platform: defaultTargetPlatform,
         isWeb: kIsWeb,
       );
