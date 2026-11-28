@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -223,6 +224,47 @@ void main() {
       expect(references.toSet(), hasLength(3));
       expect(concurrentStorage.maxConcurrentOperations, 1);
       expect(concurrentStorage.values, hasLength(3));
+    });
+
+    test('excludes namespaced secure storage files from Android backups', () {
+      const secureStoragePreferences = <String>[
+        'nihaixia_ai_credentials_v1.xml',
+        'FlutterSecureKeyStorage:nihaixia_ai_credentials_v1.xml',
+        'FlutterSecureStorageConfiguration:nihaixia_ai_credentials_v1.xml',
+      ];
+      final fullBackupRules = File(
+        'android/app/src/main/res/xml/backup_rules.xml',
+      ).readAsStringSync();
+      final extractionRules = File(
+        'android/app/src/main/res/xml/data_extraction_rules.xml',
+      ).readAsStringSync();
+      final cloudBackupRules = extractionRules
+          .split('<cloud-backup>')
+          .last
+          .split('</cloud-backup>')
+          .first;
+      final deviceTransferRules = extractionRules
+          .split('<device-transfer>')
+          .last
+          .split('</device-transfer>')
+          .first;
+
+      for (final preferenceFile in secureStoragePreferences) {
+        final exclusion =
+            '<exclude domain="sharedpref" path="$preferenceFile" />';
+        expect(fullBackupRules, contains(exclusion));
+        expect(cloudBackupRules, contains(exclusion));
+        expect(deviceTransferRules, contains(exclusion));
+      }
+
+      for (final existingExclusion in <String>[
+        'ai_models/',
+        'ai_trace.jsonl',
+        'ai_trace.jsonl.tmp',
+      ]) {
+        expect(fullBackupRules, contains('path="$existingExclusion"'));
+        expect(extractionRules, contains('path="$existingExclusion"'));
+      }
     });
 
     test('rejects platforms without an explicitly supported secure store',
