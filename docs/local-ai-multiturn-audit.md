@@ -308,3 +308,53 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 - **Native 复核：** `parsePayload` 对 Boolean 类型、条目数、每条及聚合格式化长度进行第二次校验；不合法载荷在当前 Native Conversation reset 前拒绝。成功恢复后，Native 使用显式截断状态初始化症状来源完整性标记，不再在收到无界列表后静默丢弃旧条目。
 - **数据边界：** 该投影只用于症状整理的用户自述输入，不提升为 Native 成功轮次、SessionState 事实或可重放工具动作。成功 transcript 仍最多 12 个完整轮次/10,000 UTF-16；KV Cache 不持久化，App Token budget 仍 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。
 - **设备状态：** 真实 E4B 症状整理效果、Find N2 GPU/CPU 多轮、Activity/process restart 和 SQLite/Flutter/Native 三方历史一致性继续 MISSING / UNKNOWN / LOCAL ONLY；CI 不替代设备 PASS。
+
+
+## 13. 2026-11-28 PR #610 / #618 / #622 后跨层记忆边界与当前主线复核
+
+> 本节追加更新，不改写 §10–§12 的历史快照。Native transcript 恢复、症状整理用户自述投影、Dart/SQLite SessionState 快照是三个相关但不同的边界；不得合并为一个“历史恢复”状态。
+
+### 13.1 当前基线与职责分界
+
+- **当前仓库 master：** `57f6fbef193d28fc6c3493c8740d672038fdd52c`（PR #623 文档收尾合并）。当前 AI 运行时代码基线仍为 `805f006ed502c5cbf10dba4ad30428ee9761eb42`（PR #622 合并）；PR #623 只修改架构、执行台账和唯一设备交接文档，没有运行时代码变化。
+- **Native 成功轮次 transcript：** `LocalAiConversationHistory` / `LocalAiConversationHistoryPolicy` 只保留最多 12 个完整成功 user/model 轮次和 10,000 UTF-16 code units；未完成或失败请求不提升为成功轮次。它服务 Native Conversation 重建，不等同 SQLite UI 全历史。
+- **症状整理用户自述投影：** `LocalAiUserMessageRestoreProjectionBuilder` 只为症状整理保留最近 60 条非空 user 输入；每条含来源标签后最多 2,000 UTF-16，合计最多 16,000 UTF-16；数量、单条或总量裁剪都必须通过 `user_messages_truncated=true` 显式传播。它不是成功 transcript、SessionState 事实或工具动作恢复记录。
+- **SessionState：** PR #622 新增的 SQLite 专用读取只为本轮结构化记忆构造提供有界数据；它不替换完整 UI/history API，也不改变 Native 成功 transcript。三者的 owner、截断状态和可重放资格必须继续分开。
+
+### 13.2 PR #610：跨 MethodChannel 用户自述载荷限界
+
+- **合并证据：** PR #610 最终 HEAD `39e841917139bb2b9036d615cb7bacb30031b75f`，squash merge `bcfa2e36440689d7d5cd12abfd80cf191c6d66dc`。
+- **Dart：** `lib/services/local_ai_transcript_restore_policy.dart` 中的 `LocalAiUserMessageRestoreProjectionBuilder` 增量遍历历史，只保留最近 60 条；按附加 `用户文字自述：` 后的最终 Native 格式核算 2,000 / 16,000 UTF-16 边界，并在裁剪时避免拆开 surrogate pair。两条恢复调用路径均传入有界列表与必需截断 Boolean。
+- **Native：** `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt` 的 `parsePayload` 严格验证列表、必需 Boolean、条数、每条格式化长度与聚合长度。无效载荷返回 `INVALID_RESTORE_PAYLOAD`；`MainActivity` 在恢复路径先解析/验证载荷，再进入会话状态更换流程。
+- **测试：** `test/local_ai_transcript_restore_policy_test.dart`、`test/local_ai_transcript_restore_architecture_test.dart`、`test/local_ai_interview_screen_test.dart`、`test/assistant_history_resume_test.dart`、`android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicyTest.kt` 覆盖边界、截断传播、错误 envelope、surrogate pair 和恢复调用路径。
+- **精确 HEAD CI：** Flutter regression job `140802809044` SUCCESS；Android arm64/JVM job `140805368611` SUCCESS；Fork License run `46088245573` SUCCESS。Branch validation job `140802810165` 为 SKIPPED，不计 PASS。
+
+### 13.3 PR #618：GPU→CPU fallback 原因的生命周期可观测
+
+- **合并证据：** PR #618 最终 HEAD `0b2aff6963e6fe79dabe788b05a529a273840567`，squash merge `73a79b9ac36879b22db60c8be9c1cd25ef31037a`。
+- **源码：** `MainActivity.backendFallbackReason` 只在 GPU 初始化失败且 CPU fallback 成功时保留 GPU 原因；`modelStatus()` 将其投影为 `backendFallbackReason`，Dart `LocalAiModelStatus` 与设置页展示。GPU 初始化成功、用户明确选 CPU、Native runtime/model release 时清除旧原因，避免 `backend=not_loaded` 仍展示过期 fallback 原因。
+- **测试：** `test/local_ai_service_test.dart` 覆盖状态字段读取；`test/local_ai_backend_settings_tile_test.dart` 覆盖设置页展示。该变更只提升失败可观测性，不改变 fallback 策略。
+- **精确 HEAD CI：** Branch validation job `140844538153`、Flutter regression job `140844538488`、Android arm64/JVM job `140846198464`、PR required gate job `140847230585`、Fork License run `46101434294` 均 SUCCESS。
+- **设备限制：** 以上测试不能证明 Find N2 的 GPU 初始化失败、CPU 实际 fallback、后端切换或长时间推理稳定性。
+
+### 13.4 PR #622：SessionState SQLite 有界读取（Dart/SQLite，不是 Native transcript）
+
+- **合并证据：** PR #622 最终 HEAD `1bd334ba64d46488a7008a49647bf83860f652cb`，squash merge / 代码 master `805f006ed502c5cbf10dba4ad30428ee9761eb42`。
+- **读取路径：** `AssistantConversationStore.getAssistantMessagesForSessionState` / `DatabaseHelper.getAssistantMessagesForSessionState` 只查询当前 conversation 的 user/assistant 行，SQL 硬限制最多 129 行；隐藏 tool/system 行排除，assistant 正文不投影，结果按消息 ID 正序返回。原 `getAssistantMessages` 全历史接口不变。
+- **投影限制：** Builder 最多处理最近 128 条；129 条读取用于识别是否存在更早前缀，存在则返回 PARTIAL。SQL 将 user 正文投影限制到 1,201 Unicode code points、metadata 限制到 16,001 code points；Dart 在 replayability JSON 解码前按 16,000 UTF-16 上限拒绝超限 metadata。证据引用最多 64 条，超限显式标记 PARTIAL。
+- **测试：** `test/session_state_snapshot_builder_test.dart` 覆盖 owner、tool ledger 排除、历史省略 PARTIAL、64 条 evidence 上限、metadata 超限与非 replayable 请求；`test/assistant_conversation_storage_test.dart`、`test/local_ai_interview_screen_test.dart` 等覆盖存储与调用端合同。
+- **精确 HEAD CI：** Branch validation job `140903069854`、Flutter regression job `140903070020`、Android arm64/JVM job `140905099227`、PR required gate job `140905913256`、Fork License job `140903069713` 均 SUCCESS，全部绑定 PR 最终 HEAD。
+- **职责边界：** 此改动只限制 SessionState 快照读取/投影，不截断完整 UI 历史，不改变 Native KV cache 生命周期，不把隐藏 reasoning/tool ledger 提升为用户记忆。
+
+### 13.5 PR #623 合并后的主线 Push CI
+
+- PR #623 最终 HEAD `aa5d33362cd2fc3eba9fde9ea2e2add627429b87` 的 Branch validation job `140907641647`、Flutter regression job `140907641905`、Android arm64/JVM job `140909537273`、PR required gate job `140910317781`、Fork License job `140907596176` 均 SUCCESS。
+- 合并后 `master@57f6fbef193d28fc6c3493c8740d672038fdd52c` 的 Flutter regression job `140910480679`、Android arm64/JVM job `140912271947`、Fork License job `140910480437` 均 SUCCESS。Push 事件的 Branch validation job `140910481473` 与 PR required gate job `140913307538` 为 SKIPPED；它们不属于 Push 事件门禁，也不计 PASS。
+- 以上是仓库/自动化证据，不是 Find N2 TRACE。
+
+### 13.6 当前结论与剩余事项
+
+- **云端确定性治理：** transcript 成功轮次边界、跨 MethodChannel 用户自述载荷限界、SessionState owner/provenance 与 SQLite 有界读取、临时 RAG/媒体上下文隔离、Reasoning Ledger 终态和 UNKNOWN 不重放、Activity teardown 串行释放均已有主线源码与自动化锚点。本次交叉复核没有发现新的、可仅凭仓库源码/CI 稳定复现的 Native 多轮缺陷；不为形式收尾新增运行时代码分支。
+- **Token 边界：** 12 轮/10,000 transcript、60 条/16,000 user-reported projection、128 条 SessionState 快照、16,000 SessionState context 和 24,000 reasoning supplement 都是轮数/字符/code-unit 限制，不是模型可用 Token 预算，不能相加推导。Native token count 与模型声明 maxContextTokens 仅只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED` 继续不变。未取得设备校准前，不实现猜测性的安全阈值、输出预留、动态裁剪或自动压缩。
+- **Find N2：** GPU/CPU 各至少 20 轮、真实 E4B 推理、state:7 根因、图片/语音多轮、Activity/process restart、SQLite/Flutter/Native 三方 transcript 一致性、真实 KV Cache/context 数值及 AI 数据清理后不可恢复性继续 MISSING / UNKNOWN / LOCAL ONLY；只在唯一 `docs/local-real-device-acceptance-handoff.md` §7.1 记录真实证据。
+- **下一步：** 云端本轮主线 CI 与文档映射已完成；若没有新的代码/测试可稳定复现的问题，不新增 Core-1 运行时代码或重复 Core-0～Core-5 抽象。云端收尾完成后统一交付 Find N2 本地 TRACE，设备未测不阻塞云端、也不得改写为 PASS。
