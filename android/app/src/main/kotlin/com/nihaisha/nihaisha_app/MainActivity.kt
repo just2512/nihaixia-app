@@ -831,6 +831,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine
         aiConversation = null
         aiEngine = null
+        // A fallback reason is valid only while its fallback CPU runtime is active.
         backendFallbackReason = null
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         activeBackend = "not_loaded"
@@ -2097,6 +2098,7 @@ class MainActivity : FlutterActivity() {
         // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
         aiEngine = null
+        // A fallback reason is valid only while its fallback CPU runtime is active.
         backendFallbackReason = null
         conversationContainsEphemeralContext = false
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
