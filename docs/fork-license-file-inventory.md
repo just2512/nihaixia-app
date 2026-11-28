@@ -13,7 +13,7 @@
 
 授权文件本身（LICENSE、LICENSES、.reuse/dep5）不作为受许可对象重复列入清单。rights_status=OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件需保存作者/贡献者版权或有效再许可权证据；不能仅凭 Git 作者字段或仓库管理员身份推定版权。
 
-本次同时纳入 Core-1 完整轮次 Native 历史恢复边界：Flutter 侧仅保留完整 user/assistant turns，Native 双端校验 10,000 UTF-16 上限，拒绝任意消息中间裁剪；设备验收仍为 LOCAL ONLY / MISSING。另纳入 Android Keystore Plugin、AtomicFile TokenStore 与 JVM 策略测试；真机行为仍为 LOCAL ONLY / MISSING。Core-1 增加只读 SessionStateSnapshot 适配器；Core-2 增加医案、古籍 CandidateEvidence 召回适配器及统一多源批次/来源感知旧序排序基础，不改变医案或古籍正文及其来源核验结论；Core-3 增加严格 ReasoningResponse decoder 与不可变 ReasoningRequest/补充元数据 formatter，均未绕过 Native Gate 或授权执行边界。
+本次同时纳入本地/云端 AI 模型完整开发方案，覆盖 Provider/Model/Task 配置、Credential Vault、统一 Gateway、云端多任务适配、本地 Embedding/Reranker 审计、索引 generation 与验收标准；该文档不代表运行时代码已实现。另纳入 Core-1 完整轮次 Native 历史恢复边界：Flutter 侧仅保留完整 user/assistant turns，Native 双端校验 10,000 UTF-16 上限，拒绝任意消息中间裁剪；设备验收仍为 LOCAL ONLY / MISSING。另纳入 Android Keystore Plugin、AtomicFile TokenStore 与 JVM 策略测试；真机行为仍为 LOCAL ONLY / MISSING。Core-1 增加只读 SessionStateSnapshot 适配器；Core-2 增加医案、古籍 CandidateEvidence 召回适配器及统一多源批次/来源感知旧序排序基础，不改变医案或古籍正文及其来源核验结论；Core-3 增加严格 ReasoningResponse decoder 与不可变 ReasoningRequest/补充元数据 formatter，均未绕过 Native Gate 或授权执行边界。
 
 ## 全量新增与修改文件
 
@@ -456,6 +456,7 @@
 | docs/ai-commercial-license.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-data-clear-scope-audit.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-layered-runtime-architecture.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/ai-local-cloud-model-development-plan.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-modernization-execution-ledger.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-p0-transcript-rehydration.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-parallel-execution-protocol.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -1039,8 +1040,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 1014 个（新增 850，修改 164）；删除路径 15 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 492；知识库排除 363；第三方排除 1。
+- 新增/修改路径共 1020 个（新增 856，修改 164）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 498；知识库排除 363；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
