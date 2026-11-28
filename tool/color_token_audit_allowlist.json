@@ -1,4 +1,0 @@
-{
-  "description": "Controlled exceptions for domain-specific chart colors. Every entry requires a concrete business reason and contrast coverage in tests.",
-  "files": {}
-}
