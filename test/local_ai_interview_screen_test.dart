@@ -396,6 +396,7 @@ class _PageToolTraceService extends _TextSendService {
     required int conversationId,
     required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
+    required bool userMessagesTruncated,
   }) async {
     restoredTranscripts.add(restore.transcript);
   }
@@ -761,6 +762,7 @@ class _TextSendService extends LocalAiService {
     required int conversationId,
     required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
+    required bool userMessagesTruncated,
   }) async {
     restoredTranscripts.add(restore.transcript);
   }

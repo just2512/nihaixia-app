@@ -569,6 +569,7 @@ void main() {
         conversationId: 42,
         restore: restore,
         userMessages: ['饭后腹胀'],
+        userMessagesTruncated: false,
       );
 
       expect(received?.method, 'restoreConversation');
@@ -583,6 +584,7 @@ void main() {
         'omitted_completed_turn_count': 0,
         'omitted_completed_character_count': 0,
         'userMessages': ['饭后腹胀'],
+        'user_messages_truncated': false,
       });
     });
 
