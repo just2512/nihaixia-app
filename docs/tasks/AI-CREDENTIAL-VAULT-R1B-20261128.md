@@ -52,3 +52,15 @@ Implement only the Stage 1 Credential Vault boundary:
 ## Rollback
 
 Remove the Vault integration only after any stored secrets have been explicitly migrated or deleted; never copy secrets into plaintext or SQLite during rollback. Preserve ProviderConfig rows and non-secret settings.
+
+
+## Implementation record (2026-11-28)
+
+- Secure-storage dependency selected and pinned exactly to `flutter_secure_storage 11.2.0`; upstream license is BSD-3-Clause. Upstream package metadata requires Dart >=3.8.0 and Flutter >=3.19.0; this app declares Dart `^3.13.0`, Flutter `>=3.47.0`, and Android minSdk 24.
+- Runtime support is explicitly limited to Android and Windows. Web, Linux, macOS, iOS and other targets fail closed in the Vault constructor; no weaker fallback is provided.
+- Android uses the dedicated namespace `nihaixia_ai_credentials_v1` and `resetOnError: false`. This avoids the plugin's destructive automatic reset when KeyStore access fails. The app backup rules exclude the namespace data preferences, namespaced configuration preferences and namespaced wrapped-key preferences from both cloud backup and device transfer.
+- Windows uses the plugin's Windows implementation: AES-GCM encrypted local files with the encryption key managed by Windows Credential Manager. This is not a claim of hardware-backed storage.
+- Credential references use the versioned `aicred:v1:` prefix plus 256 bits from `Random.secure()`. Only opaque references are intended to leave the Vault.
+- Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
+- Focused tests now cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, storage errors without underlying exception messages, empty stored values, overwrite semantics and unsupported platforms.
+- **Validation remains pending:** the lockfile still needs an actual Pub resolution; local Dart/Flutter execution has not been performed in this environment. No test or CI result is marked PASS by this record.
