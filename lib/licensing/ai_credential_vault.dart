@@ -3,6 +3,18 @@ import 'package:flutter/services.dart';
 const aiCredentialVaultChannelName =
     'com.nihaisha.app/ai_credential_vault';
 
+/// Decrypted only for the lifetime of a real model request. The caller must
+/// compare [providerId] with the selected ProviderConfig before using [secret].
+class AiCredentialVaultEntry {
+  const AiCredentialVaultEntry({
+    required this.providerId,
+    required this.secret,
+  });
+
+  final String providerId;
+  final String secret;
+}
+
 abstract interface class AiCredentialVault {
   /// Stores a provider secret and returns an opaque reference.
   ///
@@ -13,8 +25,9 @@ abstract interface class AiCredentialVault {
     required String secret,
   });
 
-  /// Returns null only when the reference has no stored credential.
-  Future<String?> read(String credentialRef);
+  /// Returns null only when the reference has no stored credential. The
+  /// returned providerId must be checked against the selected ProviderConfig.
+  Future<AiCredentialVaultEntry?> read(String credentialRef);
 
   Future<void> delete(String credentialRef);
 
@@ -43,7 +56,8 @@ class MethodChannelAiCredentialVault implements AiCredentialVault {
     required String providerId,
     required String secret,
   }) async {
-    if (providerId.trim().isEmpty || providerId != providerId.trim() ||
+    if (providerId.trim().isEmpty ||
+        providerId != providerId.trim() ||
         secret.isEmpty) {
       throw const AiCredentialVaultException('CREDENTIAL_INPUT_INVALID');
     }
@@ -59,18 +73,23 @@ class MethodChannelAiCredentialVault implements AiCredentialVault {
   }
 
   @override
-  Future<String?> read(String credentialRef) async {
+  Future<AiCredentialVaultEntry?> read(String credentialRef) async {
     _validateReference(credentialRef);
     final response = await _invokeMap(
       'read',
       <String, Object?>{'credentialRef': credentialRef},
     );
     if (response?['found'] == false) return null;
+    final providerId = response?['providerId'];
     final secret = response?['secret'];
-    if (response?['found'] != true || secret is! String || secret.isEmpty) {
+    if (response?['found'] != true ||
+        providerId is! String ||
+        providerId.isEmpty ||
+        secret is! String ||
+        secret.isEmpty) {
       throw const AiCredentialVaultException('CREDENTIAL_RESPONSE_INVALID');
     }
-    return secret;
+    return AiCredentialVaultEntry(providerId: providerId, secret: secret);
   }
 
   @override

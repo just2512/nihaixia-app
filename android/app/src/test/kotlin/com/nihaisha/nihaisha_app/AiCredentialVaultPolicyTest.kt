@@ -5,6 +5,7 @@ import java.nio.file.Files
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
@@ -74,6 +75,52 @@ class AiCredentialVaultPolicyTest {
         assertRejects { AiCredentialVaultPolicy.decodeEnvelope(corruptMagic) }
         val corruptIv = encoded.copyOf().apply { this[8] = 1 }
         assertRejects { AiCredentialVaultPolicy.decodeEnvelope(corruptIv) }
+    }
+
+    @Test
+    fun aesGcmAuthenticatesCredentialReferenceAndDoesNotExposePlaintext() {
+        val keyGenerator = javax.crypto.KeyGenerator.getInstance("AES")
+        keyGenerator.init(256)
+        val key = keyGenerator.generateKey()
+        val secret = "private-api-secret-do-not-persist-in-plain"
+        val payload = AiCredentialVaultPolicy.encodePayload("provider-1", secret)
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key)
+        cipher.updateAAD(AiCredentialVaultPolicy.associatedData(validReference))
+        val envelopeBytes = AiCredentialVaultPolicy.encodeEnvelope(
+            cipher.iv,
+            cipher.doFinal(payload),
+        )
+        assertFalse(String(envelopeBytes, Charsets.ISO_8859_1).contains(secret))
+
+        val envelope = AiCredentialVaultPolicy.decodeEnvelope(envelopeBytes)
+        val decrypt = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        decrypt.init(
+            javax.crypto.Cipher.DECRYPT_MODE,
+            key,
+            javax.crypto.spec.GCMParameterSpec(AiCredentialVaultPolicy.TAG_BITS, envelope.iv),
+        )
+        decrypt.updateAAD(AiCredentialVaultPolicy.associatedData(validReference))
+        assertEquals(secret, AiCredentialVaultPolicy.decodePayload(
+            decrypt.doFinal(envelope.ciphertext),
+        ).secret)
+
+        val tamperedReference = "123e4567-e89b-12d3-a456-426614174001"
+        val wrongReferenceDecrypt = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        wrongReferenceDecrypt.init(
+            javax.crypto.Cipher.DECRYPT_MODE,
+            key,
+            javax.crypto.spec.GCMParameterSpec(AiCredentialVaultPolicy.TAG_BITS, envelope.iv),
+        )
+        wrongReferenceDecrypt.updateAAD(
+            AiCredentialVaultPolicy.associatedData(tamperedReference),
+        )
+        try {
+            wrongReferenceDecrypt.doFinal(envelope.ciphertext)
+            fail("Credential reference must be authenticated as AAD")
+        } catch (_: javax.crypto.AEADBadTagException) {
+            // Expected: a ciphertext cannot be moved to another reference.
+        }
     }
 
     @Test

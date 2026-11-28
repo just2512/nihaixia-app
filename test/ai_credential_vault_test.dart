@@ -20,7 +20,7 @@ void main() {
           return <String, Object?>{'credentialRef':
             '123e4567-e89b-12d3-a456-426614174000'};
         case 'read':
-          return <String, Object?>{'found': true, 'secret': 'test-secret'};
+          return <String, Object?>{'found': true, 'providerId': 'provider-1', 'secret': 'test-secret'};
         case 'delete':
           return <String, Object?>{'deleted': true};
         case 'exists':
@@ -49,10 +49,9 @@ void main() {
 
   test('reads secret only through vault call and returns null when missing',
       () async {
-    expect(
-      await vault.read('123e4567-e89b-12d3-a456-426614174000'),
-      'test-secret',
-    );
+    final entry = await vault.read('123e4567-e89b-12d3-a456-426614174000');
+    expect(entry?.providerId, 'provider-1');
+    expect(entry?.secret, 'test-secret');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       return <String, Object?>{'found': false};

@@ -64,7 +64,11 @@ internal class AiCredentialVaultPlugin : FlutterPlugin, MethodChannel.MethodCall
                         if (secret == null) {
                             mapOf("found" to false)
                         } else {
-                            mapOf("found" to true, "secret" to secret)
+                            mapOf(
+                                "found" to true,
+                                "providerId" to secret.providerId,
+                                "secret" to secret.secret,
+                            )
                         }
                     }
                 }

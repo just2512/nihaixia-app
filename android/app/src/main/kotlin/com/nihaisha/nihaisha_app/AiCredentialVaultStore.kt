@@ -7,7 +7,6 @@ import android.util.AtomicFile
 import java.io.File
 import java.io.IOException
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.util.UUID
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -63,9 +62,10 @@ internal class AiCredentialVaultStore(context: Context) {
         }
     }
 
-    fun read(credentialRef: String): String? = synchronized(lock) {
+    fun read(credentialRef: String): AiCredentialVaultPolicy.CredentialPayload? = synchronized(lock) {
         val file = credentialFile(credentialRef)
-        if (!file.isFile) return null
+        val backupFile = File(file.path + ".bak")
+        if (!file.isFile && !backupFile.isFile) return null
         try {
             val key = getExistingKey()
             val envelopeBytes = readBounded(AtomicFile(file).openRead())
@@ -80,7 +80,7 @@ internal class AiCredentialVaultStore(context: Context) {
                 AiCredentialVaultPolicy.associatedData(credentialRef, envelope.version),
             )
             val payload = cipher.doFinal(envelope.ciphertext)
-            AiCredentialVaultPolicy.decodePayload(payload).secret
+            AiCredentialVaultPolicy.decodePayload(payload)
         } catch (_: AEADBadTagException) {
             throw AiCredentialVaultException(
                 "CREDENTIAL_DATA_AUTHENTICATION_FAILED",
@@ -98,7 +98,8 @@ internal class AiCredentialVaultStore(context: Context) {
 
     fun delete(credentialRef: String): Boolean = synchronized(lock) {
         val file = credentialFile(credentialRef)
-        if (!file.exists()) return false
+        val backupFile = File(file.path + ".bak")
+        if (!file.exists() && !backupFile.exists()) return false
         try {
             AtomicFile(file).delete()
             !file.exists()
@@ -112,7 +113,8 @@ internal class AiCredentialVaultStore(context: Context) {
 
     fun exists(credentialRef: String): Boolean = synchronized(lock) {
         val file = credentialFile(credentialRef)
-        if (!file.isFile) return false
+        val backupFile = File(file.path + ".bak")
+        if (!file.isFile && !backupFile.isFile) return false
         getExistingKey()
         true
     }
