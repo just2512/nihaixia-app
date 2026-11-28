@@ -70,6 +70,8 @@ class MainActivity : FlutterActivity() {
     private var pendingReasoningTurn: LocalAiPendingReasoningTurn? = null
     private val reasoningTurnCompletions = LocalAiReasoningTurnCompletionLedger()
     private var activeBackend = "not_loaded"
+    // Retain the preferred-backend initialization failure when CPU fallback succeeds.
+    private var backendFallbackReason: String? = null
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
     // The active KV cache may contain request-scoped RAG, session memory or
@@ -864,6 +866,7 @@ class MainActivity : FlutterActivity() {
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend,
+            "backendFallbackReason" to (backendFallbackReason ?: ""),
             "preferredBackend" to preferredBackend(),
             "conversationKvCacheObservationStatus" to conversationTokenObservation.status.name,
             "conversationKvCacheBudgetStatus" to "NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED",
@@ -951,6 +954,7 @@ class MainActivity : FlutterActivity() {
             ) == true
         )
         var loadedEngine: Engine? = null
+        backendFallbackReason = null
         if (selectedBackend == LocalAiBackendSelectionPolicy.CPU) {
             val candidate = Engine(
                 EngineConfig(
@@ -964,6 +968,7 @@ class MainActivity : FlutterActivity() {
             candidate.initialize()
             loadedEngine = candidate
             activeBackend = "cpu"
+            backendFallbackReason = null
         } else {
             // Prefer GPU where the device exposes a compatible OpenCL runtime; retry on CPU.
             // A failed Engine.initialize() instance is intentionally not closed: LiteRT-LM
@@ -987,6 +992,7 @@ class MainActivity : FlutterActivity() {
                 candidate.initialize()
                 loadedEngine = candidate
                 activeBackend = "gpu"
+                backendFallbackReason = null
             } catch (error: Exception) {
                 gpuFailure = error
             }
@@ -1005,6 +1011,8 @@ class MainActivity : FlutterActivity() {
                     candidate.initialize()
                     loadedEngine = candidate
                     activeBackend = "cpu"
+                    backendFallbackReason =
+                        "GPU 初始化失败：${gpuFailure?.message ?: "未知错误"}"
                 } catch (cpuError: Exception) {
                     activeBackend = "not_loaded"
                     throw IllegalStateException(
