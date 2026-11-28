@@ -83,10 +83,11 @@ class AiCredentialVaultStorageException extends AiCredentialVaultException {
 /// namespace and disables the plugin's destructive reset-on-error behavior;
 /// Windows delegates key protection to the plugin's Windows implementation.
 class AiCredentialVault {
-  AiCredentialVault() : this._(
-        platform: defaultTargetPlatform,
-        isWeb: kIsWeb,
-      );
+  AiCredentialVault()
+      : this._(
+          platform: defaultTargetPlatform,
+          isWeb: kIsWeb,
+        );
 
   /// Test-only factory for injecting a deterministic storage seam.
   ///
