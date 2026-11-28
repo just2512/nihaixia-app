@@ -15,10 +15,15 @@
 
 本次同时纳入 R1A 的 Provider/Model/Task 配置 DTO、结构化 Repository、schema v9 migration 和专项回归测试；仅完成配置持久化边界，不包含凭证 Vault、云端 Gateway、模型调用或向量索引。另纳入 Core-1 完整轮次 Native 历史恢复边界：Flutter 侧仅保留完整 user/assistant turns，Native 双端校验 10,000 UTF-16 上限，拒绝任意消息中间裁剪；设备验收仍为 LOCAL ONLY / MISSING。另纳入 Android Keystore Plugin、AtomicFile TokenStore 与 JVM 策略测试；真机行为仍为 LOCAL ONLY / MISSING。Core-1 增加只读 SessionStateSnapshot 适配器；Core-2 增加医案、古籍 CandidateEvidence 召回适配器及统一多源批次/来源感知旧序排序基础，不改变医案或古籍正文及其来源核验结论；Core-3 增加严格 ReasoningResponse decoder 与不可变 ReasoningRequest/补充元数据 formatter，均未绕过 Native Gate 或授权执行边界。
 
+本次 R1B 集成加入平台安全凭证 Vault 服务、独立任务卡和专项测试；密钥仅由 secure-storage 插件处理，数据库仍只保留 opaque credentialRef。Android 备份排除规则保留原有模型/TRACE 排除项，并新增凭证数据、namespace 配置与包装密钥排除。R1B 的许可证文件登记由 Integration 在统一 PR 汇总分支完成。
+
 ## 全量新增与修改文件
 
 | 路径 | Git 状态 | 分类 | SPDX 表达式 | 权属/来源状态 |
 |---|---|---|---|---|
+| docs/tasks/AI-CREDENTIAL-VAULT-R1B-20261128.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/services/ai_credential_vault.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/ai_credential_vault_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-quality.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-tests.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/fork-license-compliance.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -1049,8 +1054,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 1029 个（新增 865，修改 164）；删除路径 15 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 507；知识库排除 363；第三方排除 1。
+- 新增/修改路径共 1032 个（新增 868，修改 164）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 510；知识库排除 363；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
