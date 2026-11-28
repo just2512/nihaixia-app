@@ -5222,4 +5222,14 @@ PR HEAD 门禁证据：
 - **能力状态：** 本地 Embedding/Reranker = MISSING / NEEDS LOCAL AUDIT；云端 Provider/Vault/Gateway/生成模型/多模态/Embedding/Reranker = NOT_STARTED / MISSING；AI 总开关与 TaskModelSelection = NOT_STARTED / MISSING；Embedding generation/index = NOT_STARTED / MISSING；上下文 Token 预算端到端 = NOT_STARTED / MISSING；Find N2 相关设备证明 = LOCAL ONLY / UNKNOWN。方案文档本身不提升任何运行时状态。
 - **门禁：** 每个代码 PR 最终 HEAD 必须满足 Branch validation、Flutter regression、Android arm64/JVM、PR required gate、Fork License 五项 SUCCESS；SKIPPED 不算 PASS。合并后重新核对 master 和 Push CI。Local 模型还必须有 Find N2 实测及 TRACE。
 - **纠偏：** 先前 PR #627 只同步了四份共享规范和 v1.4 约束，没有完整开发分解；本次将完整方案独立成文，并通过本执行台账和架构/审计规范建立强制链接。任何 Local/Remote 后续任务若没有引用该方案中的具体阶段、接口、文件 Owner 和验收条目，不得视为已正式登记。
+### 151.1 Stage 1 配置与凭证安全实现进展（2026-11-28）
 
+- **唯一公共配置 PR：** [#629](https://github.com/just2512/nihaixia-app/pull/629)，目标 `master`；R1A 与独立实现后集成的 R1B 共用该 PR。未另开 Credential Vault 面向 master 的第二个配置 PR。
+- **代码基线：** PR 基于 `master@79324c44d638826d6e97cfb0951fc0cef35ec0f9`；集成分支为 `remote/ai-model-config-schema-20261128`。本台账提交时的精确 PR HEAD 由 GitHub PR 实时状态核验；任何后续提交都会使此前 CI 证据失效，必须重新执行五项门禁。
+- **R1A 配置与迁移：** 已实现 ProviderConfig、ModelConfig、AiLocalModelAsset、TaskModelSelection、校验与事务 Repository；SQLite schema v9 在现有 `nihaisha.db` 中新增四张 AI 配置表，只保存不透明 `credentialRef`，不保存 API secret。v8→v9 迁移保持原有表；新增表/索引采用 `IF NOT EXISTS`，避免旧版 v8 打开后保留 v9 表、再次升级时重复建表。
+- **迁移回滚自动化：** Repository 测试覆盖 v8→v9、旧版 v8 打开同一数据库、再升级 v9；验证 user_settings、bookmarks、assistant_messages 与新 Provider 行持续存在。此为 SQLite FFI 自动化证据，不替代 Find N2 设备升级/签名/真实数据库 TRACE。
+- **R1B Credential Vault：** 已实现 create/read/exists/delete/显式 replace；引用为 `aicred:v1:` + `Random.secure()` 生成的 256-bit 不透明值。生产后端仅支持 Android 与 Windows，其他平台 fail-closed；秘密不写入 SQLite、日志或异常消息。Android 使用独立 secure-storage namespace 且 `resetOnError: false`，相应 data/config/wrapped-key preference 文件从云备份和设备迁移中排除。
+- **R1B 自动化边界：** 已覆盖新增、读取、存在性、删除、未知/畸形引用、空值、读写删异常、碰撞、显式覆盖、同 Dart isolate 跨实例串行以及 Android 备份规则。Android Keystore 丢失/恢复行为仍须 Find N2 实机验证。
+- **明确未进入阶段 2：** 当前 PR 不实现 RuntimeAccessCoordinator、AI 总开关接线、Model Gateway、HTTP/SSE Provider Adapter、真实云端调用、设置 UI、Embedding/Reranker runtime 或索引 generation；Provider/Model 协议适配器兼容性留待 Stage 2 Registry 定义。不得从配置表存在推断 Provider 已可调用。
+- **当前状态：** R1A/R1B 实现已集成到 #629；PR 仍为 OPEN/DRAFT，未合并。由于近期为 Vault `exists(credentialRef)` 与 v8→v9→v8→v9 回滚路径追加了代码和测试，先前 SHA 上的五项门禁只保留历史意义。当前最终 PR HEAD 的 Branch validation、Flutter regression、Android arm64/JVM、PR required gate、Fork License 必须全部在同一 SHA 上 SUCCESS 后才可合并；SKIPPED 不算 PASS。
+- **设备与合并后验收：** Find N2 Keystore 丢失/恢复、备份/迁移、旧 APK 覆盖升级仍为 LOCAL ONLY / UNKNOWN。合并后必须重新读取 master SHA 并单独验收 Push CI；不得用 PR CI 替代。Stage 2 只能在 Stage 1 五项门禁与合并后主线 CI 完成后启动。
