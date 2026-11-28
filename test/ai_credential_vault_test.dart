@@ -205,7 +205,7 @@ void main() {
   });
 }
 
-Future<Object> _captureException(Future<void> Function() action) async {
+Future<Object> _captureException(Future<dynamic> Function() action) async {
   try {
     await action();
   } catch (error) {
