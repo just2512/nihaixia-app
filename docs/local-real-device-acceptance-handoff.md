@@ -3,7 +3,7 @@
 > **文档版本：** 1.8  
 > **编制日期：** 2026-11-27  
 > **执行地点：** 本地 Windows + OPPO Find N2（PUG110）  
-> **当前状态：** **CLOUD AI CLOSEOUT CI: PASS / DEVICE: LOCAL ONLY / NOT RUN**  
+> **当前状态：** **PR #622 CORE-1 CLOUD CI: PASS / DOC CLOSEOUT: IN PROGRESS / DEVICE: LOCAL ONLY / NOT RUN**
 > **目标：** 汇总远端交付后的唯一设备验收入口。本文件是本地执行交接，不是修复任务，也不是实机通过报告。
 
 ---
@@ -15,7 +15,7 @@
 | 项目 | 当前核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | **just2512/nihaixia-app** | 只从最新 master 构建 |
-| 构建基线 | **最新 master 文档 HEAD `f34b12573e16a790032a1450afb245d67891d680`（PR #599，文档同步）；当前 Native/AI 运行时代码基线 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598）；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | 最新 master 文档 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。运行时代码 SHA `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f` 的 Flutter tests run `45993861676`、Flutter Quality Gate run `45993861611`、Fork License run `45993861643`、Android arm64/JVM job `140491798547` / `140488210528` 均 SUCCESS。PR #599 仅变更文档，未改变应用运行时代码。执行前仍必须 git fetch origin 并重新读取届时最新 origin/master SHA、版本与 CI 终态；不得沿用本表历史 SHA 构建 |
+| 构建基线 | **当前 AI/Native 运行时代码基线 `master@805f006ed502c5cbf10dba4ad30428ee9761eb42`（PR #622 squash merge）；五层运行时集成点 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`；Core-3 旧包装 API 退役点 `11ac0c5918e5c25754b44e71f0ba48c82bea6669`** | PR #622 最终 HEAD `1bd334ba64d46488a7008a49647bf83860f652cb` 的 Branch validation `140903069854`、Flutter regression `140903070020`、Android arm64/JVM `140905099227`、PR required gate `140905913256`、Fork License `140903069713` 全部 SUCCESS；merge commit 为 `805f006ed502c5cbf10dba4ad30428ee9761eb42`。设备构建前仍必须重新 fetch 最新 master、核对届时 HEAD 与 Push CI 终态、版本及 APK 元数据，不得沿用本表历史 SHA |
 | App 版本 | **2.0.0+8048** | versionName=2.0.0、versionCode=8048；必须严格大于设备现有 versionCode 才能覆盖升级 |
 | Android applicationId | **com.nihaisha.nihaisha_app** | 不得修改 |
 | 产品显示名称 | **研纪** | 桌面、应用信息、最近任务和 App 内关于页均应一致 |
@@ -347,8 +347,8 @@ test-results.md 每一行按以下格式填写：
 | 工作包 | 云端代码/自动化状态 | Find N2 当前状态 | 本地必须留存的关键证据 |
 |---|---|---|---|
 | 安装身份、原签名覆盖升级与数据保留 | Manifest、ABI、签名构建保护等自动化门禁通过；正式 Release 仍由本地原签名构建 | MISSING | 旧/新 APK 元数据、签名证书 SHA-256、版本码、覆盖安装结果、升级前后数据哨兵 |
-| 品牌名称、Launcher 图标与外屏/内屏/半折叠布局 | 品牌资源/几何约束有自动化检查；PR #564 尚未合并，不属于本轮运行时代码基线 | MISSING | 当前 master 图标截图、ColorOS 遮罩、外屏/内屏/半折叠截图与窗口 metrics |
-| Core-1 Native 会话记忆与多轮恢复 | Transcript、SessionState owner/provenance、临时上下文隔离、请求终态 Ledger、UNKNOWN 不重放已有代码/测试 | MISSING / DEVICE UNKNOWN | GPU 与 CPU 各至少 20 轮、实际 backend、state:7、Activity/process restart、SQLite/UI/Native transcript 对照 |
+| 品牌名称、Launcher 图标与外屏/内屏/半折叠布局 | PR #564 已于 `747b5193844b1e276af50bfaac1366c534f9e371` 合并，launcher 自适应安全区资源与资源回归已进入 master；真机遮罩截图、ColorOS 图标实际观感与折叠屏姿态尚未验证 | MISSING | 当前 master 图标截图、ColorOS 遮罩、外屏/内屏/半折叠截图与窗口 metrics |
+| Core-1 Native 会话记忆与多轮恢复 | Transcript、SessionState owner/provenance、临时上下文隔离、请求终态 Ledger、UNKNOWN 不重放已覆盖；PR #622 新增最近 129 条可见记录的 SQLite 投影、128 条快照上限、超限 PARTIAL、metadata 与证据引用边界，完整历史 API 保持不变 | MISSING / DEVICE UNKNOWN | GPU 与 CPU 各至少 20 轮、实际 backend、state:7、Activity/process restart、SQLite/UI/Native transcript 对照、真实 KV Cache/context 观测 |
 | Core-2 检索证据与知识条目解读 | CandidateEvidence、RankedEvidenceSet、黄金检索回归及来源回填约束已有云端覆盖 | MISSING | 本地知识命中/无命中/跨轮回指、知识条目情境入口、来源锚点和消息 metadata |
 | Core-3 五模式文本与图片/音频附件 | 五模式结构化 Request/Response、媒体双阶段提交、旧自由文本入口 fail-closed；PR #598 清理不可达旧 helper | MISSING / DEVICE UNKNOWN | E4B 文字/图片/音频场景、实际 backend、每轮 TRACE、取消/失败不伪成功 |
 | Core-4 四项受限工具执行闭环 | 仅 dosage、solar_terms、yuxiaji_omen、sanshan_lingqian；显式确认、one-shot claim、结果读回与 UNKNOWN 不重放有自动化覆盖 | MISSING | 真实工具调用 TRACE、参数确认、实际结果、重复请求/中断不重放 |
@@ -701,3 +701,13 @@ GPU 与 CPU 必须分开建会话、分别记录。每次记录用户选择 back
 - **自动化证据：** 本次 PR 增加 Dart typed-turn/裁剪测试、Kotlin structured snapshot/角色重建校验和“不在 restore 路径调用模型”的静态回归。最终适用 CI 以该 PR 最终 HEAD 为准。
 - **Find N2 本地待验：** 历史会话恢复后连续追问早期 user/assistant 内容；切换会话、Activity recreation、强停/重启后核对 SQLite UI transcript 与 Native 重建上下文；确认恢复动作不额外生成一条助手消息。以上未执行前继续 MISSING / UNKNOWN / LOCAL ONLY。
 - **唯一进度入口：** 本地结果仍只追加在本文件 §7.1；不建立 Native/恢复专项交接单。
+
+
+## 20. 2026-11-28 PR #622 Core-1 SessionState 有界读取合并记录
+
+- **代码基线：** PR #622 squash merge `805f006ed502c5cbf10dba4ad30428ee9761eb42`；该提交将 SessionState 的历史与证据投影限制前移到 SQLite 查询层。
+- **合并前精确验收：** 最终 PR HEAD `1bd334ba64d46488a7008a49647bf83860f652cb` 的 Branch validation `140903069854`、Flutter regression `140903070020`、Android arm64/JVM `140905099227`、PR required gate `140905913256`、Fork License `140903069713` 均 SUCCESS。五项均绑定该 HEAD。
+- **运行语义：** SessionState 专用查询最多读取 129 条 user/assistant 可见行并返回时间正序；Builder 最多处理 128 条，发现更早历史后显式 PARTIAL；assistant 正文不投影；metadata 超限在解码前拒绝；证据引用最多 64 条并报告截断。完整历史 API 未变。
+- **当前应用版本：** `pubspec.yaml` 仍为 `2.0.0+8048`，Android applicationId 仍为 `com.nihaisha.nihaisha_app`；本地实际构建前仍须重新获取最新 master SHA 与 CI 终态，不能直接把 `805f...` 当作之后所有文档提交的最新 HEAD。
+- **设备状态：** PR #622 未连接或操作 Find N2，也未产生设备 TRACE。E4B 实际推理、GPU/CPU 各 20 轮、`state:7`、媒体、Activity/process restart、真实 KV Cache/context、覆盖升级、Keystore 与授权正向场景继续 MISSING / UNKNOWN / LOCAL ONLY；不因云端 CI 通过而提升。
+- **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED。
