@@ -5129,3 +5129,26 @@ PR HEAD 门禁证据：
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不纳入本轮验收范围。
 - **设备边界：** Find N2 GPU/CPU 各至少 20 轮、Gemma 4 E4B 实际推理、`state:7`、媒体、Activity/process restart、SQLite/Flutter/Native transcript 对照、真实 KV Cache/context 数值、覆盖升级和授权/Keystore 等场景仍按唯一 `docs/local-real-device-acceptance-handoff.md` 记录为 MISSING / UNKNOWN / LOCAL ONLY。不得修改该文件制造“设备收尾”状态。
 - **下一步放行：** 先完成本次文档同步 PR 的最终 HEAD Branch validation、Flutter regression、Android arm64/JVM、PR required gate 和 Fork License 验收。除此以外，在取得设备校准/TRACE 前不增加 Core-1 Token 预算实现或其他推测性 Native 运行时改造；全部云端门禁完成后，统一转入唯一 Find N2 本地验收交接。
+
+
+
+## 146. 2026-11-28 PR #620 后主线基线、五层收尾与开放 PR 复核（Task ID: DOC-AI-POST620-MASTER-SYNC-20261128）
+
+- **任务登记与分工：** 从完整基线 `master@9a929398e8b15fef57d8a3f749d68cbc4a5113e4` 建立独立分支 `docs/ai-post620-master-sync-20261128`，并先通过 Draft PR #621 登记任务，再实施文档同步。唯一 Owner 为 just2512（Integration + Architecture）。允许路径严格为 `docs/ai-layered-runtime-architecture.md` 与本执行台账；没有改动运行时代码、Workflow、授权实现或设备交接文件。
+- **当前仓库与代码基线：** 当前仓库文档 master 为 `9a929398e8b15fef57d8a3f749d68cbc4a5113e4`（PR #620 合并提交）。当前 AI 五层运行时代码基线仍为 `f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；PR #617（`b188aadbe10b91a2dd639e2c51e901039801e447`）和 PR #620 均为文档专用提交，不应把文档 HEAD 误记为新运行时代码。
+- **PR #620 精确 HEAD 自动验收：** PR 最终 HEAD 为 `331763a5544f5ac4bf499fdd2d549a8dfee8ede8`；Branch validation job `140862104727`、Flutter regression job `140862104447`、Android arm64/JVM job `140864111270`、PR required gate job `140865099452`、Fork License run `46107061082` 均 SUCCESS。五项结果均绑定上述同一 PR HEAD。
+- **PR #620 合并后主线 CI：** merge commit / master HEAD 为 `9a929398e8b15fef57d8a3f749d68cbc4a5113e4`。Flutter regression job `140869245983`、Android arm64/JVM job `140871145617`、Fork License run `46109373085` 均 SUCCESS。Push 事件的 Branch validation job `140869247091` 与 PR required gate job `140872191422` 为 SKIPPED；它们是 PR 事件门禁，不计 PASS，也不构成失败。
+- **master 保护状态：** PR #620 合并后公开 branch 响应仍返回 `protected=true`、`protection.enabled=true`、enforcement `everyone`，必需检查准确为 `PR required gate` 与 `Fork license inventory and boundary`。仓库管理员报告 required approvals 已设为 0；PR #620 无 review 记录且正常通过受保护合并操作，操作结果确认之前的审批阻塞已解除。当前 GitHub 集成仍不能读取完整 `/branches/master/protection`，因此审批数、strict、enforce_admins、强推/删除开关等未被 API 逐项独立读取；不得扩张成未经核验的 PASS。
+- **Core-0 到 Core-5 当前判定：** Core-0 契约与源码映射已完成；Core-1 云端 transcript/SessionState/dirty-KV/Reasoning Ledger/UNKNOWN 不重放和 Native restore envelope 边界已有代码与自动化证据；Core-2 当前约定范围的 CandidateEvidence、多源聚合、独立 RankedEvidenceSet/KEEP-DROP 和 golden regression 已完成；Core-3 五种主文本模式与图片/音频结构化 ReasoningRequest/Response 已接线，旧自由文本入口 fail-closed；Core-4 ACTION_PROPOSAL 仅允许 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian` 四项，需 App 显式确认，UNKNOWN 不重放；Core-5 20 轮知识问答与一次工具执行 E2E 仍是 fake Native/executor 的应用层测试，不代表真实 E4B。
+- **Native 多轮 / Core-1 未闭合边界：** 成功 transcript、Native context、SessionState、临时 RAG 与请求 Ledger 继续分离；历史恢复用户输入跨 MethodChannel 前已限定最近 60 条非空输入，单条格式化不超过 2,000 UTF-16、总量不超过 16,000 UTF-16，并携带显式截断 Boolean，Native 在 reset 前二次校验。KV Cache token 数与模型声明 maxContextTokens 只是只读观察，`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`；没有 Find N2 测量前不猜 App 可用输入 Token budget、输出预留、动态阈值或自动压缩。本轮云端复核未发现可确定复现的新 Native 运行时缺陷，因此不新开代码 PR。
+- **开放 PR 复核（以当前 master 与 compare API 为准）：**
+  - **PR #539 — BLOCKED：** `chore/remove-source-archaeology-residue-20261125` 相对当前 master ahead 4 / behind 209，34 个变更文件。除修改两份共享架构/台账外，还删除多份 AI 能力/来源审计、经典检索 golden review、经典来源 manifest 及其测试等文件。合并前必须逐项证明每份被删资料/测试已被替代且没有来源证据损失；当前不合并、不关闭，也不得覆盖本次文档同步。
+  - **PR #564 — NEEDS_REBASE：** `fix/android-launcher-icon-safe-scale-20261126` ahead 3 / behind 154，11 个变更文件，集中于 Launcher 图标资源、图标资源回归与品牌实机验收步骤。当前 PR API 曾返回 mergeable=true，但其 base 明显落后；需从最新 master 重审最终资源差异并重新运行适用 CI，静态安全区测试不替代 Find N2 遮罩截图。
+  - **PR #589 — NEEDS_REBASE：** `docs/about-origin-goals-audience-2026-11-27` ahead 12 / behind 29，5 个变更文件。已审读 About 页面增量：名称由来对应《天纪》《人纪》《地纪》，项目表述为离线优先学习工具，并排除“中医诊疗软件”等定位；内容与当前已确认产品边界一致。仍须基于最新 master 重审 `app_dialogs.dart`、测试和许可证清单差异后再验收，不从旧 HEAD 继承 CI。
+  - **PR #416 — BLOCKED / 保持 Draft：** `feature/pro-license-batch-1` ahead 36 / behind 446，22 个变更文件，覆盖授权协议/验签/离线签发、测试、Workflow、共享台账，并修改已退役的旧设备交接路径 `docs/find-n2-e4b-local-handover.md`。需基于最新主线重新审核授权范围、生产 Trust Anchor、Workflow 门禁和唯一设备交接归属；在此之前保持 Draft，不合并。
+  - 上述四个 PR 当前均没有未解决 review thread；PR #539/#416 含共享台账/架构路径，故在本次 #621 文档 single-writer 批次完成前不允许并发写入这两份共享文件。没有批量关闭或自动合并任何旧 PR。
+- **工作流 H：** 五层核心职责解耦的云端代码、自动化测试、架构映射、执行台账和主线 CI 已达到当前约定范围；整体仍为 `PARTIAL`，剩余为 Find N2 本地真实证据，不反向阻塞已完成的云端切片。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`；本轮没有建分支、实现或改变其状态。
+- **设备状态：** Find N2 GPU/CPU 各至少 20 轮、Gemma 4 E4B 实际推理、`state:7`、媒体、Activity/process restart、SQLite/Flutter/Native transcript 对照、真实 KV Cache/context 数值、覆盖升级和授权/Keystore 等仍为 MISSING / UNKNOWN / LOCAL ONLY。唯一设备交接文件 `docs/local-real-device-acceptance-handoff.md` 未修改；执行前必须重新 fetch 最新 master 并记录实际构建 SHA。
+- **下一步放行：** 先验收并合并 PR #621 的文档同步（所有五项 PR 门禁必须对其最终 HEAD 为 SUCCESS）。随后逐个决定旧 PR 是否重基/拆分/保留，不将它们合并为 AI 五层收尾的隐含依赖。除非后续审计找到可复现的云端 Native 缺陷，否则不新增 Core-1 运行时代码；完成云端收尾后统一交付 Find N2 本地验收。 
+
