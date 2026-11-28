@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/acupuncture_repository.dart';
@@ -34,7 +35,8 @@ const PageTransitionsTheme _pageTransitionsTheme = PageTransitionsTheme(
 
 /// 全局组件样式统一层：AppBar / Card / NavigationBar / ListTile / 输入框
 /// 的外观只在这里定义一次，页面无需各写各的，观感一致且全部引用设计 Token。
-ThemeData _buildTheme(Brightness brightness) {
+@visibleForTesting
+ThemeData buildAppTheme(Brightness brightness) {
   final scheme = AppColors.colorSchemeFor(brightness);
   final tokens = brightness == Brightness.dark ? AppColors.dark : AppColors.light;
 
@@ -225,8 +227,8 @@ class NiHaishaApp extends StatelessWidget {
             title: '研纪',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
-            theme: _buildTheme(Brightness.light),
-            darkTheme: _buildTheme(Brightness.dark),
+            theme: buildAppTheme(Brightness.light),
+            darkTheme: buildAppTheme(Brightness.dark),
             home: const HomeScreen(),
             // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
             // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
