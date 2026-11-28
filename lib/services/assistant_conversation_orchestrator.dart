@@ -1101,7 +1101,10 @@ class AssistantConversationOrchestrator {
     final hasMatchedMetaphysicsToolAction = metaphysicsDomainMatches.any(
       (tool) => tool.actionWords.any(text.contains),
     );
-    if ((pureMetaphysicsAliases.isNotEmpty || mentionsXiaoliurenPalace) &&
+    final isNonYunqiXiaoliurenPalaceCue =
+        mentionsXiaoliurenPalace && !isYunqiOnlyDomain;
+    if ((pureMetaphysicsAliases.isNotEmpty ||
+            isNonYunqiXiaoliurenPalaceCue) &&
         !hasExplicitMetaphysicsExecutionIntent &&
         !hasMatchedMetaphysicsToolAction &&
         !hasMetaphysicsKnowledgeCue &&

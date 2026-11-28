@@ -171,6 +171,34 @@ void main() {
       }
     });
 
+    test('五运六气领域优先于同句的小六壬宫名，独立宫名仍进入玄学', () {
+      final yunqiTermWithoutKnowledgeCue =
+          AssistantConversationOrchestrator.resolve(
+        query: '五运六气空亡',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(
+        yunqiTermWithoutKnowledgeCue.mode,
+        AssistantMode.automatic,
+      );
+      expect(yunqiTermWithoutKnowledgeCue.tool, isNull);
+
+      final yunqiKnowledgeQuestion =
+          AssistantConversationOrchestrator.resolve(
+        query: '五运六气空亡的含义是什么',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(yunqiKnowledgeQuestion.mode, AssistantMode.learning);
+      expect(yunqiKnowledgeQuestion.tool, isNull);
+
+      final palaceOnly = AssistantConversationOrchestrator.resolve(
+        query: '空亡',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(palaceOnly.mode, AssistantMode.metaphysics);
+      expect(palaceOnly.tool, isNull);
+    });
+
     test('工具选择待处理时的非五运六气术数知识问题仍进入玄学解释', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '八字十神的原理是什么？',

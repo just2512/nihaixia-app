@@ -1,9 +1,9 @@
 name: Flutter Quality Gate
 
 on:
-  # Run the extended gate for each master change; manual dispatch remains available.
-  push:
-    branches: [master]
+  # Automatic master acceptance is provided by flutter-tests.yml and the
+  # independent Fork License workflow. Keep this extended suite as a manual
+  # diagnostic entry point to avoid duplicate full Dart/Android/arm64 work.
   workflow_dispatch:
 
 permissions:
