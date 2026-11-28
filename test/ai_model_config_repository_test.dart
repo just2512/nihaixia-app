@@ -102,7 +102,7 @@ void main() {
         displayName: 'Provider',
         protocolAdapterId: 'chat-completions-v1',
         baseUrl: 'https://api.example.test/v1',
-        credentialRef: 'credential-ref-1',
+        credentialRef: 'aicred:v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       ),
     );
     await repository.saveModelConfig(cloudTextModel());
@@ -116,7 +116,7 @@ void main() {
 
     expect(
       (await repository.getProvider('provider-1'))?.credentialRef,
-      'credential-ref-1',
+      'aicred:v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     );
     expect(
       (await repository.getModelConfig('cloud-text-1'))?.modelIdentifier,

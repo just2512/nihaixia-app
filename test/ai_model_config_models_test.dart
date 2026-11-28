@@ -11,10 +11,10 @@ void main() {
         displayName: 'Example',
         protocolAdapterId: 'openai-chat-completions-v1',
         baseUrl: 'https://api.example.test/v1',
-        credentialRef: 'credential-ref-1',
+        credentialRef: 'aicred:v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       );
       final row = config.toDatabaseRow();
-      expect(row['credential_ref'], 'credential-ref-1');
+      expect(row['credential_ref'], 'aicred:v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
       expect(row.containsKey('api_key'), isFalse);
       expect(row.containsKey('secret'), isFalse);
     });
