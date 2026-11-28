@@ -252,6 +252,7 @@ void main() {
       String? tokenizerRevision = 'rev-1',
       int maxInputTokens = 512,
       int maxBatchItems = 16,
+      bool omitFingerprint = false,
     }) =>
         AiModelConfig(
           modelConfigId: 'local-embedding-validation',
@@ -260,7 +261,7 @@ void main() {
           runtimeKind: AiRuntimeKind.local,
           modelIdentifier: modelIdentifier ?? asset.modelIdentifier,
           localAssetId: asset.localAssetId,
-          modelFingerprint: modelFingerprint ?? asset.sha256,
+          modelFingerprint: omitFingerprint ? null : (modelFingerprint ?? asset.sha256),
           maxInputTokens: maxInputTokens,
           embeddingDimension: embeddingDimension,
           embeddingNormalization: embeddingNormalization,
@@ -276,7 +277,7 @@ void main() {
       throwsA(isA<StateError>()),
     );
     await expectLater(
-      repository.saveModelConfig(localEmbedding(modelFingerprint: null)),
+      repository.saveModelConfig(localEmbedding(omitFingerprint: true)),
       throwsA(isA<StateError>()),
     );
     await expectLater(
@@ -295,6 +296,73 @@ void main() {
     );
     await expectLater(
       repository.saveModelConfig(localEmbedding(maxInputTokens: 1024)),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('validates Local Reranker metadata against its referenced asset',
+      () async {
+    final asset = AiLocalModelAsset(
+      localAssetId: 'asset-reranker-1',
+      modelIdentifier: 'local-reranker-model',
+      taskKind: AiTaskKind.reranking,
+      runtimeAdapterId: 'reranker-runtime-v1',
+      modelFormat: 'tflite',
+      privateRelativePath: 'ai_models/reranker/model.tflite',
+      byteLength: 2048,
+      sha256: List.filled(64, 'c').join(),
+      manifestJson: '{"schema":1}',
+      installStatus: 'installed',
+      maxInputTokens: 4096,
+      maxCandidates: 20,
+      outputProtocolId: 'ordered-candidate-ids-v1',
+      tokenizerId: 'reranker-tokenizer',
+      tokenizerRevision: 'rev-1',
+    );
+    await repository.saveLocalAsset(asset);
+
+    AiModelConfig localReranker({
+      int maxCandidates = 20,
+      String outputProtocolId = 'ordered-candidate-ids-v1',
+      int maxInputTokens = 4096,
+      String? modelIdentifier,
+    }) =>
+        AiModelConfig(
+          modelConfigId: 'local-reranker-validation',
+          displayName: 'Local reranker validation',
+          taskKind: AiTaskKind.reranking,
+          runtimeKind: AiRuntimeKind.local,
+          modelIdentifier: modelIdentifier ?? asset.modelIdentifier,
+          localAssetId: asset.localAssetId,
+          modelFingerprint: asset.sha256,
+          maxInputTokens: maxInputTokens,
+          maxCandidates: maxCandidates,
+          maxCandidateTokens: 256,
+          outputProtocolId: outputProtocolId,
+          tokenizerId: 'reranker-tokenizer',
+          tokenizerRevision: 'rev-1',
+        );
+
+    await repository.saveModelConfig(localReranker());
+    await repository.deleteModelConfig('local-reranker-validation');
+    await expectLater(
+      repository.saveModelConfig(localReranker(maxCandidates: 40)),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(
+        localReranker(outputProtocolId: 'free-form-scores-v1'),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(localReranker(maxInputTokens: 8192)),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      repository.saveModelConfig(
+        localReranker(modelIdentifier: 'different-reranker'),
+      ),
       throwsA(isA<StateError>()),
     );
   });
