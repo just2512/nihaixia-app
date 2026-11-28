@@ -5065,3 +5065,13 @@ PR HEAD 门禁证据：
 - **回归：** Dart 覆盖最近 60 条、每条 2,000（包含来源标签）UTF-16、总计 16,000（包含标签）、emoji surrogate 边界及空/短列表；Kotlin 覆盖截断 Boolean 缺失/类型错误、数量、单条、聚合上限；Service wire contract 与 Screen/Native architecture tests 覆盖两条恢复路径。
 - **范围：** 不改变成功 transcript 12 个完整轮次/10,000 UTF-16、SessionState 准入、RAG/媒体/推理上下文隔离、Reasoning Ledger、Native Gate、Core-2 排序、Core-3 Response 协议或 Core-4 四项 capability allowlist。Find N2 实际 E4B/GPU/CPU、Activity/process restart 仍为 MISSING / UNKNOWN。
 - **验收：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM、Fork License 为准；Branch validation 若为 SKIPPED 不计 PASS。
+
+
+## 140. 2026-11-28 Core-3 ReasoningResponse v1 schemaVersion 严格整数校验
+
+- **主线基线：** PR #610 合并后的 `master@bcfa2e36440689d7d5cd12abfd80cf191c6d66dc`。工作分支 `fix/core3-reasoning-response-integer-schema-version-20261128` 已从旧基线 `85f9a23acb07341af3fbfdd38275831f2a2f4c48` 重基；本切片原提交 `dfb0d7aae3555f8ba47bbfa09118e16b13e29b82` 只包含 decoder 与负向测试两处修改。
+- **缺陷：** `ReasoningResponseCodec` 原先只用 `payload['schemaVersion'] != 1` 判断版本。JSON `1.0` 解码为浮点数，数值比较不能作为严格 schema 类型校验，可能让违反 v1 字段类型合同的载荷通过。
+- **修复：** decoder 必须先检查 `schemaVersion is int`，再检查值严格为 `1`。不接受 `1.0`、字符串、缺失值或其他版本；统一以 `REASONING_RESPONSE_SCHEMA_VERSION_UNSUPPORTED` 返回 `PARSE_FAILED`。不放宽字段白名单、requestId、evidence ID 或 response kind/status 校验。
+- **回归：** 增加 `schemaVersion=1.0` 的显式负向用例，并保留缺失字段、未知字段、`schemaVersion=2` 等现有测试；合法整数 v1 仍通过。
+- **范围：** 不修改 Native 主发送链、ReasoningRequest、ACTION_PROPOSAL 用户确认、Core-4 capability 白名单、Core-1 记忆与 Request Ledger、Core-2 排序及设备流程；不新增服务/Agent/数据库/授权 Gate。Find N2 真机 E4B 行为继续 MISSING / UNKNOWN。
+- **CI：** 新分支最终 PR HEAD 的 Flutter 静态分析和全量回归、Android arm64/JVM、Fork License 需逐项核实。Branch validation 若为 SKIPPED 不计 PASS；不得继承原始分支旧 HEAD 的结果。

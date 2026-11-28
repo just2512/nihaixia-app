@@ -129,10 +129,15 @@ void main() {
     final missing = answerPayload()..remove('segments');
     final unknown = answerPayload()..['authorized'] = true;
     final unsupported = answerPayload()..['schemaVersion'] = 2;
+    final floatingPointVersion = answerPayload()..['schemaVersion'] = 1.0;
 
     expect(decode(missing).status, ReasoningResponseStatus.parseFailed);
     expect(decode(unknown).status, ReasoningResponseStatus.parseFailed);
     expect(decode(unsupported).status, ReasoningResponseStatus.parseFailed);
+    expect(
+      decode(floatingPointVersion).status,
+      ReasoningResponseStatus.parseFailed,
+    );
   });
 
   test('rejects model claims of EMPTY, PARSE_FAILED, or UNKNOWN', () {
