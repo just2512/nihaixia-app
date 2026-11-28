@@ -192,15 +192,21 @@ void main() {
       throwsA(isA<StateError>()),
     );
 
-    await repository.saveTaskSelection(
-      AiTaskModelSelection(
-        taskKind: AiTaskKind.embedding,
-        selectionMode: AiTaskModelSelectionMode.deterministicUnconfigured,
+    await repository.saveModelConfig(
+      AiModelConfig(
+        modelConfigId: 'cloud-text-unselected',
+        displayName: 'Unselected cloud text',
+        taskKind: AiTaskKind.textReasoning,
+        runtimeKind: AiRuntimeKind.cloud,
+        modelIdentifier: 'chat-model-unselected',
+        providerId: 'provider-1',
+        apiProtocolId: 'chat-completions-v1',
+        contextWindowTokens: 8192,
+        maxOutputTokens: 1024,
       ),
     );
-    await repository.deleteModelConfig('cloud-text-1');
-    await repository.deleteProvider('provider-1');
-
+    // An unselected model can be deleted without changing the active selection.
+    await repository.deleteModelConfig('cloud-text-unselected');
     final asset = await saveEmbeddingAsset();
     await repository.saveModelConfig(
       AiModelConfig(
