@@ -62,6 +62,7 @@ Remove the Vault integration only after any stored secrets have been explicitly 
 - Windows uses the plugin's Windows implementation with DPAPI-protected encrypted local storage. This is not a claim of hardware-backed storage.
 - Credential references use the versioned `aicred:v1:` prefix plus 256 bits from `Random.secure()`. Only opaque references are intended to leave the Vault.
 - Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
+- Vault operations are serialized across instances within the Dart isolate. This compensates for the pinned Windows federated implementation version predating its upstream concurrent read/write fix; a cross-instance concurrency regression test guards the boundary.
 - Focused tests now cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, storage errors without underlying exception messages, empty stored values, overwrite semantics and unsupported platforms.
 - **Validation remains pending:** the lockfile still needs an actual Pub resolution; local Dart/Flutter execution has not been performed in this environment. No test or CI result is marked PASS by this record.
 
