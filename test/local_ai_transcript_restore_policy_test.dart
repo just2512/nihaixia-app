@@ -160,7 +160,8 @@ void main() {
 
     test('projects only the latest sixty user messages and preserves truncation', () {
       final projection = LocalAiTranscriptRestorePolicy.projectUserMessages(
-        (1..75).map((index) => 'user-$index'),
+        Iterable<int>.generate(75, (index) => index + 1)
+            .map((index) => 'user-$index'),
       );
 
       expect(projection.messages, hasLength(60));

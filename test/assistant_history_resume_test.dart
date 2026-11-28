@@ -52,6 +52,7 @@ class _HistoryResumeService extends LocalAiService {
     required int conversationId,
     required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
+    required bool userMessagesTruncated,
   }) async {
     restoredConversationId = conversationId;
     restoredTranscript = restore.transcript;

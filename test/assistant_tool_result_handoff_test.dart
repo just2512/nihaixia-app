@@ -270,6 +270,7 @@ class _RecordingAssistantService extends LocalAiService {
     required int conversationId,
     required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
+    required bool userMessagesTruncated,
   }) async {
     restoredTranscript = restore.transcript;
     restoredUserMessages = List<String>.from(userMessages);
