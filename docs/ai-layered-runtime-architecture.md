@@ -512,7 +512,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ---
 
-**最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、用户选定的本地/云端模型负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态。模型的本地/云端运行时、任务键、用户开关、唯一 ai_access 和上下文配置遵循本文件 §6 及专业版架构 v1.4；Embedding/Reranker 已被纳入配置范围，但不因此视为已经实现。
+**最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、用户选定的本地/云端模型负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态。模型的本地/云端运行时、任务键、用户开关、唯一 ai_access 和上下文配置遵循本文件 §10 及专业版架构 v1.4；Embedding/Reranker 已被纳入配置范围，但不因此视为已经实现。
 
 
 ### 5.3 历史快照（2026-11-26，后续状态以 §5.5 为准）：Core-3 / Core-4 早期切片
@@ -729,7 +729,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - **回归：** `test/reasoning_response_codec_test.dart` 覆盖整数 v1 正常路径、缺失/未知字段、不支持版本 `2`，以及浮点版本 `1.0` 必须拒绝。
 - **边界：** 不改变 ReasoningRequest、requestId/evidence ID 校验、响应 kind/status、ACTION_PROPOSAL 确认/执行门禁、Native 调用链、业务白名单或记忆层；本修复不是 Core-3 所有设备行为的证明。Find N2 真实 E4B/媒体/多轮结果仍留在最终设备验收，未知状态继续 MISSING / UNKNOWN。
 - **验收：** 以该独立 PR 最终 HEAD 的 Flutter 静态分析/全量回归、Android arm64/JVM 和 Fork License 为准；SKIPPED 不计 PASS。
-## 6. 2026-11-28 v1.4 本地/云端统一模型运行时补充（当前规范）
+## 10. 2026-11-28 v1.4 本地/云端统一模型运行时补充（当前规范）
 
 > 本节与 docs/pro-edition-architecture-constraints.md §18 同步，优先于本文早期只描述 E4B、未授权云端模型或将 Embedding/Reranker 延后的历史表述。历史任务记录保留作为时间轨迹，不再自动构成当前禁止项。
 
