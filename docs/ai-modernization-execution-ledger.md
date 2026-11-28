@@ -5116,3 +5116,16 @@ PR HEAD 门禁证据：
 - **边界：** 不改五层 AI 合同、Reasoning DTO、知识召回/排序、SessionState、业务执行或 UI 产品定位；这是一项确定性模式路由优先级修复，不是新增 Agent 或工具执行权限。
 
 
+## 145. 2026-11-28 PR #617 合并后 AI 云端收尾、master 保护与主线同步
+
+- **当前仓库基线：** PR #617 已合并，当前仓库 `master@b188aadbe10b91a2dd639e2c51e901039801e447`。PR #617 最终 HEAD `9f87ad7d8f339988700161c74ca6b0f24394d033`，merge commit 为上述 master SHA；该 PR 仅更新架构文档与本执行台账，没有运行时代码、Workflow、许可证清单或设备交接文件变更。
+- **运行时代码基线：** 当前 AI 五层运行时代码的最新变化仍落在 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；PR #617 是其后的文档专用提交。因此不能把文档提交误称为新的运行时代码批次。
+- **PR #617 精确 HEAD 自动验收：** Branch validation job `140854181797`、Flutter regression job `140854181627`、Android arm64/JVM job `140855769369`、PR required gate job `140856635902`、Fork License run `46104525606` 均 SUCCESS，全部对应 PR 最终 HEAD `9f87ad7d8f339988700161c74ca6b0f24394d033`。
+- **PR #617 合并后主线 CI：** Flutter tests Push run `46105373769` 已完成；Flutter regression job `140856830001` SUCCESS，Android arm64/JVM job `140858889845` SUCCESS；独立 Fork License run `46105373752` SUCCESS。Push 事件的 Branch validation job `140856831095` 与 PR required gate job `140859960445` 为 SKIPPED，不计 PASS；PR required gate 应在后续 PR 事件中验收。
+- **master 分支保护状态：** 仓库管理员已确认按本规范 §6.2 的网页方法完成 classic branch protection。公开 `branches/master` 响应独立确认 `protected=true`、`protection.enabled=true`、required-check enforcement 为 `everyone`，且必需检查精确为 `PR required gate` 与 `Fork license inventory and boundary`（GitHub Actions App）。当前 GitHub 集成连接无法读取完整 `/branches/master/protection` 详情；`strict`、PR review 对象、`enforce_admins`、force-push/deletion 等字段未能通过该 API 独立复核。用户报告已按方法一完成全部网页配置；本台账不把不可读取字段表述为 API 独立验证通过。
+- **Native 多轮 / Core-1：** PR #610 的跨 MethodChannel 用户自述投影上限、显式截断 Boolean 和 Native reset 前二次校验已进入主线。当前云端确定性记忆隔离范围已有 transcript、SessionState、dirty-KV、Reasoning Ledger、UNKNOWN 不重放及相应 Flutter/Kotlin 自动化证据；本轮源码复核未发现新的、可由云端确定性复现的缺陷，因此不新开运行时代码分支。KV Cache token 只读观测不等于 App 可用输入 Token 预算；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED` 维持原状，不猜阈值、不新增自动摘要/压缩。
+- **Core-0 至 Core-5：** 云端约定范围完成；Core-2 不重复建设召回/排序，不引入无证据 Embedding/Reranker；Core-3 保留辅助窄 DTO，拒绝旧自由文本入口；Core-4 白名单仍只有 `dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian`，显式确认及 UNKNOWN 不重放边界不变；Core-5 20 轮知识问答和单次工具执行 E2E 是 fake Native/executor 的应用层验证，不替代真实模型/设备证明。
+- **工作流 H：** 云端代码、自动化测试、架构映射、执行台账和 CI 已达到当前约定范围；整体仍为 `PARTIAL`，唯一剩余收尾是 Find N2 本地真实证据，不反向阻塞云端。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不纳入本轮验收范围。
+- **设备边界：** Find N2 GPU/CPU 各至少 20 轮、Gemma 4 E4B 实际推理、`state:7`、媒体、Activity/process restart、SQLite/Flutter/Native transcript 对照、真实 KV Cache/context 数值、覆盖升级和授权/Keystore 等场景仍按唯一 `docs/local-real-device-acceptance-handoff.md` 记录为 MISSING / UNKNOWN / LOCAL ONLY。不得修改该文件制造“设备收尾”状态。
+- **下一步放行：** 先完成本次文档同步 PR 的最终 HEAD Branch validation、Flutter regression、Android arm64/JVM、PR required gate 和 Fork License 验收。除此以外，在取得设备校准/TRACE 前不增加 Core-1 Token 预算实现或其他推测性 Native 运行时改造；全部云端门禁完成后，统一转入唯一 Find N2 本地验收交接。
