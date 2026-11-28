@@ -348,7 +348,8 @@ class DatabaseHelper implements AssistantConversationStore {
       CREATE TABLE ai_local_model_assets(
         local_asset_id TEXT PRIMARY KEY,
         model_identifier TEXT NOT NULL,
-        task_kind TEXT NOT NULL CHECK(task_kind IN ('embedding', 'reranking')),
+        task_kind TEXT NOT NULL CHECK(task_kind IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
+        asset_source TEXT NOT NULL CHECK(asset_source IN ('user_import', 'legacy_native')),
         runtime_adapter_id TEXT NOT NULL,
         model_format TEXT NOT NULL,
         private_relative_path TEXT NOT NULL,
@@ -360,6 +361,8 @@ class DatabaseHelper implements AssistantConversationStore {
         tokenizer_id TEXT,
         tokenizer_revision TEXT,
         max_input_tokens INTEGER,
+        context_window_tokens INTEGER,
+        max_output_tokens INTEGER,
         embedding_dimension INTEGER,
         embedding_normalization TEXT,
         max_batch_items INTEGER,
@@ -368,7 +371,11 @@ class DatabaseHelper implements AssistantConversationStore {
         license_id TEXT,
         license_url TEXT,
         notice TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        CHECK(
+          (asset_source = 'user_import' AND task_kind IN ('embedding', 'reranking'))
+          OR (asset_source = 'legacy_native' AND task_kind = 'text_reasoning')
+        )
       )
     ''');
     await db.execute('''

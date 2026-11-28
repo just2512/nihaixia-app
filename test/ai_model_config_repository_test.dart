@@ -281,6 +281,45 @@ void main() {
     );
   });
 
+  test('represents legacy E4B asset without claiming it is loaded', () async {
+    final asset = AiLocalModelAsset(
+      localAssetId: 'legacy-e4b-fixed-model',
+      modelIdentifier: 'gemma-4-E4B-it',
+      taskKind: AiTaskKind.textReasoning,
+      assetSource: 'legacy_native',
+      runtimeAdapterId: 'litert-lm-e4b-native',
+      modelFormat: 'litertlm',
+      privateRelativePath: 'ai_models/gemma-4-E4B-it.litertlm',
+      byteLength: 3659530240,
+      sha256: '0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0',
+      manifestJson: '{"compatibility":"legacy-e4b-native"}',
+      installStatus: 'unknown',
+      contextWindowTokens: 8192,
+      maxOutputTokens: 1024,
+      modelRevision: '28299f30ee4d43294517a4ac93abd6163412f07f',
+    );
+    await repository.saveLocalAsset(asset);
+    await repository.saveModelConfig(
+      AiModelConfig(
+        modelConfigId: 'legacy-e4b-text',
+        displayName: 'Gemma 4 E4B (existing Native runtime)',
+        taskKind: AiTaskKind.textReasoning,
+        runtimeKind: AiRuntimeKind.local,
+        modelIdentifier: asset.modelIdentifier,
+        localAssetId: asset.localAssetId,
+        modelFingerprint: asset.sha256,
+        contextWindowTokens: 8192,
+        maxOutputTokens: 1024,
+        enabled: false,
+      ),
+    );
+
+    final saved = await repository.getLocalAsset(asset.localAssetId);
+    expect(saved?.assetSource, 'legacy_native');
+    expect(saved?.installStatus, 'unknown');
+    expect((await repository.getModelConfig('legacy-e4b-text'))?.enabled, isFalse);
+  });
+
   test('migrates schema v8 to v9 and preserves existing user settings',
       () async {
     final legacyPath = directory.path + '/legacy.db';
