@@ -1,11 +1,10 @@
-# 研纪专业版架构约束（v1.3）
+# 研纪专业版架构约束（v1.4）
 
-> **状态：架构冻结稿；后续专业版授权实现必须遵守。**  
-> 冻结日期：2026-11-24  
+> **状态：v1.3 专业版授权约束 + v1.4 本地/云端统一 AI 配置修订；后续授权与模型接入必须遵守。**  
+> 修订日期：2026-11-28  
 > 适用仓库：`just2512/nihaixia-app`  
-> 当前文档分支基线：`master@8f5091c08f10743e7ef3322c86f50fc2e296fd78`  
-> 实施时必须重新读取当时的 `master` HEAD；本文记录的 2026-11-23 初始核验基线不替代后续实施分支基线。  
-> 本文只冻结设计和验收约束，不代表任何尚未实施的能力已经通过测试。
+> 本轮文档基线：`master@8f947cdb481c31c86d607c0d4683f8dc69f85272`  
+> v1.4 仅增加统一 AI 开关、本地/云端双运行时及任务模型配置决策；不代表相关运行时代码、Embedding/Reranker 本地引擎或 Find N2 实测已经完成。后续实施必须重新读取届时最新 `master` SHA。
 
 ## 0. 目的、范围与规范效力
 
@@ -804,3 +803,248 @@ Release CI 必须同时包含：
 ---
 
 **v1.3 取代 v1.2 中多 Feature 业务收费门禁的设计；v1.2 仍作为历史决策记录。本文是研纪专业版授权后续工程实施的架构约束依据。**
+
+
+## 18. 2026-11-28 本地/云端统一模型配置与专业版 AI 总开关（v1.4）
+
+> **本节是 v1.3 的正式架构修订。** 若本节与 §1–§17 中“AI 权益仅代表 Native LiteRT”或“唯一收费门禁只能覆盖 Native LiteRT”的表述冲突，以本节为准。旧章节保留为 v1.3 决策记录，不代表本地/云端统一 AI 产品边界。协议 Token 的字段、签名格式、协议修订号和旧 Token 兼容规则均不因本节自动改变。
+
+### 18.1 产品和运行时边界
+
+研纪 AI 采用**本地与云端双运行时**。用户在设置中决定是否启用 AI、配置本地模型或云端供应商，并按任务能力指定模型。App 忠实使用用户保存的配置；不根据模型名称推断能力，不执行能力探测，不擅自寻找替代模型。
+
+本架构不按问诊、学习、工具、玄学等助手角色绑定不同模型。助手场景共享任务能力配置；场景级模型覆盖属于后续独立需求，不进入首期范围。
+
+本地与云端是同级可选运行时，不存在“云端优先”或“本地优先”的全局自动策略：
+- 本地模型通过对应本地运行时 Adapter 执行。现有 Gemma 4 E4B 仍使用 LocalAiService、Android Native LiteRT-LM Engine/Conversation、现有 GPU/CPU 选择和串行生命周期；不得将云端 HTTP 调用并入 Native E4B 队列。
+- 云端模型通过供应商 Adapter 发送 HTTP 请求；不调用 Native LiteRT，也不借用 AiModelAccessGate 作为云端 HTTP 实现。
+- ReasoningRequest、ReasoningResponse、现有严格 Codec、来源校验、会话记忆和确定性业务执行边界继续作为统一推理合同。具体 Adapter 负责供应商载荷转换，不改变 App 的来源与执行权威边界。
+- 五层仍是职责边界，不因增加模型运行时而新建 Agent、DAG、第二套会话库或替代业务规则。
+
+### 18.2 一个专业版权益 + 一个用户 AI 总开关
+
+运行时仍只有一个签名授权权益 ai_access，不新增 cloud_ai_access、embedding_access、reranker_access 或按任务拆分的付费 Feature。
+
+设置页提供统一的“启用 AI 功能”开关。它是用户偏好，不是授权事实，也不能自行授予专业权益。
+
+统一可用条件：
+
+    aiEnabledForRuntime =
+      EntitlementService.snapshot.aiAccess == true
+      AND userAiEnabled == true
+      AND entitlementStatus is currently usable
+
+强制规则：
+1. 非专业版、授权检查中、授权无效、授权存储/验签暂不可用时，用户不能开启 AI；所有本地和云端模型调用都必须 fail-closed。
+2. 专业版有效但用户关闭 AI 时，禁止发起新的本地模型、云端 LLM、多模态模型、Embedding 和 Reranker 调用。
+3. 专业版有效且用户开启 AI 后，才允许按照模型配置发起上述调用。
+4. 新安装或缺少已保存偏好时，AI 总开关默认关闭；升级安装保留已保存设置。专业版授权恢复不自动把用户开关改为开启。
+5. 关闭 AI 不删除模型文件、供应商配置、API Key、索引、会话或历史数据。Native 已加载模型按现有串行队列安全释放；对已经发出且供应商可能已接收的 HTTP 请求，不谎称可以撤回，阻止后续请求并保留实际结果状态。
+6. 授权失效与用户关闭开关都保留用户配置。恢复授权后仍遵守用户最后保存的开关状态。
+7. 确定性业务、阅读、书签、本地资料浏览，以及未启用模型检索时的既有确定性知识召回/排序，不因 AI 开关关闭或专业版失效而被禁用。
+
+职责边界：
+- EntitlementService 继续是专业版授权唯一事实来源；不得在 SettingsRepository、SQLite、Provider Repository 或 UI 中保存可独立授予专业版的 is_pro / cloudAccess。
+- 用户 AI 开关只保存为普通用户偏好；其值必须与授权结果取逻辑 AND，不能绕过授权。
+- Android AiModelAccessGate 保留为 Native LiteRT 模型加载/推理的最终边界，并由统一 AI 状态同步。它不处理云端 HTTP，也不替代 Dart 层的云端调用前检查。
+- 统一模型 Gateway/任务入口必须在每次 AI 调用前检查同一 aiEnabledForRuntime。云端 Adapter 不得成为绕过该检查的可直接调用入口。
+- Headless Dispatcher、工具参数校验和确定性业务执行仍按既有合同执行；AI 开关不收费或重写纯确定性工具，但关闭 AI 后不得再让模型生成动作提案。
+
+### 18.3 供应商、模型与任务能力配置
+
+设置页配置分为供应商/模型管理、默认推理模型、任务能力模型和 AI 总开关。模型由用户选择，不显示每次调用的路由原因或额外的 ResolvedRoute 详情。
+
+首期任务能力键固定为：
+
+| 任务键 | 模型类型 | 配置规则 | 未单独配置时 |
+|---|---|---|---|
+| text_reasoning | 生成式语言模型 | 必须配置一个默认推理模型（可选本地或云端） | 没有默认模型时明确提示未配置，不自动找模型 |
+| image_understanding | 支持图像输入的生成式模型 | 可指定本地或云端模型 | 跟随默认推理模型；实际接口不支持时明确提示 |
+| audio_understanding | 支持音频输入的生成式模型 | 可指定本地或云端模型 | 跟随默认推理模型；实际接口不支持时明确提示 |
+| embedding | 向量嵌入模型 | 可指定本地或云端专用模型 | 不调用模型，保持现有确定性召回 |
+| reranking | 候选重排模型 | 可指定本地或云端专用模型 | 不调用模型，保持现有确定性排序 |
+
+约束：
+- 每种任务模型都允许选择已配置的本地模型或云端模型；Embedding 和 Reranker 必须同时建设本地模型与云端模型的配置、存储和实际调用路径，不得只完成云端。
+- 图片和音频任务默认继承默认推理模型。继承只表示按用户配置向同一模型发起该模态请求，不表示 App 已验证它支持该模态。供应商或本地运行时返回不支持时，明确向用户提示；不自动改用 E4B、不切换其他云端供应商。
+- Embedding/Reranker 是独立任务，不继承普通文本推理模型；不得把普通聊天模型默认当作向量模型或重排模型。
+- 用户选择的具体模型及其任务配置由设置页持久化；模型列表 API 只用于获取供应商实际返回的模型 ID/展示名。不能把模型列表存在当成能力声明。
+- 不建设模型能力探测、探针、内置模型能力表、基于模型名称的自动判断或自动确权流程。模型不支持时，以实际调用返回的错误为准。
+- 不显示每轮实际模型路由明细、路由原因或能力证据面板；普通错误只说明当前任务配置的模型不能完成该任务及相应错误。
+- 按助手场景绑定不同 LLM 延后，不在首期设置中开放。
+
+### 18.4 默认模型、显式任务模型与失败行为
+
+ModelCapabilityResolver 只解析用户配置，不探测模型能力，不根据模型元数据或名称改写用户选择。
+
+静态配置解析：
+1. text_reasoning 使用用户配置的默认推理模型；未配置则返回“默认推理模型未配置”。
+2. image_understanding / audio_understanding 有专用任务模型时使用专用模型；未配置时使用默认推理模型。
+3. embedding / reranking 有专用任务模型时使用所选模型；未配置时分别维持既有确定性召回/排序。
+4. 配置引用的供应商、凭证或本地模型文件不存在时，返回可操作的配置错误；不得静默改指向默认模型或其他供应商。用户主动将任务设为“跟随默认”属于配置继承，不是运行期自动降级。
+5. 模型被删除或凭证丢失后，相关任务显示未配置/凭证缺失，不能崩溃，也不能自动选取另一模型。
+
+运行期行为：
+- 一旦按配置选定模型并发起请求，HTTP/Native 调用失败、模型不支持、鉴权失败、配额不足、参数不兼容或结构化输出解析失败，均返回明确错误，不在异常处理分支自动切换到其他模型。
+- 禁止云端供应商 A 自动切换到云端供应商 B；禁止云端失败后静默切回本地；禁止本地失败后自动上传云端。
+- 不自动执行第二次推理来修复 JSON/Codec 失败。确需重新请求时必须由用户主动再次发送；不得重复计费或将失败载荷写入成功 transcript。
+- 请求已发出但连接中断、超时或客户端未收到最终响应，可能已被供应商处理时标记 UNKNOWN；不自动重放，不自动换模型。
+- HTTP 响应明确表示任务不支持时，给出任务/模型不支持提示。实际 API 错误才是反馈，不提前探测或保证供应商能力。
+- 现有 ReasoningResponseCodec 继续严格校验；结构化响应不合格时拒绝提交成功回合，维持现有 finalizeReasoningTurn / rejectReasoningTurn 双阶段提交语义。
+
+### 18.5 Embedding：本地与云端均为首期任务能力
+
+Embedding 必须作为知识召回层的真实可配置模型能力实现，不是仅在设置页增加下拉框。
+
+调用链：
+    Knowledge query / source chunk
+      -> configured local or cloud Embedding Adapter
+      -> numeric vector + model identity/version/dimension
+      -> App-owned local embedding index
+      -> CandidateEvidence with existing sourceId/chunkId/locator
+      -> existing multi-source aggregation and evidence validation
+
+数据和索引约束：
+- 查询向量和文档向量必须来自同一兼容的模型身份、模型版本、向量维度、归一化/距离配置；不允许将不同模型空间的向量混用。
+- 每个 Embedding 索引必须记录至少：provider/runtime、模型配置 ID、模型 ID 或本地模型指纹、模型版本/修订、向量维度、归一化策略、索引 schema 版本、被嵌入内容的稳定 source/chunk ID、内容哈希和索引 generation。
+- 切换 Embedding 模型或改变维度/归一化策略时，建立新 generation 并重新嵌入对应资料。新 generation 完整构建并通过一致性检查后再原子切换活动索引；旧 generation 在切换成功前保留，失败不得破坏现有可用检索。
+- 索引数据是派生缓存，不是来源事实。原始知识正文、sourceId、verificationStatus、locator 和资料版本仍由 App 原数据层管理。
+- 模型输出向量必须校验有限数值、维度、空向量和协议返回结构；向量相似度只代表当前检索相关性信号，不代表医学正确性、来源权威或事实置信度。
+- Embedding 命中只能形成 CandidateEvidence，必须继续进入现有来源身份检查、证据聚合和排序边界；模型不得生成 sourceId 或伪造本地条目。
+- 没有 Embedding 配置时，现有关键词、实体、别名和结构化本地检索行为保持不变。显式配置后实际调用所选 Embedding；该模型调用失败必须如实报告召回失败，不伪装成 Embedding 成功，也不静默切换到其他 Embedding。
+- 向量索引存储/检索方案先在现有 SQLite/本地存储边界内测量数据规模、构建耗时、查询耗时、内存和文件体积；只有测试证明现有存储/检索结构不足，才单独提出引入额外向量数据库/索引依赖的决策。不能因已允许 Embedding 就自动引入新数据库。
+
+### 18.6 Reranker：本地与云端均为首期任务能力
+
+Reranker 必须作为知识证据排序层的真实可配置模型能力实现。
+
+调用链：
+    existing retrieval channels
+      -> bounded CandidateEvidence list
+      -> configured local or cloud Reranker Adapter
+      -> ordered candidate IDs
+      -> App verifies IDs against input candidate set
+      -> RankedEvidenceSet
+      -> existing source resolution and context builder
+
+约束：
+- Reranker 只能重排本轮实际召回且已提供给它的候选；不能创建候选、添加 sourceId、改写正文、修改来源版本、来源类别或 verificationStatus。
+- App 必须校验返回候选 ID 全部属于本轮输入集合、没有重复/未知 ID、排序输出符合合同；不接受模型自报的来源可信度或医学正确性分数。
+- Reranker 的排序结果只决定当前候选的相对顺序；不得替代来源校验，也不得把相关性分数展示/解释成事实置信度。
+- 没有 Reranker 配置时，继续现有 SourceAwareLegacyEvidenceRanker 确定性排序和黄金行为；显式配置后调用所选本地/云端 Reranker。所选模型失败或输出不符合合同，记录该次排序失败并提示用户，不自动切换另一个 Reranker 或将失败伪装为成功。
+- 现有 CandidateEvidence、MultiSourceEvidencePipeline、RankedEvidenceSet 和 source resolver 是复用基础；不得为 Reranker 重建新一套知识库、来源体系或排序状态库。
+
+### 18.7 本地 Embedding / Reranker 模型运行时
+
+本地 Embedding 与本地 Reranker 必须作为真实任务模型配置和本地运行时接入，不得因为 E4B 已接入 LiteRT-LM 就假定这两类模型可以使用同一引擎。
+
+- 本地模型目录应能区分 LLM、IMAGE/AUDIO（若由独立本地模型承担）、EMBEDDING、RERANKER 等模型用途；同一模型文件可以被多个任务引用，但实际运行时必须通过该模型格式对应的 Adapter 加载。
+- 每种本地模型需明确模型格式、运行库、Tokenizer/预处理、输入长度、输出维度/排序合同、设备后端、内存占用、关闭/释放方式和模型文件完整性验证。未被真实 runtime 支持的文件类型不能仅因导入成功就标记可用。
+- 现有 LocalAiService / Native E4B Engine 仍只承担当前 E4B 已实现的推理路径；不要把 Embedding/Reranker 请求送入 E4B 的普通聊天接口。
+- 当前 master@8f947cdb 的目录/源码审计没有找到可确认的独立本地 Embedding 或 Reranker 运行时调用链。此项当前状态为 MISSING / NEEDS LOCAL AUDIT，不能写成已实现；由独立 Local 工作流核对 LiteRT-LM/其他兼容运行库、模型格式、Find N2 资源和性能后，形成最小实现方案。
+- 本地 Embedding/Reranker 的模型导入、文件存储与 SHA 校验、模型配置选择、运行时创建/释放、索引构建/查询、错误状态和测试必须与云端 Adapter 分开验收；不得将云端 Mock 测试作为本地模型实际运行证据。
+- 新增依赖、独立模型目录、数据库 schema/index、下载或模型分发服务均须按仓库规则先给出收益/风险、数据规模与设备资源证据、替代方案和回滚路径；没有用户决策前不得扩张基础设施。
+
+### 18.8 生成模型上下文窗口配置
+
+默认推理、独立图片理解和独立音频理解若属于生成式模型，每个模型配置可保存用户声明的 contextWindowTokens，并可设置 maxOutputTokens。Embedding/Reranker 不使用生成模型上下文窗口设置。
+
+- 设置页可提供常见预设及自定义整数 Token 数（例如 16K、32K、64K、128K、200K、256K、512K、1M）；预设只是方便输入的配置值，不是 App 对供应商能力的保证。
+- 用户按所购模型供应商的规格填写；App 不读取模型名称推断窗口、不主动探测，也不在供应商不支持时静默改小、改模型或换供应商。
+- 云端 Adapter 必须按配置的上下文预算组装本轮输入：系统提示、当前输入、已选完整会话历史、检索证据和工具结果都属于同一预算；输出预留单独计入 maxOutputTokens。超出用户配置预算时按完整轮次/证据块边界裁剪并明确记录遗漏，不得任意切断来源或把字符数冒充 Token 数。
+- Token 计数必须使用对应模型/供应商可用的 Tokenizer 或实际运行时 token 统计。若当前无法准确取得 Token 数，显式记录 UNKNOWN；不得以固定字符比例宣称精确 Token 预算。请求因上下文超限被供应商拒绝时，明确返回错误，不偷偷换模型或重放。
+- 对本地模型，用户输入值不得超过模型声明、Native Runtime 限制和设备实测可用预算中的实际边界。现有 E4B 的 ModelInfo.maxContextTokens() 与 KV Cache token 数只是只读观测，不代表 Find N2 可稳定使用的 App 输入预算；在真实设备校准前继续保留 NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED，不将 1M 设置强加给 E4B。
+- 模型上下文窗口不等于长期记忆。会话持久化、跨进程 transcript 恢复、SessionState provenance 和既有会话边界继续由现有会话体系管理；不能因云端模型声明 1M 就无限重放 SQLite 历史或放宽用户确认/执行状态约束。
+- 当前本地 Native 成功 transcript 的 12 个完整轮次/10,000 UTF-16 限制属于 E4B 恢复合同，不能无测试地套用或删除；云端长上下文需单独实现模型 token budget 下的完整轮次投影和证据预算。
+
+### 18.9 供应商和凭证的最小边界
+
+- 一个供应商可以有多个独立连接配置；每个连接包含用户填写的 Base URL、协议适配类型、脱敏显示名称、模型 ID 清单和凭证引用。模型目录仅表示供应商返回了哪些 ID，不代表模型支持何种输入能力。
+- 支持供应商模型列表接口时自动获取模型 ID；不支持时允许手动填写模型 ID。连接测试只验证 API Key/地址/接口连通，不调用图片、音频、Embedding、Reranker 探针，也不产生隐式模型推理费用。
+- API Key 不得明文存入 user_settings/SQLite、日志、TRACE、异常或 PR；凭证由独立 ProviderCredentialVault 保护，不复用 LicenseKeystore 的设备签名私钥。
+- Android 侧优先采用 Android Keystore 保护的独立加密密钥与 authenticated encryption（例如 AES-GCM），密文保存在 App 私有存储；凭证文件排除 Android Auto Backup。备份恢复后若密文无法解密，显示凭证缺失并允许用户重新输入，不删除供应商元数据。
+- 云端请求强制 HTTPS；自定义 Base URL 由用户自行填写时，清楚提示该 API Key 将发送到该地址。重定向到不同 origin 时不得转发 Authorization / api-key 凭证头。禁止记录密钥、完整认证请求头或敏感正文。
+- 不增加供应商逐家隐私确认、每种数据的隐私开关或每轮隐私确认弹窗；用户配置云端供应商本身即选择云端服务。供应商和模型名称由设置页管理，不在每轮对话额外展示路由原因。
+- 用户删除供应商或模型时，必须处理被默认模型/任务模型引用的配置关系；先解除引用并将对应任务置为未配置，再清除凭证，不得留下崩溃性悬空引用。
+
+### 18.10 模型配置数据与变更兼容
+
+配置数据只存储模型选择和运行所需的非敏感元数据；凭证密文走 Credential Vault。建议最小逻辑实体如下，不要求机械采用同名 SQL 表：
+
+- ProviderConfig：providerConfigId、provider/protocol 类型、displayName、baseUrl、credentialRef、模型目录缓存、创建/更新时间。
+- ModelConfig：modelConfigId、local/cloud runtime、providerConfigId（本地为空）、modelId/modelFileFingerprint、task family、userContextWindowTokens（仅生成模型）、maxOutputTokens、必要的本地模型格式/版本元数据。
+- TaskModelSelection：taskKey、modelConfigId 或显式 FOLLOW_DEFAULT / UNCONFIGURED。text_reasoning 必须指向默认模型；图片/音频可跟随默认；Embedding/Reranker 未配置时保持确定性路径。
+- Embedding index metadata：模型空间指纹、维度、归一化、schema/generation 和 source/content hash；向量正文是派生索引数据，不是来源权威信息。
+
+存储实现须沿用现有数据库迁移纪律，迁移可重复、可回滚；不得创建第二套用户设置库或专业版授权库。模型/供应商删除、改名、API Key 替换和模型变更必须分别测试；已有有效配置不能被一次失败的连接测试或模型列表刷新覆盖。
+
+### 18.11 本地—远程双工作流和实施分工
+
+该能力必须按仓库 docs/parallel-execution-and-integration-spec.md 与 docs/ai-parallel-execution-protocol.md 执行；master 是唯一集成基线，Local 与 Remote 可以并行，但单个文件/缺陷只有一个写入 Owner。
+
+| 工作流 | 本任务责任 | 明确不负责 |
+|---|---|---|
+| Local | 本地 Embedding/Reranker 运行库、模型文件格式、Tokenizer/预处理、Find N2 内存/耗时/后台索引和真实模型运行验证；E4B 本地多模态设备场景 | 不修改远端共享架构/执行台账文件；不把模拟结果写为设备 PASS |
+| Remote | Provider API、Credential Vault、默认与任务模型设置、统一 Gateway、云端 Embedding/Reranker Adapter、SQLite 配置/索引方案与自动化测试 | 不宣称本地模型运行时或 Find N2 通过；不替代 Local 的设备 TRACE |
+| Architecture | 冻结公共任务键、配置 DTO、错误语义、授权状态和本地/云端 Adapter 接口；审查五层边界 | 不直接把规范文本当成运行时代码完成 |
+| Integration | 从最新 master 分支基线、文件所有权、PR 顺序、CI、合并后主线同步和执行台账 | 不在多个分支同时写同一共享文件 |
+
+依赖与并行：
+1. 公共 Task Capability、Provider/Model 配置 DTO、Credential Vault 接口、AI 总开关状态合同先冻结；随后 Local 与 Remote 可在不同文件所有权范围内并行实现。
+2. Local Embedding 与 Local Reranker 可分别拆独立任务/分支，但若共享模型加载器、文件导入、索引 Schema 或同一 Native 模块，必须先指定单一 Owner 并按接口串行。
+3. Cloud provider adapters 与设置 UI 可在公共 DTO 冻结后并行；Cloud Embedding/Reranker 与本地执行不共享运行时生命周期。
+4. Embedding 索引建造与 Reranker 可分支开发，但 Reranker 的输入合同必须消费既有 CandidateEvidence；Embedding 的向量候选必须能够回到既有 sourceId/chunkId。
+5. 任一 Local 设备任务阻塞，不冻结无依赖的供应商管理、设置 UI、配置持久化、云端 Adapter 和 Dart/Kotlin 自动化工作。
+6. 任何 PR 必须以完整 SHA 为基线，并对最终 HEAD 执行仓库 required checks；分支级 changed tests 不替代 Flutter 全回归、Android arm64/JVM 或 Fork License。
+7. 共享架构文档由 Architecture 单写，执行台账由 Integration 单写，设备验收交接单由 Local 单写。普通实现 PR 不顺手改共享治理文件。
+
+### 18.12 实施切片和验收门槛
+
+按小批量、可独立回滚实施，不以设置页面出现选项作为能力完成：
+
+| 切片 | 工作内容 | 主要验收 |
+|---|---|---|
+| A. 统一 AI 状态 | 专业版 ai_access + 用户 AI 开关；Native Gate 同步；云端 Gateway 调用前门禁 | 非专业版/关闭开关时，本地与云端、Embedding/Reranker 都 fail-closed；确定性功能继续可用；关闭后本地资源按队列释放 |
+| B. 供应商与本地模型配置 | Provider Repository、Credential Vault、模型列表/手动添加、本地模型注册与文件校验 | Key 无明文泄漏；多个供应商可独立保存/编辑/删除；失效凭证可恢复；已有配置不丢失 |
+| C. 默认推理与上下文预算 | 默认文本模型、图片/音频跟随默认或专用模型、每个生成模型 context/output Token 配置 | 配置真实进入请求组装和会话历史预算；不把 1M 当作本地 E4B 的可用值；超限显式失败/裁剪记录 |
+| D. 云端文本/图片/音频 | 供应商 Adapter、统一 ReasoningRequest/Response、附件输入和 Codec 校验 | 用户选哪个就发哪个；供应商不支持时提示；无自动换供应商/本地、无 UNKNOWN 重放 |
+| E. 本地 Embedding | 本地模型导入/校验/运行、向量构建/查询、本地索引版本切换 | Find N2 真实模型加载、向量维度、查询、重建和稳定性 TRACE；旧索引可回滚 |
+| F. 云端 Embedding | API Adapter、向量缓存/索引元数据、失败状态 | query/document 使用兼容模型空间；超时 UNKNOWN 不自动重发；来源 ID 回链完整 |
+| G. 本地 Reranker | 本地模型文件、Tokenizer、打分/排序执行、候选 ID 回校验 | Find N2 真实运行和资源 TRACE；输出仅重排输入候选 |
+| H. 云端 Reranker | Provider Adapter、候选片段请求、排序输出校验 | 只返回本轮候选 ID 排序；供应商错误明确失败，不自动回退 |
+| I. 集成回归 | 本地/云端组合、开关状态、授权失效、删除供应商、索引迁移、来源完整性 | 单位/状态清晰；无 AI 绕过、无悬空引用、无来源丢失；所有 required checks 按最终 HEAD 通过 |
+
+关键负向验收：
+- 非专业版不能开启 AI；仅 UI 禁用不够，调用入口与 Native Gate 必须 fail-closed。
+- AI 关闭时，直接调用 Dart Cloud Adapter、Embedding/Reranker Adapter 或 Native LiteRT 的尝试均被拒绝。
+- 删除供应商、清除 API Key、删除本地模型或切换模型不允许让设置页/推理页崩溃。
+- 未配置 Embedding/Reranker 走既有确定性路径；配置后不支持/接口失败，显示明确失败，不偷偷当作旧模型成功。
+- 模型调用结果 UNKNOWN 不自动重放；失败响应不写入成功会话轮次。
+- Embedding 模型切换后不能混用旧向量；重建未完成时保留最后一个完整索引。
+- Reranker 返回未知/重复/伪造候选 ID 必须拒绝。
+- 1M context 配置不能绕过模型/运行时/设备硬上限，也不能把字符计数称为 Token 计数。
+- UI 场景模型绑定、供应商能力探针、用户每轮隐私确认、逐数据隐私开关和自动切换均不进入首期。
+
+### 18.13 优势、风险与回滚
+
+| 方案 | 优势 | 风险/代价 | 回滚边界 |
+|---|---|---|---|
+| 一个 AI 开关 + 一个 ai_access | 本地/云端收费边界一致，避免重复权益 | 需把现有授权—Native Gate 同步扩展为统一可用状态 | 回滚统一调用层；保留 Token 格式和旧授权兼容 |
+| 用户按任务配置模型 | 贴合真实购买/API 能力，配置直观 | 不支持的模型由用户自行更换 | 保留配置，返回明确能力错误 |
+| 本地/云端双 Embedding/Reranker | 设备离线与云端质量/算力选择可控 | 本地模型格式、耗时、内存、索引重建需设备实测 | 新索引失败保留旧 generation；模型 Adapter 独立回滚 |
+| 用户配置上下文窗口 | 能把长上下文模型的能力用于长对话 | Tokenizer 差异、费用、输入预算和本地设备限制 | 回滚到既有有界 transcript 行为，不丢历史 |
+| 不做探测/自动切换 | 避免模型能力假设、意外数据外发和重复扣费 | 用户可能选择不支持任务的模型 | 显示真实错误，不需要恢复自动策略 |
+
+### 18.14 本轮文件基线与当前未完成状态
+
+- **规范修订基线：** master@8f947cdb481c31c86d607c0d4683f8dc69f85272。本节由独立 Architecture 文档 PR 承载，不在 master 上直接修改。
+- **当前已确认的代码锚点：** SettingsScreen、LocalAiBackendSettingsTile、LocalAiService、EntitlementService、AiModelAccessGate、ReasoningRequest、ReasoningResponse、ReasoningResponseCodec、AssistantKnowledgeContextBuilder、MultiSourceEvidencePipeline、SourceAwareLegacyEvidenceRanker、LocalAiModelImportRecovery。
+- **当前已确认限制：** 仓库现有本地模型运行时明确对应 Android Gemma 4 E4B LiteRT-LM；当前 master 源码树未发现可确认的独立本地 Embedding 或 Reranker Adapter 和调用链，因此保持 MISSING / NEEDS LOCAL AUDIT，不能写成已实现；云端模型、Credential Vault、统一 Model Gateway、任务模型配置、1M context 端到端预算、Embedding index 和 Reranker Adapter 也都尚未实现。
+- **开放 PR 文件冲突：** PR #539 修改 ai-capability-audit.md、ai-layered-runtime-architecture.md 和 ai-modernization-execution-ledger.md；PR #416 修改 pro-edition-license-protocol.md。依据仓库单写者规则，本 PR 不覆盖这些文件、不擅自关闭/重写在途 PR。待 Integration 完成两个 PR 的逐文件归属/处置后，分别由 Architecture 与 Integration 以当时最新 master 同步本节到五层规范、审计规范、授权协议和执行台账。
+- **远端任务登记：** PR #625（Task ID DOC-CLOUD-MODEL-ARCH-20261128），允许文件仅 docs/pro-edition-architecture-constraints.md。
+- **本地任务登记：** PR #626（Task ID LOCAL-MODEL-EMBED-RERANK-AUDIT-20261128），Local 工作流负责只读核查本地 Embedding/Reranker 模型格式、运行库、Find N2 资源和设备能力；无设备证据保持 MISSING / UNKNOWN / LOCAL ONLY。
+- **本节状态：** 架构决策已冻结；所有实现任务仍为 NOT_STARTED / MISSING，不得把本规范文本或 Draft PR 任务登记卡视为代码/设备完成。
+
+---
+
+**v1.4 在保留 v1.3 授权 Token 与 ai_access 唯一性基础上，正式扩展 AI 可用范围到本地/云端推理及按任务配置的 Embedding/Reranker；不新增签名 Feature，不改变既有 Token wire format。**
