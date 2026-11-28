@@ -2,7 +2,7 @@
 
 > **文件性质：项目执行约束 / 验收标准。** 本文件约束后续全局 AI 审计、实现、测试和真机验收。与既有业务代码冲突时，不得擅自扩大 AI 权限；先记录冲突、说明影响，再按本文安全边界处理。
 >
-> 生效基线：`master` @ `2c3cf60b8d7b02286f733e364fbff94f03e1da46`（2026-11-10）。此 SHA 是本文件制定时的审计基线，不代表后续实现状态。
+> 本文件的历史审计条款持续有效；2026-11-28 起，模型运行时/任务配置/AI 授权范围以 docs/pro-edition-architecture-constraints.md v1.4 §18 和本文 §18 补充为准。早期“不得引入云端模型/API、Embedding 或 Reranker”的限制已被用户批准的 v1.4 明确取代；证据、来源、授权、UNKNOWN 与设备验收门槛仍然有效。
 
 ## 产品定位与 AI / App 边界（2026-11-15，优先级最高）
 
@@ -59,12 +59,12 @@
 - 重建 AIWorkbench、五种模式、Orchestrator、ToolRouter 或会话/消息数据库表；
 - 新建通用 Agent 平台、DAG 工作流引擎或复杂任务图；
 - 以“统一架构”为由把现有规则问诊、知识库和业务算法迁移到模型；
-- 先引入向量数据库、Embedding、LangChain、云端模型/API 或原生 Function Calling；
+- 未经数据规模和性能证据引入独立向量数据库、LangChain、通用 Agent 平台或原生 Function Calling。Embedding、Reranker 与云端模型/API 已由 2026-11-28 专业版架构 v1.4 授权为按任务配置能力，但必须遵守本文件 §18 的统一授权、来源、错误和验收边界。
 - 把学习测验、批改、复习计划等新产品功能混入 AI 核心改造。此类功能需独立立项，明确是否新增学习状态存储。
 
 实现优先采用小型线性任务计划；若确有多步需求，先使用最多 5 步的顺序计划和显式引用，不引入 DAG。不得为了架构整齐而复制已有状态或业务逻辑。
 
-## 3. 端侧 E4B 的职责分工与预算
+## 3. 现有端侧 E4B 的职责分工与预算（仅适用于当前 E4B 路径）
 
 必须遵守“代码确定性、模型语义性、代码执行与验证”的边界：
 
@@ -82,7 +82,7 @@
 不要求每轮都调用模型做规划。简单单意图请求可走确定性路径；复杂或歧义请求才进入模型辅助选择/槽位提取。结构化输出必须有 schema、解析失败处理和重试上限，不得把自由文本 JSON 当作可信参数。
 
 **预算要求：**
-- 每次模型调用记录模型/后端、轮次、输入字符数、可取得时的 token 数、输出字符数、耗时和异常。
+- 每次模型调用记录 taskKey、模型/运行时、轮次、输入字符数、可取得时的 token 数、输出字符数、耗时和异常；本节关于 GPU/CPU 和 Native queue 的规定只适用于当前 E4B 本地路径。
 - 不得把字符数冒充 token 数；token 统计能力不存在时写 UNKNOWN。
 - Prompt/context 必须分段记录来源与预算；超限应按条目边界和优先级裁剪，并显式标记哪些来源被省略。禁止无提示地从任意字符位置截断而仍声称上下文完整。
 - 上下文预算以 Find N2 实测可稳定运行的值确定，不从其他手机的公开性能数据推算。
@@ -467,3 +467,50 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 用户自述整理、对话历史恢复、附件格式校验、工具参数/权限校验、确定性规则执行结果校验和模型协议校验继续保留；它们不是临床红旗门禁。
 - 固定、简明的一般性急重症求助提醒继续保留，不对症状判级、不出具临床分诊结论，不阻断普通学习或既有 App 业务流程。
 - 本节为当前实现口径；本文较早记录中的临床 detector、医学词表签审、医学版本记录和全模式临床拦截要求均为历史设计，不得重新转为待办或发布门槛。
+
+## 18. 2026-11-28 v1.4 本地/云端模型能力与统一 AI 审计补充
+
+> 本节是本文件当前生效的模型配置/授权/验收约束。与旧版“禁止云端模型/API、Embedding/Reranker”的条文冲突时，以本节和 docs/pro-edition-architecture-constraints.md §18 为准；其他领域安全、数据、来源、测试和设备验收条款不因此放宽。
+
+### 18.1 模型任务和选择
+
+首期任务键为 text_reasoning、image_understanding、audio_understanding、embedding、reranking。每项由用户选择具体本地或云端模型；图片/音频无专用选择时跟随默认推理模型；Embedding/Reranker 必须独立选择，不继承普通聊天模型。
+
+- 不做能力探测、模型探针、能力目录或基于模型名称/供应商模型列表的能力推断。
+- 不按助手模式/场景绑定不同模型；模式共享任务模型配置。
+- 不展示每轮模型路由原因/能力探针细节；任务不支持时以实际调用错误提示。
+- 禁止本地与云端、供应商之间或模型之间自动切换；禁止本地失败后自动上传云端或云端失败后自动回退本地。
+- Embedding/Reranker 未配置时继续当前确定性检索/排序；显式配置后必须真实调用所选模型，失败如实报告，不伪装为确定性成功。
+
+### 18.2 单一专业版授权与 AI 总开关
+
+统一调用可用条件：EntitlementService 当前有效且签名验证的 ai_access 为 true，并且用户保存的 AI 总开关为开启。
+
+- ai_access 是唯一签名付费权益；不新增 cloud_ai_access、embedding_access、reranker_access 或按任务拆分的权益。
+- 用户 AI 总开关只是用户偏好，不是授权事实；非专业版、授权校验中或授权无效时不得开启/调用模型。
+- 统一检查覆盖本地/云端生成模型、图片/音频、Embedding 和 Reranker。Native LiteRT 继续由 AiModelAccessGate 最终 fail-closed；云端 HTTP 通过受控 Model Gateway 在每次请求前检查同一状态。
+- 新增开关的默认值和升级迁移须兼容既有已授权用户；不得静默关闭用户既有 AI 使用状态。
+- 关闭 AI 或授权失效不删除模型、供应商、凭证、索引或历史；阻止新调用并按既有生命周期处理本地运行时。已发请求若响应不确定，标 UNKNOWN，不自动重放。
+
+### 18.3 上下文窗口与预算
+
+- 每个生成模型单独保存用户声明的 contextWindowTokens 与 maxOutputTokens，可使用常见预设（16K 至 1M）或自定义整数；不把预设当作能力保证。
+- 云端请求按对应模型 Tokenizer/接口统计计算系统提示、当前输入、完整会话历史、证据和工具结果预算，并为输出预留 Token。不能取得准确 Token 数时标 UNKNOWN，不以字符比例冒充 Token。
+- 本地模型值不得超过模型声明、Native Runtime 和 Find N2 实测可用上限；E4B 当前 KV Cache 和 ModelInfo 上限仅为只读观测，实测校准前不配置 App 可用 Token budget。
+- Embedding/Reranker 使用各自输入长度/候选条数合同，不使用生成模型 contextWindowTokens。
+- 长上下文不能取消 Session ID 隔离、完整轮次恢复、SessionState provenance、用户确认和 UNKNOWN 不重放。
+
+### 18.4 Embedding 与 Reranker 审计范围
+
+Embedding 必须审计 query 与 source chunk 使用同一模型空间、模型版本、向量维度和归一化；索引记录来源 ID、内容哈希、模型指纹、schema/generation。模型空间变化须创建新 generation，构建验证成功后原子切换，失败保留旧索引。向量相似度只表示相关性，不表示资料真实性或医学正确性。
+
+Reranker 只处理本轮已召回且有界的 CandidateEvidence；输出必须是输入集合中的候选 ID 合法排序，由 App 校验无未知/重复 ID。Reranker 不得修改来源字段、正文或 verificationStatus。
+
+本地与云端 Embedding/Reranker 是并行的两种正式接入路径。Local 负责本地格式/runtime/Tokenizer/Find N2 内存和耗时/TRACE；Remote 负责云端 Adapter、凭证安全和索引元数据/调用。两者不共享运行时生命周期。
+
+### 18.5 当前证据和不可推定项
+
+- 当前代码存在 Gemma 4 E4B LiteRT-LM 本地推理路径；它不证明普通聊天 Engine 已支持独立向量输出或 reranking。
+- 当前 master 未确认本地 Embedding/Reranker 独立 runtime；状态为 MISSING / NEEDS LOCAL AUDIT，任务卡为 PR #626。未实测 Find N2 前保持 LOCAL ONLY / UNKNOWN。
+- 云端 Provider、Credential Vault、Model Gateway、统一 AI 开关、任务模型设置、云端 Embedding/Reranker、生成模型上下文窗口端到端预算尚未实现，均不能标 PASS。
+- 代码结构、配置 UI、云端 Mock、Flutter CI 或 Android 编译不构成本地模型/真实云端调用证据。所有 PR 必须绑定最终 HEAD 的 Branch validation、Flutter regression、Android arm64/JVM、PR required gate 和 Fork License；Find N2 场景另由唯一设备交接单记录。
