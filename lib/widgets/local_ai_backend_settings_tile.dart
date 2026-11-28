@@ -187,6 +187,15 @@ class _LocalAiBackendSettingsTileState
           ),
           const SizedBox(height: 6),
           Text(runtimeLabel, style: theme.textTheme.bodySmall),
+          if (status?.backendFallbackReason?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 4),
+            Text(
+              status!.backendFallbackReason!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
           if (status != null &&
               status.ready &&
               status.backend != status.preferredBackend) ...[
