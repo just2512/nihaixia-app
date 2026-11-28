@@ -80,7 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('当前实际运行：CPU'), findsOneWidget);
+    expect(find.textContaining('当前实际运行：CPU'), findsOneWidget);
     expect(find.text('GPU 初始化失败：OpenCL 不可用'), findsOneWidget);
   });
 

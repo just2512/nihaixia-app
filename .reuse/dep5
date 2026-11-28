@@ -1303,3 +1303,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Native transcript restore architecture regression test. It ensures typed completed-turn hydration uses the existing Native history snapshot/rebuild path and does not invoke model generation or GPU/CPU first-turn fallback; ownership evidence required.
+
+Files:
+ .github/ISSUE_TEMPLATE/task.md
+ .github/pull_request_template.md
+ docs/parallel-execution-and-integration-spec.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored local/remote parallel execution and integration governance specification and GitHub collaboration templates; ownership evidence required.
