@@ -10,6 +10,7 @@ enum AiCredentialVaultOperation { read, write, delete }
 /// Platform-neutral storage seam. Production uses [FlutterSecureStorage];
 /// tests can provide an in-memory implementation without touching platform
 /// channels.
+@visibleForTesting
 abstract interface class AiCredentialVaultStorage {
   Future<String?> read({required String key});
 
@@ -82,16 +83,38 @@ class AiCredentialVaultStorageException extends AiCredentialVaultException {
 /// namespace and disables the plugin's destructive reset-on-error behavior;
 /// Windows delegates key protection to the plugin's Windows implementation.
 class AiCredentialVault {
-  AiCredentialVault({
+  AiCredentialVault()
+      : this._(
+          platform: defaultTargetPlatform,
+          isWeb: kIsWeb,
+        );
+
+  /// Test-only factory for injecting a deterministic storage seam.
+  ///
+  /// Production call sites must use [AiCredentialVault.new], which always
+  /// selects the platform secure-storage implementation.
+  @visibleForTesting
+  AiCredentialVault.forTesting({
+    required AiCredentialVaultStorage storage,
+    required TargetPlatform platform,
+    bool isWeb = false,
+  }) : this._(
+          storage: storage,
+          platform: platform,
+          isWeb: isWeb,
+        );
+
+  AiCredentialVault._({
     AiCredentialVaultStorage? storage,
-    TargetPlatform? platform,
-  })  : _platform = platform ?? defaultTargetPlatform,
+    required TargetPlatform platform,
+    required bool isWeb,
+  })  : _platform = platform,
         _storage = storage ??
             _createDefaultStorage(
-              platform ?? defaultTargetPlatform,
-              isWeb: kIsWeb,
+              platform,
+              isWeb: isWeb,
             ) {
-    if (kIsWeb || !_isSupportedPlatform(_platform)) {
+    if (isWeb || !_isSupportedPlatform(_platform)) {
       throw const AiCredentialVaultUnsupportedPlatformException();
     }
   }
