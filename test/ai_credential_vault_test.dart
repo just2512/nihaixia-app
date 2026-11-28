@@ -203,6 +203,28 @@ void main() {
       );
     });
 
+    test('serializes storage operations across Vault instances', () async {
+      final concurrentStorage = _ConcurrencyTrackingStorage();
+      final secondVault = AiCredentialVault.forTesting(
+        storage: concurrentStorage,
+        platform: TargetPlatform.windows,
+      );
+      final firstVault = AiCredentialVault.forTesting(
+        storage: concurrentStorage,
+        platform: TargetPlatform.android,
+      );
+
+      final references = await Future.wait(<Future<String>>[
+        firstVault.createCredential('first-secret'),
+        secondVault.createCredential('second-secret'),
+        firstVault.createCredential('third-secret'),
+      ]);
+
+      expect(references.toSet(), hasLength(3));
+      expect(concurrentStorage.maxConcurrentOperations, 1);
+      expect(concurrentStorage.values, hasLength(3));
+    });
+
     test('rejects platforms without an explicitly supported secure store',
         () {
       expect(
@@ -268,4 +290,39 @@ class _MemoryCredentialStorage implements AiCredentialVaultStorage {
     if (failure != null) throw failure;
     values.remove(key);
   }
+}
+
+class _ConcurrencyTrackingStorage implements AiCredentialVaultStorage {
+  final Map<String, String> values = <String, String>{};
+  int activeOperations = 0;
+  int maxConcurrentOperations = 0;
+
+  Future<T> _track<T>(Future<T> Function() operation) async {
+    activeOperations++;
+    if (activeOperations > maxConcurrentOperations) {
+      maxConcurrentOperations = activeOperations;
+    }
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+      return await operation();
+    } finally {
+      activeOperations--;
+    }
+  }
+
+  @override
+  Future<String?> read({required String key}) =>
+      _track(() async => values[key]);
+
+  @override
+  Future<void> write({required String key, required String value}) =>
+      _track(() async {
+        values[key] = value;
+      });
+
+  @override
+  Future<void> delete({required String key}) =>
+      _track(() async {
+        values.remove(key);
+      });
 }
