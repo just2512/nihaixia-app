@@ -8,7 +8,7 @@
 - **Integration owner:** Integration (single public configuration PR; no second public PR)
 - **Base SHA:** `ee1fc1e1aca47d489885893423e14ab6895ba738` (R1A branch HEAD; based on master `79324c44d638826d6e97cfb0951fc0cef35ec0f9`)
 - **Work branch:** `remote/ai-credential-vault-r1b-20261128`
-- **Status:** IN_PROGRESS / NOT MERGED
+- **Status:** IMPLEMENTED / INTEGRATED INTO PR #629 / NOT MERGED (merge remains gated by exact-final-HEAD validation)
 
 ## Allowed paths
 
@@ -63,10 +63,17 @@ Remove the Vault integration only after any stored secrets have been explicitly 
 - Credential references use the versioned `aicred:v1:` prefix plus 256 bits from `Random.secure()`. Only opaque references are intended to leave the Vault.
 - Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
 - Vault operations are serialized across instances within the Dart isolate. This compensates for the pinned Windows federated implementation version predating its upstream concurrent read/write fix; a cross-instance concurrency regression test guards the boundary.
-- Focused tests now cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, storage errors without underlying exception messages, empty stored values, overwrite semantics and unsupported platforms.
-- **Validation status:** `flutter pub get --enforce-lockfile` completed successfully on integrated HEAD `bb0bbaa` before the final concurrency revision. The later integrated HEAD `9b445d0` workflow was cancelled before all dependent jobs completed, so final-HEAD validation remains pending and must be rerun. Local Dart/Flutter execution outside CI and Find N2 real-device evidence remain unavailable here; no local/device PASS is asserted.
+- Focused tests cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, injected read/write/delete failures with typed errors and no underlying exception leakage, empty stored values, explicit overwrite semantics, unsupported platforms, cross-Vault-instance operation serialization within one Dart isolate, and Android cloud-backup/device-transfer exclusions for all three namespaced SharedPreferences files. The Android KeyStore-loss branch is configured with `resetOnError: false` and remains a real-device UNKNOWN until Find N2 testing.
+- **Exact final integrated HEAD validation (2026-11-28):** `5cb53c35c1668334259081b71cd3489089bb14d4`.
+  - Branch validation: SUCCESS; 36 changed-file regression tests passed, including the Vault concurrency and Android backup-rule tests.
+  - Flutter regression: SUCCESS; the full suite reported 2,279 passed and 15 skipped. The 15 skips are existing Yunqi oracle comparisons blocked by the external fixture `D:\tools\yunqi_ref.json` being unavailable in GitHub CI; they were not converted to passes.
+  - Android arm64/JVM: SUCCESS; CI verification APK contains only `arm64-v8a`, merged manifest references both backup-rule files, and 131 Android unit tests passed with 0 failures/errors/skips.
+  - PR required gate: SUCCESS; all three prerequisite jobs succeeded.
+  - Fork License: SUCCESS in its independent workflow on the same HEAD.
+  - These results apply only to the SHA above. A later PR HEAD must rerun the five gates before merge.
+  - Local Dart/Flutter execution on the user's workstation and Find N2 KeyStore/backup/restore evidence remain UNKNOWN; no local/device PASS is asserted.
 
 
 ## Integration-owned follow-up (not Remote R1B scope)
 
-The Fork license checker compares every changed path against the repository-wide fixed divergence baseline, not only the files in this task. When R1B is folded into PR #629, the Integration owner must update `.reuse/dep5`, `docs/fork-license-file-inventory.json`, and `docs/fork-license-file-inventory.md` on the PR aggregation branch for the newly added Vault service, focused test, and task card. This is deliberately excluded from the Remote R1B implementation branch and must not be represented as part of the Vault service implementation. Existing `pubspec.yaml`, `pubspec.lock`, and Android backup-rule inventory entries retain their existing classifications.
+The Integration-owned Fork inventory update is complete in PR #629: `.reuse/dep5`, `docs/fork-license-file-inventory.json`, and `docs/fork-license-file-inventory.md` include the task card, Vault service, and focused tests. The independent Fork License workflow passed on exact final integrated HEAD `5cb53c35c1668334259081b71cd3489089bb14d4`. This confirms inventory/boundary consistency; it does not independently establish legal copyright ownership or sublicensing title.
