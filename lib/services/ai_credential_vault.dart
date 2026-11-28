@@ -85,9 +85,7 @@ class AiCredentialVault {
   AiCredentialVault({
     AiCredentialVaultStorage? storage,
     TargetPlatform? platform,
-    Random? random,
   })  : _platform = platform ?? defaultTargetPlatform,
-        _random = random ?? Random.secure(),
         _storage = storage ??
             _createDefaultStorage(
               platform ?? defaultTargetPlatform,
@@ -109,7 +107,7 @@ class AiCredentialVault {
       RegExp(r'^aicred:v1:[A-Za-z0-9_-]{43}$');
 
   final TargetPlatform _platform;
-  final Random _random;
+  final Random _random = Random.secure();
   final AiCredentialVaultStorage _storage;
 
   /// Persists [secret] and returns its opaque, versioned reference.
