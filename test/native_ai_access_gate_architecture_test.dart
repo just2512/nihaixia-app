@@ -13,6 +13,10 @@ void main() {
 
     expect(mainActivity, contains('if (requiresAiAccess) aiModelAccessGate.requireAccess()'));
     expect(mainActivity, contains('if (!enabled) aiModelAccessGate.disable()'));
+    // Enabling must ack synchronously. Queueing enable behind model work let a
+    // Dart-side timeout observe unavailable while Native was about to open the
+    // gate, splitting the two authorization states.
+    expect(mainActivity, contains('result.success(mapOf("enabled" to true'));
     expect(gateSource, contains('AiModelAccessGate(initiallyEnabled: Boolean = false)'));
     expect(gateSource, contains('currentEpoch()'));
     expect(gateSource, contains('expectedEpoch != epoch'));
