@@ -6,7 +6,7 @@
 >
 > **核心决策：** 知识召回、证据排序、会话记忆、语言推理、业务执行五项职责必须逻辑独立、输入输出可审计、状态所有权清楚。它们不是五个互相自治的 Agent，也不要求拆成五套服务、五个数据库或五个模型。
 >
-> 本文件与 docs/product-positioning-and-boundaries.md、docs/ai-capability-audit.md、docs/pro-edition-architecture-constraints.md 和 docs/ai-modernization-execution-ledger.md 配套使用。产品定位约束产品边界；本文件定义五层运行时职责；专业版架构约束 v1.4 定义本地/云端任务模型配置与唯一授权；AI 审计规范定义实现与证据门槛。2026-11-28 起，v1.4 模型运行时补充条款优先于本文早期仅有 E4B/尚未授权 Embedding、Reranker 或云端模型的历史表述。
+> 本文件与 docs/product-positioning-and-boundaries.md、docs/ai-capability-audit.md、docs/pro-edition-architecture-constraints.md 和 docs/ai-modernization-execution-ledger.md 配套使用。产品定位约束产品边界；本文件定义五层运行时职责；专业版架构约束 v1.4 定义本地/云端任务模型配置与唯一授权；AI 审计规范定义实现与证据门槛。2026-11-28 起，v1.4 模型运行时补充条款优先于本文早期仅有 E4B/尚未授权 Embedding、Reranker 或云端模型的历史表述。**完整实施基线：** Provider/Model/Task 配置、Credential Vault、统一 Gateway、本地/云端 Embedding 与 Reranker、向量索引 generation、Token 预算、任务拆分和验收标准统一见 [docs/ai-local-cloud-model-development-plan.md](ai-local-cloud-model-development-plan.md)。
 
 ## 1. 架构目标：五项职责独立，而不是一个模型包办
 
@@ -792,3 +792,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - 云端 Provider、Credential Vault、Model Gateway、云端 LLM/图片/音频、云端 Embedding/Reranker、统一 AI 总开关、TaskModelSelection 与上下文 Token budget 端到端接线均为 NOT_STARTED / MISSING。
 - 当前 CandidateEvidence、MultiSourceEvidencePipeline 与 SourceAwareLegacyEvidenceRanker 是可复用 Core-2 基础，不等于向量索引或 Reranker 已接通。
 - v1.4 只冻结边界；全部功能仍需独立 Task ID、文件范围、源码/测试/CI/设备证据和可回滚小批量 PR。
+
+### 10.7 完整模型改造开发方案（强制执行入口）
+
+v1.4 解决“允许做什么、不可越过什么”；完整开发方案进一步冻结“怎么实现、如何配置、怎么验收和如何回滚”。后续 Local、Remote、Architecture 与 Integration 的模型改造任务必须遵循 [本地与云端 AI 模型完整开发方案](ai-local-cloud-model-development-plan.md)。若代码任务发现方案与最新源码不一致，先登记差异和证据，由 Architecture 更新方案后再实施；不得在代码 PR 中自行改变公共模型配置、Provider 协议、索引 generation 或失败语义。

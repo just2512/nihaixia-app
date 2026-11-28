@@ -471,6 +471,8 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 ## 18. 2026-11-28 v1.4 本地/云端模型能力与统一 AI 审计补充
 
 > 本节是本文件当前生效的模型配置/授权/验收约束。与旧版“禁止云端模型/API、Embedding/Reranker”的条文冲突时，以本节和 docs/pro-edition-architecture-constraints.md §18 为准；其他领域安全、数据、来源、测试和设备验收条款不因此放宽。
+>
+> **完整工程实施标准：** 具体 Provider/Model/Task 配置、Credential Vault、Gateway、本地/云端 Embedding/Reranker、索引 generation、设置 UI、迁移、执行阶段和验收门禁见 [docs/ai-local-cloud-model-development-plan.md](ai-local-cloud-model-development-plan.md)。后续任务不得只引用本节原则而省略完整方案中的接口和数据生命周期要求。
 
 ### 18.1 模型任务和选择
 

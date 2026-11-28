@@ -20,6 +20,7 @@
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
+| 本地/云端模型完整开发方案 | `docs/ai-local-cloud-model-development-plan.md` | Provider、Model、Task 配置、Credential Vault、Gateway、本地/云端 Embedding/Reranker、索引、迁移、阶段和验收的强制实施标准 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
@@ -5208,3 +5209,17 @@ PR HEAD 门禁证据：
 - **远端后续任务：** 在五层架构 §10、AI 审计 §18 和专业版架构 v1.4 §18 合同合入后，Remote 可另立独立 Task ID/PR，按小批量实现 ProviderConfig/ModelConfig、ProviderCredentialVault、统一 AI Gateway 与总开关、云端各任务 Adapter、配置持久化及索引 generation；不得与 Local 同时修改同一模型加载器/索引 Schema 文件。共享架构规范由 Architecture 单写，执行台账由 Integration 单写，设备交接由 Local 单写。
 - **优势/风险与回滚：** 统一 ai_access 避免重复权益，本地/云端由用户按任务选择可保持行为明确；代价是要建设两个独立运行时和 Token 预算。向量模型切换必须隔离索引 generation；本地模型必须由 Find N2 测量证明。回滚只针对每个模型 Adapter/配置切片，Embedding 失败保留旧索引；关闭 AI 不删除用户数据。
 - **未闭合项与下一步：** PR #627 最终 HEAD 的 Branch validation、Flutter regression、Android arm64/JVM、PR required gate、Fork License 以精确 SHA 取得终态前保持 IN_PROGRESS；合并后从最新 master 再次检查 PR #626 与本地工作区结果。不要把本节中计划的远端实现写成已开工；无依赖的 Local 审计与后续 Remote 任务分别登记、各自执行。
+
+## 151. 本地与云端 AI 模型完整开发方案正式纳入执行基线（Task ID: DOC-AI-LOCAL-CLOUD-DEV-PLAN-20261128）
+
+- **方案文件：** docs/ai-local-cloud-model-development-plan.md，版本 1.0；本节与该文件共同构成后续模型改造的强制约束。
+- **本节目的：** v1.4 架构约束只回答允许的能力和边界；本方案补齐 ProviderConfig、ModelConfig、TaskModelSelection、Credential Vault、统一 Model Gateway、本地模型清单/导入、Cloud Provider Adapter、五类任务请求链路、Embedding 向量索引 generation、Reranker 候选 ID 合同、Token 预算、设置 UI、DB migration、错误语义、回滚和分阶段任务。不得再把“架构原则已写明”当成“开发方案已完整”。
+- **方案任务基线：** 当前文档 Integration 分支从 master@c0dbf72cebc8345fc58163b9fe4cf30ee353820d 延续；AI 运行时代码锚点仍为 PR #622 merge 805f006ed502c5cbf10dba4ad30428ee9761eb42。当前 master DB schema 在该基线源码中为 version 8；实际 migration 开始前必须重读最新 master。
+- **当前真实代码复用点：** LocalAiService/Android MainActivity 仅证明 E4B 生成式与媒体路径；SettingsRepository/user_settings 只适合简单偏好，SettingsScreen 现有 LocalAiBackendSettingsTile 只管理 E4B 后端；EntitlementService/AiModelAccessPlatform/AiModelAccessGate 是唯一授权现有基础；CandidateEvidence/MultiSourceEvidencePipeline/SourceAwareLegacyEvidenceRanker 是确定性知识召回与排序基础，不是向量索引或模型 Reranker。
+- **Local 并行入口：** PR #626 继续作为本地 Embedding/Reranker 只读审计任务登记卡。必须先确认 runtime、model format、Tokenizer、manifest、设备内存/耗时与释放路径；若当前 Find N2 缺乏可验证 runtime，状态保持 MISSING/LOCAL ONLY，不得提前接入未经验证的依赖或模型文件。
+- **Remote 后续顺序：** Provider/Model/Selection 与安全凭证存储 → 统一授权 Gateway/HTTP transport → 云端文本推理 → 云端图片/音频 → 云端 Embedding/Reranker Adapter → 向量索引 generation/Core-2 接线 → 设置 UI 与全链路验收。Local E/R runtime 可在公共接口冻结后与云端 Adapter 并行，但不得重叠写同一 Native loader、DB migration、VectorIndexStore 或 AssistantKnowledgeContext 文件。
+- **单写者与执行治理：** Architecture 单一写入五层架构规范；Integration 单一写入本执行台账；Local 单一写入设备交接文件；各代码任务按 Task ID、最新 master SHA、独立分支、明确路径和 Owner 登记。DB 配置 migration 与索引 migration 顺序提交，不允许两个分支同时改 DatabaseHelper schema version。
+- **能力状态：** 本地 Embedding/Reranker = MISSING / NEEDS LOCAL AUDIT；云端 Provider/Vault/Gateway/生成模型/多模态/Embedding/Reranker = NOT_STARTED / MISSING；AI 总开关与 TaskModelSelection = NOT_STARTED / MISSING；Embedding generation/index = NOT_STARTED / MISSING；上下文 Token 预算端到端 = NOT_STARTED / MISSING；Find N2 相关设备证明 = LOCAL ONLY / UNKNOWN。方案文档本身不提升任何运行时状态。
+- **门禁：** 每个代码 PR 最终 HEAD 必须满足 Branch validation、Flutter regression、Android arm64/JVM、PR required gate、Fork License 五项 SUCCESS；SKIPPED 不算 PASS。合并后重新核对 master 和 Push CI。Local 模型还必须有 Find N2 实测及 TRACE。
+- **纠偏：** 先前 PR #627 只同步了四份共享规范和 v1.4 约束，没有完整开发分解；本次将完整方案独立成文，并通过本执行台账和架构/审计规范建立强制链接。任何 Local/Remote 后续任务若没有引用该方案中的具体阶段、接口、文件 Owner 和验收条目，不得视为已正式登记。
+
