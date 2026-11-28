@@ -14,8 +14,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| AI 五层运行时代码集成基线 | `45144f6c3d140d259ac51f8cfbb886c19c10e0a3` | PR #583/#585 的 Core-3/Core-5 合并点；PR #586 未改动五层 AI 运行时代码 |
-| 本轮最新主线/文档核验基线 | `f34b12573e16a790032a1450afb245d67891d680` | 当前 master HEAD（PR #599，文档同步；未改运行时代码）。同一 SHA 的 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前 Native/AI 运行时代码基线仍为 PR #598 merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`。 |
+| AI 五层运行时代码集成基线 | `805f006ed502c5cbf10dba4ad30428ee9761eb42` | PR #622 Core-1 SessionState SQLite 有界投影合并点；之后 PR #623/#624/#625/#627 均为文档任务，不改变此运行时代码锚点 |
+| 本轮 Integration 文档基线 | `c0dbf72cebc8345fc58163b9fe4cf30ee353820d` | PR #625 将专业版架构 v1.4 合入 master；当前同 SHA 的 Flutter tests run `46134367859` / regression job `140946259549` IN_PROGRESS，Fork License run `46134367761` / job `140946259607` SUCCESS；Push 事件 Branch validation job `140946261093` 为 SKIPPED，不计 PASS。该文档基线相对 AI 运行时代码锚点 `805f006e` 只增加架构规范文档，不改变 Native/Dart 运行时代码。PR #627 当前正在把五层架构、AI 审计、授权协议及本台账按 v1.4 同步；此表记录其建立时的完整 master 基线，合并后的 master SHA/CI 需在后续收尾条目更新。 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -23,7 +23,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 当前 `master` 文档 HEAD 为 `f34b12573e16a790032a1450afb245d67891d680`（PR #599，7 个变更文件全部位于 `docs/`，相对运行时代码基线仅增加文档提交；未改 Dart/Kotlin/Native 运行时代码）。该 SHA 对应 Flutter tests run `46003046571`、Flutter Quality Gate run `46003046432`、Fork License run `46003046794` 均 SUCCESS；Android arm64/JVM job `140522734914` SUCCESS；Branch validation job `140519281368` 为 SKIPPED，不计 PASS。当前运行时代码基线为 `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`（PR #598），五层运行时集成锚点仍为 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`。本轮交接同步不改变运行时、业务规则、模型行为或权限边界。Native KV Cache token 数与模型声明最大上下文长度仅为只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，App 可用 Token/input budget、输出预留、动态预算裁剪和自动压缩均未配置。Find N2 实机 GPU/CPU、多媒体、进程恢复、数据清理与 TRACE 仍为 LOCAL ONLY / MISSING / UNKNOWN；本地执行前必须重新读取届时最新 `origin/master` SHA、CI、APK 和签名信息，不能沿用本表 SHA 直接构建。
+**核验基线说明：** 本轮 Integration 任务从 `master@c0dbf72cebc8345fc58163b9fe4cf30ee353820d` 建立；该提交是 PR #625 的文档合并点，未改 Dart/Kotlin/Native 运行时代码。当前五层 AI 运行时代码锚点为 PR #622 merge `805f006ed502c5cbf10dba4ad30428ee9761eb42`。在 `c0dbf72` 上的 master Push Flutter regression run `46134367859` 尚在运行（job `140946259549`），Fork License run `46134367761` / job `140946259607` SUCCESS；Push 的 Branch validation job `140946261093` 为 SKIPPED，不计 PASS。PR #627 通过独立分支同步四份共享约束文件，未合并前不改变 master。当前已合并的架构决策为专业版 v1.4 §18；它只冻结本地/云端双运行时、任务模型选择、统一 ai_access+AI 总开关、上下文配置及 Embedding/Reranker 的架构边界，不代表任何云端 Provider、Credential Vault、Model Gateway、本地 Embedding/Reranker runtime 或 Find N2 实测已完成。Native KV Cache token 数与 E4B 模型声明上下文长度仍只是只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，Find N2 GPU/CPU、多媒体、进程恢复、真实 Token/context、数据清理和 TRACE 仍为 LOCAL ONLY / MISSING / UNKNOWN。任何本地执行前必须重新读取届时最新 `origin/master` SHA、CI、APK 和签名信息，不能沿用本表 SHA 直接构建。
 
 ## 2. 状态定义
 
@@ -55,7 +55,7 @@
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
-| H | AI 五层核心职责解耦（高优先级） | `PARTIAL`（Core-0～Core-5 当前约定云端范围已完成代码/测试/CI 收口；Native KV Cache token 数与模型声明 maxContextTokens 已有只读观测，但 App 输入预算/动态治理未配置；Find N2 真实推理、GPU/CPU、多媒体和进程恢复仍为 LOCAL ONLY / UNKNOWN） | Native 多轮治理归属 Core-1；Core-0～Core-5 云端审计按主线基线、小批量独立分支与自动验收推进；设备 TRACE 集中在云端收尾后本地执行 | 五层各自有契约、状态所有权、失败语义和隔离测试；Core-5 云端回归证明应用层跨层闭环，不替代真实 E4B Native/Find N2 证据；不机械新建五套服务/Agent |
+| H | AI 五层核心职责解耦与模型运行时扩展 | `PARTIAL`（Core-0～Core-5 既有五层云端核心范围有代码/自动化/CI 证据；PR #625 已冻结 v1.4 本地/云端统一模型架构，PR #627 正同步五层/审计/授权/台账；新一轮运行时代码尚未启动。本地 Embedding/Reranker 为 MISSING / NEEDS LOCAL AUDIT；云端 Provider/Gateway/凭证/各任务 Adapter/AI 总开关/上下文 Token 预算端到端接线为 NOT_STARTED / MISSING；Find N2 E4B GPU/CPU/媒体/恢复仍 LOCAL ONLY / UNKNOWN） | Local 审计与 Remote 供应商/云端 Adapter 可以在不重叠文件范围内并行；公共 DTO/授权/任务配置先冻结 | 新增的双运行时能力必须实际接线并经过最终 HEAD CI；本地模型另需 Find N2 TRACE，不可用文档、Mock 或 CI 替代 |
 | I | 用户 Markdown 书架本地知识库（未来能力） | `DEFERRED / NOT_AUTHORIZED`（设计已冻结，当前非优先级） | 等待核心五层 Core-0～Core-2 与多轮/证据边界稳定，之后须用户明确恢复书架事项 | 只有核心架构放行后才按书架专项文档实施；其交付不得阻塞核心主线，Find N2 仍需独立 TRACE |
 
 > A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
