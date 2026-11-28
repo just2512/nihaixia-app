@@ -49,7 +49,11 @@ void main() {
         expect(end, greaterThan(start));
         final about = dialogs.substring(start, end);
 
-        expect(about, contains('项目介绍'));
+        expect(about, contains('名称由来与含义'));
+        expect(about, contains('项目定位与目标'));
+        expect(about, contains('知识内容与功能'));
+        expect(about, contains('适用人群'));
+        expect(about, contains('使用边界'));
         expect(about, contains('研纪更新记录'));
         expect(about, contains('开源致谢'));
         for (final forbidden in [
