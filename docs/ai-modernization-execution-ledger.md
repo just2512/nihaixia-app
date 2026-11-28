@@ -5181,3 +5181,15 @@ PR HEAD 门禁证据：
 - **验收：** 每项结论绑定实际 PR merge/head SHA、源码/测试定位和对应精确 CI；SKIPPED 不计 PASS；区分 PR-head 检查与 master Push 检查；设备场景保持 MISSING / UNKNOWN / LOCAL ONLY；不得推导 Token 预算，不引入自动摘要/压缩。
 - **不做事项：** 本任务不是 Native 运行时代码改造，不重做五层职责，不扩展 Core-4 白名单，不启动工作流 I；若源码审计没有可云端复现的缺陷，不新建运行时代码 PR。
 - **回滚：** 只回滚本 PR 的两份文档提交；不改历史合并代码与设备结果。
+
+
+## 149. 2026-11-28 Native 多轮专项审计与 Core-1 交叉证据同步（Task ID: DOC-NATIVE-MULTITURN-AUDIT-POST610-622-20261128）
+
+- **基线/分支：** `master@57f6fbef193d28fc6c3493c8740d672038fdd52c`；独立分支 `docs/native-multiturn-audit-post610-622-20261128`；PR #624。登记提交 `5f970e7c19627196dacfc6a39663ba7a945571ab`，审计更新提交 `8d5a61091b62b7cc7fefbae4dcba79d2947003f5`。本任务只改 Native 多轮专项审计与执行台账，不改架构规范、运行时代码、测试、Workflow、license inventory 或唯一设备交接单。
+- **审计增量：** `docs/local-ai-multiturn-audit.md` 新增 §13，明确区分 Native 成功 transcript、跨 MethodChannel 症状整理 user projection、Dart/SQLite SessionState 三个独立边界；分别同步 PR #610（merge `bcfa2e36440689d7d5cd12abfd80cf191c6d66dc`）、#618（merge `73a79b9ac36879b22db60c8be9c1cd25ef31037a`）、#622（merge `805f006ed502c5cbf10dba4ad30428ee9761eb42`）的源码定位、测试锚点和精确 HEAD CI。历史 §10–§12 不回写。
+- **Native 多轮结论：** 最近 12 个完整成功轮次/10,000 UTF-16 transcript、用户自述最近 60 项/单条 2,000/合计 16,000 UTF-16、SessionState 最近 128 行与 64 evidence 引用是不同的数据投影，不是模型 Token 预算。KV Cache token 与模型声明 maxContextTokens 只读观测；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED` 保持不变。
+- **当前主线 CI：** master `57f6fbef193d28fc6c3493c8740d672038fdd52c` 的 Flutter regression job `140910480679`、Android arm64/JVM job `140912271947`、Fork License job `140910480437` 均 SUCCESS；Push 事件 Branch validation `140910481473`、PR required gate `140913307538` 为 SKIPPED，不计 PASS。PR #623 精确 HEAD `aa5d33362cd2fc3eba9fde9ea2e2add627429b87` 的五项 PR 门禁均 SUCCESS。
+- **本轮源码复核：** 检查了 Native transcript restore envelope、60/2,000/16,000 UTF-16 projection、SessionState SQLite 有界查询、128/129 行边界、64 evidence 引用、fallback reason 生命周期及对应回归锚点；没有发现新的、可仅凭仓库源码/自动化稳定复现的 Native 多轮缺陷。本任务不新建运行时代码分支，不推测 Token budget，不引入自动摘要/压缩。
+- **开放 PR 状态：** #539 继续 BLOCKED / Draft，8 项来源审计/manifest/golden review/测试删除仍缺逐项替代位置和等价证据；#416 继续 BLOCKED / Draft，旧 v1.1 授权方案不能机械并入 v1.3。两者不与本任务争抢代码文件；#539 不得覆盖本任务执行台账。当前 compare 以 master `57f6fbef` 重新核对，数值见 PR 评论/最新 compare。
+- **设备/工作流：** Find N2 GPU/CPU 各 20 轮、state:7、媒体、Activity/process restart、三方 transcript 一致性、真实 Token/context 观测和 AI 数据清理实测仍为 MISSING / UNKNOWN / LOCAL ONLY；只能回填唯一 `docs/local-real-device-acceptance-handoff.md` §7.1。工作流 H 云端代码、测试、架构映射、审计文档与主线 CI 达到当前约定范围，整体仍 PARTIAL；工作流 I 继续 DEFERRED / NOT AUTHORIZED。
+- **PR #624 自身验收：** 最终 HEAD 的 Branch validation、Flutter regression、Android arm64/JVM、PR required gate 与 Fork License 全部以 GitHub 精确 HEAD checks 核验；SKIPPED 不计 PASS。Find N2 设备证据不由 CI 替代。
