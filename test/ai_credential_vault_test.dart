@@ -112,6 +112,28 @@ void main() {
       expect(storage.values, hasLength(1));
     });
 
+    test('reports failed replacement without exposing the attempted secret',
+        () async {
+      const original = 'still-active-secret';
+      const replacement = 'replacement-secret-marker';
+      final reference = await vault.createCredential(original);
+      storage.writeFailure = StateError(replacement);
+
+      final error = await _captureException(
+        () => vault.replaceCredential(reference, replacement),
+      );
+
+      expect(error, isA<AiCredentialVaultStorageException>());
+      expect(
+        (error as AiCredentialVaultStorageException).operation,
+        AiCredentialVaultOperation.write,
+      );
+      expect(error.toString(), isNot(contains(replacement)));
+      // The fake backend models a rejected pre-commit write. This does not
+      // claim that every platform provider offers transactional writes.
+      expect(await vault.readCredential(reference), original);
+    });
+
     test('does not overwrite an existing random reference on collision',
         () async {
       final collisionVault = AiCredentialVault(
@@ -205,7 +227,7 @@ void main() {
   });
 }
 
-Future<Object> _captureException(Future<dynamic> Function() action) async {
+Future<Object> _captureException<T>(Future<T> Function() action) async {
   try {
     await action();
   } catch (error) {
