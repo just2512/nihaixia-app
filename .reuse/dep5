@@ -1054,6 +1054,7 @@ License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned deterministic bounded AI plan preflight, plan-level result presentation, and regression tests; only portions for which sufficient rights exist.
 
 Files:
+ docs/remote-ai-model-provider-gateway-audit.md
  docs/release-license-keyring-configuration.md
  lib/licensing/license_key_ring_factory.dart
  test/license_key_ring_factory_test.dart
