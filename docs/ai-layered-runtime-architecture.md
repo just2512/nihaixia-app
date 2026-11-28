@@ -364,7 +364,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.1 当前 master 源码映射与已确认断点（2026-11-28）
 
-**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役（merge `11ac0c5918e5c25754b44e71f0ba48c82bea6669`），Native 不可达媒体 helper 已由 PR #598 清理（merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`）。后续 Core-1 用户输入恢复边界见 PR #610，ReasoningResponse 严格整数 schema 合同见 PR #611，并行工作流/PR 必备门禁见 PR #612，master CI 重复触发去重见 PR #619，Native GPU→CPU fallback 原因观测见 PR #618，确定性玄学入口路由优先级见 PR #615。当前精确运行时代码与文档基线为 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd`。该 SHA 对应的合并后 Push CI：Flutter tests run `46103578217`（Flutter regression job `140851236286` SUCCESS；Android arm64/JVM job `140852758501` SUCCESS 22/22）、Fork License run `46103578205` SUCCESS；Branch validation job `140851237663` 和 PR required gate job `140853757013` 因 Push 事件被 SKIPPED，不计 PASS。PR #619 已将 Flutter Quality Gate 自动触发改为手动 `workflow_dispatch`，其诊断步骤仍保留。以下按已合并代码描述生产能力；其他 SHA 的 CI、SKIPPED 项和本地未执行的 TRACE 不计为当前通过证据。
+**AI 运行时代码审计基线：** 五层运行时集成点仍为 PR #585 合并提交 `45144f6c3d140d259ac51f8cfbb886c19c10e0a3`（包含 PR #583 图片/音频结构化推理协议、PR #585 20 轮记忆隔离与工具执行回流 E2E）。Core-3 旧非结构化包装 API 已由 PR #594 退役（merge `11ac0c5918e5c25754b44e71f0ba48c82bea6669`），Native 不可达媒体 helper 已由 PR #598 清理（merge `04eb5bec9321b3d00eb85fdea7c0bd31b6fdc40f`）。后续 Core-1 用户输入恢复边界见 PR #610，ReasoningResponse 严格整数 schema 合同见 PR #611，并行工作流/PR 必备门禁见 PR #612，master CI 重复触发去重见 PR #619，Native GPU→CPU fallback 原因观测见 PR #618，确定性玄学入口路由优先级见 PR #615。当前 AI 运行时代码基线为 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；其后的 PR #617（merge `b188aadbe10b91a2dd639e2c51e901039801e447`）只更新本架构文档与执行台账，没有修改运行时代码。当前仓库 `master` 为 `b188aadbe10b91a2dd639e2c51e901039801e447`。该代码基线 `f4b2aaab` 的合并后 Push CI：Flutter regression job `140851236286` SUCCESS、Android arm64/JVM job `140852758501` SUCCESS（22/22）、Fork License run `46103578205` SUCCESS；Push 事件的 Branch validation 与 PR required gate 为 SKIPPED，不计 PASS。PR #617 合并后的 `b188aadbe` Push CI：Flutter regression job `140856830001` SUCCESS、Android arm64/JVM job `140858889845` SUCCESS、Fork License run `46105373752` SUCCESS；Push 事件的 Branch validation job `140856831095` 与 PR required gate job `140859960445` 为 SKIPPED，不计 PASS。PR #619 已将 Flutter Quality Gate 自动触发改为手动 `workflow_dispatch`，其诊断步骤仍保留。以下按已合并代码描述生产能力；其他 SHA 的 CI、SKIPPED 项和本地未执行的 TRACE 不计为当前通过证据。
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
@@ -407,9 +407,9 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - **回归：** `test/local_ai_service_test.dart` 的“Native GPU fallback reason is preserved in model status”和 `test/local_ai_backend_settings_tile_test.dart` 的“shows the Native GPU-to-CPU fallback reason”覆盖 status 解析与 UI 展示；PR Android arm64/JVM CI 覆盖 Native 单元测试。
 - **边界：** 这是错误状态观测，不改变 GPU/CPU fallback 策略，不证明实际 Find N2 GPU 初始化失败、CPU fallback 成功率或真实设备稳定性。GPU/CPU 真机 retest 仍为 DEVICE MISSING / UNKNOWN。
 
-## 6. 当前执行状态与后续放行顺序
+## 6. 当前执行状态与后续放行顺序（master 文档基线 b188aadbe）
 
-本节取代早期“各 Core 尚待接线”的排期快照。当前状态以 2026-11-28 的 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd` 和已合并 PR 的精确 HEAD/CI 证据为准；历史分支描述保留作演进记录，不作为当前待办。
+本节取代早期“各 Core 尚待接线”的排期快照。当前仓库文档基线为 2026-11-28 的 `master@b188aadbe10b91a2dd639e2c51e901039801e447`；AI 运行时代码基线仍为 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd`（PR #617 为文档专用提交）。状态以已合并 PR 的精确 HEAD/CI 证据为准；历史分支描述保留作演进记录，不作为当前待办。
 
 | 顺序 | 层 | 当前主线状态 | 现有证据 | 尚未闭合 / 放行边界 |
 |---|---|---|---|---|
@@ -429,7 +429,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - 小批量集成继续从最新 master 建独立分支；最终 HEAD 要有适用的 Flutter、Android arm64/JVM、Fork License 和静态分析证据。SKIPPED 不计 PASS，旧 SHA CI 不替代最新 HEAD。
 - 全部云端事项收尾后，本地按唯一 docs/local-real-device-acceptance-handoff.md 执行 Find N2 TRACE；MISSING/UNKNOWN 保持原状态，不预填 PASS。
 
-**2026-11-28 集成闭环（当前 master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd）：**
+**2026-11-28 AI 运行时代码集成闭环（`master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；当前仓库文档主线 `b188aadbe10b91a2dd639e2c51e901039801e447`）：**
 
 - PR #610（Native 用户自述恢复投影跨进程前限界）最终 HEAD `39e841917139bb2b9036d615cb7bacb30031b75f`，merge commit `bcfa2e36440689d7d5cd12abfd80cf191c6d66dc`；Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。Branch validation 为 SKIPPED，不计 PASS。
 - PR #611（ReasoningResponse schemaVersion 严格整数）最终 HEAD `46ceb7490f0afb43c357dc59d0a15939a2f33803`，merge commit `178bf925a667e93a26539d2967a34519fc4ca5ff`；Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。Branch validation 为 SKIPPED，不计 PASS。
@@ -439,7 +439,10 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - PR #615（五运六气/小六壬宫名确定性模式路由优先级）最终 HEAD `4a916dd8847404406364a59a43865b21149a8310`，merge commit `f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；最终 HEAD 的 Branch validation job `140847951174`、Flutter regression job `140847950958`、Android arm64/JVM job `140849888468`、PR required gate job `140850831785`、Fork License run `46102527332` 均 SUCCESS。
 - PR #618 合并后的 `master@73a79b9a` Push CI：Flutter regression run `46102435178` / job `140847654952` SUCCESS；Android arm64/JVM job `140849750121` SUCCESS；Fork License run `46102435181` SUCCESS。Push 事件的 Branch validation / PR required gate 为 SKIPPED，不计 PASS。
 - PR #615 合并后的当前主线 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd` Push CI：Flutter regression run `46103578217` / job `140851236286` SUCCESS；Android arm64/JVM job `140852758501` SUCCESS（22/22）；Fork License run `46103578205` SUCCESS。Push 事件的 Branch validation job `140851237663` 与 PR required gate job `140853757013` 为 SKIPPED，不计 PASS。
-- **保护状态未完成：** 当前核对 `master.protected=false` 且 Rulesets 为空。PR workflow 的自动门禁已在 PR 上验证，但仓库管理员尚未将 `PR required gate` 和 `Fork license inventory and boundary` 配置为 master required checks；不得表述为 master 已受保护。执行命令和核对要求见 `docs/parallel-execution-and-integration-spec.md` §6.2。
+- **PR #617 文档收尾：** 仅修改本文件与 `docs/ai-modernization-execution-ledger.md`；最终 HEAD `9f87ad7d8f339988700161c74ca6b0f24394d033`，merge commit / 当前仓库 master `b188aadbe10b91a2dd639e2c51e901039801e447`。该合并不改变 AI 运行时代码。
+- **PR #617 精确 HEAD 验收：** Branch validation job `140854181797`、Flutter regression job `140854181627`、Android arm64/JVM job `140855769369`、PR required gate job `140856635902` 与 Fork License run `46104525606` 均 SUCCESS。
+- **PR #617 合并后主线验收：** Push run `46105373769` 的 Flutter regression job `140856830001` 与 Android arm64/JVM job `140858889845` 均 SUCCESS；Fork License run `46105373752` SUCCESS。Push 事件的 Branch validation / PR required gate 为 SKIPPED，不计 PASS。
+- **master 分支保护（2026-11-28 复核）：** 仓库管理员已确认按 `docs/parallel-execution-and-integration-spec.md` §6.2 的网页方法完成 classic branch protection 配置。公开 branch 响应独立确认 `master.protected=true`、`protection.enabled=true`、状态检查 enforcement 为 `everyone`，required checks 精确包含 `PR required gate` 与 `Fork license inventory and boundary`（GitHub Actions App）。当前连接无权读取完整 `/branches/master/protection` 详情；`strict`、PR review 对象、`enforce_admins`、force-push/deletion 等字段未能通过该 API 独立复核。不要将未读取字段伪装为 API 验证结果；后续 PR 仍必须以 required checks 实际通过及保护规则生效为准。
 - **设备与延期边界：** Find N2 GPU/CPU 真机、E4B 多轮、state:7、进程恢复、媒体、升级及 TRACE 仍按唯一 `docs/local-real-device-acceptance-handoff.md` 记录为 MISSING / UNKNOWN / LOCAL ONLY；工作流 I（用户 Markdown 书架）仍 DEFERRED / NOT AUTHORIZED。
 
 
