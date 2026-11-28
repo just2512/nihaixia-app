@@ -86,7 +86,8 @@ void main() {
     final store = DatabaseHelper.instance;
     final database = await store.database;
     final version = await database.getVersion();
-    expect(version, 8);
+    // R1A adds AI model configuration tables in schema v9 after the v8 transcript migration.
+    expect(version, 9);
 
     final columns = await database.rawQuery('PRAGMA table_info(assistant_messages)');
     expect(columns.any((column) => column['name'] == 'invocation_key'), isTrue);
