@@ -1183,6 +1183,7 @@ class LocalAiModelStatus {
   final int expectedSizeBytes;
   final String backend;
   final String preferredBackend;
+  final String? backendFallbackReason;
   final int? conversationKvCacheTokens;
   final String conversationKvCacheObservationStatus;
   final String conversationKvCacheBudgetStatus;
@@ -1199,6 +1200,7 @@ class LocalAiModelStatus {
     required this.backend,
     this.preferredBackend = 'gpu',
     this.hashVerified = false,
+    this.backendFallbackReason,
     this.conversationKvCacheTokens,
     this.conversationKvCacheObservationStatus = 'UNKNOWN',
     this.conversationKvCacheBudgetStatus =
@@ -1239,6 +1241,7 @@ class LocalAiModelStatus {
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
       preferredBackend: map['preferredBackend'] as String? ?? 'gpu',
+      backendFallbackReason: map['backendFallbackReason'] as String?,
       conversationKvCacheTokens: conversationTokens,
       conversationKvCacheObservationStatus: observationStatus,
       conversationKvCacheBudgetStatus:
