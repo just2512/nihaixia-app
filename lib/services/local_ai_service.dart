@@ -725,6 +725,7 @@ class LocalAiService {
     required int conversationId,
     required LocalAiTranscriptRestoreResult restore,
     required List<String> userMessages,
+    required bool userMessagesTruncated,
   }) async {
     if (restore.transcript.trim().isEmpty) {
       throw const FormatException('历史对话为空，无法恢复');
@@ -743,6 +744,7 @@ class LocalAiService {
         'omitted_completed_turn_count': restore.omittedCompletedTurnCount,
         'omitted_completed_character_count': restore.omittedCompletedCharacterCount,
         'userMessages': userMessages,
+        'user_messages_truncated': userMessagesTruncated,
       },
     );
     if (data?['restored'] != true) {

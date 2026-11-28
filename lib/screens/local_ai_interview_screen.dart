@@ -374,6 +374,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   final Set<String> _persistedDiagnosisTaskIds = <String>{};
   LocalAiTranscriptRestoreResult? _pendingHistoryRestore;
   List<String> _pendingHistoryUserMessages = const [];
+  bool _pendingHistoryUserMessagesTruncated = false;
   int _historyRestoreGeneration = 0;
   bool _contextualInitializationPending = false;
   bool _restoringPendingHistory = false;
@@ -475,6 +476,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingSavedChartsArguments = null;
         _pendingHistoryRestore = null;
         _pendingHistoryUserMessages = const [];
+        _pendingHistoryUserMessagesTruncated = false;
       }
       setState(() {
         _status = status;
@@ -6442,14 +6444,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ))
           .toList(growable: false),
     );
-    final userMessages = _messages
-        .where((message) => message.isUser)
-        .map((message) => message.text)
-        .toList(growable: false);
+    final userInputProjection =
+        LocalAiTranscriptRestorePolicy.projectUserMessages(
+      _messages
+          .where((message) => message.isUser)
+          .map((message) => message.text),
+    );
     await _service.restoreConversation(
       conversationId: conversationId,
       restore: restore,
-      userMessages: userMessages,
+      userMessages: userInputProjection.messages,
+      userMessagesTruncated: userInputProjection.truncated,
     );
   }
 
@@ -7581,7 +7586,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[AssistantHistory] 结构化问诊状态读取失败：$error\n$stack');
     }
     if (!mounted || generation != _historyRestoreGeneration) return;
-        final replayableUserMessages = <String>[];
+        final replayableUserMessages = LocalAiUserMessageRestoreProjectionBuilder();
     final restoredMessages = <_InterviewMessage>[];
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
@@ -7981,6 +7986,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ))
           .toList(growable: false),
     );
+    final replayableUserInputProjection = replayableUserMessages.build();
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
@@ -8008,8 +8014,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ..addAll(restoredMessages);
       _confirmedDraft = null;
       _pendingHistoryRestore = canRestoreContext ? restore : null;
-      _pendingHistoryUserMessages =
-          canRestoreContext ? replayableUserMessages : const [];
+      _pendingHistoryUserMessages = canRestoreContext
+          ? replayableUserInputProjection.messages
+          : const [];
+      _pendingHistoryUserMessagesTruncated =
+          canRestoreContext && replayableUserInputProjection.truncated;
       _contextResolutionError = contextRestoreError;
       _error = reasoningRecoveryFailed
           ? '历史消息已载入，但上一轮 Native 请求状态恢复失败；未自动重放。请检查后再继续。'
@@ -8030,6 +8039,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final targetConversationFuture = _conversationIdFuture;
     final restore = _pendingHistoryRestore;
     final userMessages = List<String>.unmodifiable(_pendingHistoryUserMessages);
+    final userMessagesTruncated = _pendingHistoryUserMessagesTruncated;
     try {
       if (restore == null || _status?.ready != true) return;
       final conversationId = await targetConversationFuture;
@@ -8043,6 +8053,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     )) {
       _pendingHistoryRestore = null;
       _pendingHistoryUserMessages = const [];
+      _pendingHistoryUserMessagesTruncated = false;
       return;
     }
     if (!mounted || generation != _historyRestoreGeneration) return;
@@ -8052,11 +8063,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId: conversationId,
         restore: restore,
         userMessages: userMessages,
+        userMessagesTruncated: userMessagesTruncated,
       );
       if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() {
         _pendingHistoryRestore = null;
         _pendingHistoryUserMessages = const [];
+        _pendingHistoryUserMessagesTruncated = false;
         _error = null;
       });
     } catch (error) {
@@ -10691,6 +10704,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingShoushengDebtArguments = null;
       _pendingHistoryRestore = null;
       _pendingHistoryUserMessages = const [];
+      _pendingHistoryUserMessagesTruncated = false;
       setState(() {
         _status = status;
         _messages

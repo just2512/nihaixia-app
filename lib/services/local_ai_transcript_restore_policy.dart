@@ -33,6 +33,62 @@ class LocalAiTranscriptTurn {
       };
 }
 
+class LocalAiUserMessageRestoreProjection {
+  LocalAiUserMessageRestoreProjection({
+    required List<String> messages,
+    required this.truncated,
+  }) : messages = List.unmodifiable(messages);
+
+  final List<String> messages;
+  final bool truncated;
+}
+
+/// Incrementally keeps only the bounded user-input projection used by Native
+/// symptom extraction. This is separate from the successful-turn transcript.
+class LocalAiUserMessageRestoreProjectionBuilder {
+  final List<String> _messages = <String>[];
+  var _firstRetainedIndex = 0;
+  var _formattedCharacterCount = 0;
+  var _truncated = false;
+
+  void add(String rawMessage) {
+    final normalized = rawMessage.trim();
+    if (normalized.isEmpty) return;
+
+    final bounded = LocalAiTranscriptRestorePolicy._truncateUserMessage(
+      normalized,
+    );
+    if (bounded.length != normalized.length) _truncated = true;
+
+    _messages.add(bounded);
+    _formattedCharacterCount += bounded.length +
+        LocalAiTranscriptRestorePolicy.userMessageSourcePrefix.length;
+
+    while (_messages.length - _firstRetainedIndex >
+            LocalAiTranscriptRestorePolicy.maxUserMessages ||
+        _formattedCharacterCount >
+            LocalAiTranscriptRestorePolicy.maxTotalUserMessageCharacters) {
+      final removed = _messages[_firstRetainedIndex];
+      _formattedCharacterCount -= removed.length +
+          LocalAiTranscriptRestorePolicy.userMessageSourcePrefix.length;
+      _firstRetainedIndex += 1;
+      _truncated = true;
+    }
+
+    // Keep the accumulator itself bounded while preserving input order.
+    if (_firstRetainedIndex >= 16) {
+      _messages.removeRange(0, _firstRetainedIndex);
+      _firstRetainedIndex = 0;
+    }
+  }
+
+  LocalAiUserMessageRestoreProjection build() =>
+      LocalAiUserMessageRestoreProjection(
+        messages: _messages.skip(_firstRetainedIndex).toList(growable: false),
+        truncated: _truncated,
+      );
+}
+
 class LocalAiTranscriptRestoreResult {
   const LocalAiTranscriptRestoreResult({
     required this.transcript,
@@ -56,7 +112,39 @@ class LocalAiTranscriptRestoreResult {
 class LocalAiTranscriptRestorePolicy {
   static const int maxTranscriptCharacters = 10000;
   static const int maxRetainedTurns = 12;
+  static const int maxUserMessages = 60;
+  static const int maxUserMessageEntryCharacters = 2000;
+  static const int maxTotalUserMessageCharacters = 16000;
+  static const String userMessageSourcePrefix = '用户文字自述：';
   static const String truncationMarker = '【较早历史已省略，以下为最近内容】\n';
+
+  /// Raw text budget after Native attaches the fixed source label.
+  static int get maxUserMessageCharacters =>
+      maxUserMessageEntryCharacters - userMessageSourcePrefix.length;
+
+  static LocalAiUserMessageRestoreProjection projectUserMessages(
+    Iterable<String> messages,
+  ) {
+    final projection = LocalAiUserMessageRestoreProjectionBuilder();
+    for (final message in messages) {
+      projection.add(message);
+    }
+    return projection.build();
+  }
+
+  static String _truncateUserMessage(String value) {
+    final maximum = maxUserMessageCharacters;
+    if (value.length <= maximum) return value;
+    var end = maximum;
+    if (end > 0 && end < value.length) {
+      final previous = value.codeUnitAt(end - 1);
+      final next = value.codeUnitAt(end);
+      final previousIsHighSurrogate = previous >= 0xD800 && previous <= 0xDBFF;
+      final nextIsLowSurrogate = next >= 0xDC00 && next <= 0xDFFF;
+      if (previousIsHighSurrogate && nextIsLowSurrogate) end -= 1;
+    }
+    return value.substring(0, end);
+  }
 
   static LocalAiTranscriptRestoreResult fromMessages(
     List<LocalAiTranscriptMessage> messages,
