@@ -5153,10 +5153,20 @@ PR HEAD 门禁证据：
 - **下一步放行：** 先验收并合并 PR #621 的文档同步（所有五项 PR 门禁必须对其最终 HEAD 为 SUCCESS）。随后逐个决定旧 PR 是否重基/拆分/保留，不将它们合并为 AI 五层收尾的隐含依赖。除非后续审计找到可复现的云端 Native 缺陷，否则不新增 Core-1 运行时代码；完成云端收尾后统一交付 Find N2 本地验收。 
 
 
-## 147. 2026-11-28 PR #622 合并后 Core-1 SessionState 收尾（Task ID: DOC-AI-POST622-CLOSEOUT-20261128）
+## 147. 2026-11-28 PR #622 合并后 Core-1 SessionState 收尾与当前主线同步（Task ID: DOC-AI-POST622-CLOSEOUT-20261128）
 
-- **任务登记：** 从 `master@805f006ed502c5cbf10dba4ad30428ee9761eb42` 建立独立文档分支 `docs/ai-post622-closeout-20261128`。唯一 Owner 为 just2512（Integration + Architecture）。本次文档写入范围严格限定为 `docs/ai-layered-runtime-architecture.md`、本执行台账和唯一活动交接单 `docs/local-real-device-acceptance-handoff.md`。
-- **目标：** 记录 PR #622 的 Core-1 有界 SessionState 读取合入事实、最终 HEAD/merge SHA 与五项精确 CI；同步主线与开放 PR 最新状态；刷新设备交接构建基线及 #564 图标云端状态。
-- **范围冻结：** 本任务不修改应用代码、测试、Workflow、许可证清单或授权实现；不扩展 Core-1 Token/input budget，不新增自动摘要/压缩，不启动工作流 I。
-- **设备边界：** PR #622 只证明 Dart/SQLite 记忆投影读取边界。Find N2 E4B、GPU/CPU 多轮、`state:7`、媒体、Activity/process restart、签名覆盖升级、Keystore 和 TRACE 仍为 MISSING / UNKNOWN / LOCAL ONLY；本任务不得改变这些状态。
-- **验收：** 文档 PR 最终 HEAD 必须通过 Branch validation、Flutter regression、Android arm64/JVM、PR required gate 与 Fork License，所有结果必须绑定同一最终 HEAD；SKIPPED 不计 PASS。
+- **文档任务登记与基线：** 从完整基线 `master@805f006ed502c5cbf10dba4ad30428ee9761eb42` 建立独立分支 `docs/ai-post622-closeout-20261128`，先以仅含本登记段的提交 `0902f1463bfa48a2abf9a03bbdaac15becb98eeb` 创建 Draft PR #623。唯一 Owner 为 just2512（Integration + Architecture）。允许路径严格为本文件、`docs/ai-layered-runtime-architecture.md` 与唯一活动设备交接单 `docs/local-real-device-acceptance-handoff.md`；没有修改应用代码、测试、Workflow、license inventory 或授权实现。
+- **PR #622 基线与合并：** 原提交 `192c21465585a2a6284d41ee3f742dea507f6e7d` 基于旧 master `faf243c3779b79da9129e7a3a06a5e94790bc14d`。重新对齐最新主线 `747b5193844b1e276af50bfaac1366c534f9e371` 后，最终 PR HEAD 为 `1bd334ba64d46488a7008a49647bf83860f652cb`，compare 为 ahead 1 / behind 0、仅 12 个原允许文件；PR #622 已以 squash merge 合入，merge commit / 当前代码 master 为 `805f006ed502c5cbf10dba4ad30428ee9761eb42`。
+- **PR #622 精确 HEAD 自动验收：** Branch validation job `140903069854` SUCCESS；Flutter regression job `140903070020` SUCCESS；Android arm64/JVM job `140905099227` SUCCESS；PR required gate job `140905913256` SUCCESS；Fork License run `46120281090` / job `140903069713` SUCCESS。五项结果全部绑定最终 HEAD `1bd334ba64d46488a7008a49647bf83860f652cb`；旧 HEAD 检查未继承。
+- **Core-1 本批变更：** 新增 `AssistantConversationStore.getAssistantMessagesForSessionState`，由 SQLite 只读取当前 conversation 最近最多 129 条 user/assistant 行，排除 hidden tool/system 行、按 ID 顺序返回，assistant 正文不投影。SnapshotBuilder 最多处理最近 128 条；检测到更早历史后标记 PARTIAL。SQL 层限制用户正文与 metadata 投影；Builder 在 replayability JSON 解码前拒绝超限 metadata；evidence 引用最多 64 条并显式报告截断。原 `getAssistantMessages` 完整历史合同保持不变，继续服务 UI 与 Reasoning Ledger。
+- **Core-1 未闭合边界：** 本批只解决 Dart/SQLite SessionState 投影读取与暂存数据结构边界，不改变 Native KV Cache 生命周期，不配置 App 可用 Token/input budget，不增加自动摘要/压缩。Native `Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 仍只是只读观测，`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`；Find N2 GPU/CPU 多轮、state:7、媒体、Activity/process restart、真实 token/context 数值与 transcript 三方一致性继续 MISSING / UNKNOWN / LOCAL ONLY。
+- **PR #622 合并后 master Push CI（run 创建于 2026-11-28 07:29 UTC）：** Fork License run `46121415846` / job `140906580920` SUCCESS；Flutter tests run `46121415768` / job `140906580424` 在本段记录生成时仍 IN_PROGRESS，最终结果以该 run 更新为准。Push 事件的 Branch validation job `140906581519` 为 SKIPPED，不计 PASS；PR required gate 是 PR 事件门禁，不能用 Push 事件 SKIPPED 冒充通过。PR #622 自身五项 PR 门禁已经全部 SUCCESS。
+- **当前开放 PR 复核（compare 基线为 `805f006ed502c5cbf10dba4ad30428ee9761eb42`）：**
+  - **PR #539 — BLOCKED / Draft：** ahead 4 / behind 213，34 个文件。仍删除来源审计、classic manifest、golden review 与测试等资产，没有逐项替代映射和等价来源/回归证明；不合并、不关闭。与本轮 Core-1 PR 曾共享 `lib/screens/local_ai_interview_screen.dart`；#622 已合入，文件修改所有权窗口结束，但 #539 的删除资产阻塞不因此解除。#539 被告知在本 PR #623 文档 single-writer 窗口内不修改架构/台账/唯一设备交接文档。
+  - **PR #564 — 已合并：** merge commit `747b5193844b1e276af50bfaac1366c534f9e371`。Launcher 自适应图标资源与自动化检查已在主线；Find N2 ColorOS 遮罩截图仍 MISSING / LOCAL ONLY。
+  - **PR #589 — 已合并：** merge commit `faf243c3779b79da9129e7a3a06a5e94790bc14d`。About 页面保留《天纪》《人纪》《地纪》来源与离线优先学习工具定位，不改变产品边界。
+  - **PR #416 — BLOCKED / Draft：** ahead 36 / behind 450，22 个变更文件。仍是旧 v1.1 授权方案，与主线 v1.3 的 `protocol_revision`、Key Ring、Keystore、TokenStore 和唯一设备交接边界冲突；不机械 rebase。生产 Trust Anchor、公钥来源、离线私钥备份/恢复演练、正式签发及 Find N2 Keystore 生命周期仍 UNKNOWN / MISSING。
+- **工作流 H：** Core-0 契约/源码映射已完成；Core-1 云端 transcript、SessionState owner/provenance、dirty-KV、Request Ledger、UNKNOWN 不重放及本次 SQL 有界读取已有代码和自动化证据；Core-2 当前约定范围完成；Core-3 结构化文本/媒体协议与旧自由文本入口 fail-closed 已完成；Core-4 仍仅四项显式确认能力；Core-5 20 轮问答和单次工具闭环仍是 fake Native/executor 的应用层 E2E。工作流 H 整体继续 PARTIAL，剩余为 Find N2 实机证据，不反向阻塞云端。
+- **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，本轮未启动、未建分支、未实现。
+- **设备交接：** 唯一活动文件 `docs/local-real-device-acceptance-handoff.md` 已同步 #564 合并状态、#622 代码/CI 证据和运行时代码基线；所有真机项目保持 MISSING / UNKNOWN / LOCAL ONLY。执行前须再次 fetch 最新 master、确认 CI 终态、记录实际构建 SHA、APK/签名元数据。
+- **下一步放行：** 先完成 PR #623 的文档/设备交接同步并对其最终 HEAD 验收五项门禁；之后若无新的可复现云端缺陷，不再新增猜测性 Core-1 运行时代码或 Token budget 实现，统一交付 Find N2 本地验收。
