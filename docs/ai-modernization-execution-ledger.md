@@ -5242,3 +5242,21 @@ PR HEAD 门禁证据：
 - **合并后 master Push：** `master@0fd7c29e0cc7b2347414483e6b17b5e4199e0e77` 的 Push run `46159016032` completed / SUCCESS。Flutter job `141021920486` SUCCESS，2,280 passed / 15 skipped（相同外部 oracle 夹具缺失）；Android job `141024034283` SUCCESS，arm64-only APK、131 JVM tests（0 failures/errors/skips）、manifest 与签名隔离检查通过。Fork License Push run `46159016036` / job `141021920468` SUCCESS。
 - **Push 工作流条件说明：** master Push 中 Branch validation 与 PR required gate 按 workflow 条件标记 SKIPPED；它们不是该 Push 事件的失败项，也不冒充 PASS。PR 上的五项门禁已经在合并前对最终 HEAD 全部 SUCCESS。
 - **当前阶段边界：** Stage 1 云端配置/Vault 的实现、PR 验收、合并、master Push CI 已闭环；Stage 2 尚未启动。Provider HTTP/SSE、Model Gateway、AI 总开关、Runtime Coordinator、真实云端请求与向量索引均仍 NOT_STARTED。Find N2 设备验证仍 LOCAL ONLY / UNKNOWN。
+
+
+## 152. Stage 2 统一门禁与 Model Gateway 任务登记（Task ID: AI-MODEL-GATEWAY-20261128）
+
+- **最新登记基线：** master@56baacebd08e8e90e818471ba558ceff209b9ca7。任务卡：docs/tasks/AI-MODEL-GATEWAY-STAGE2-20261128.md。Owner：Remote；Integration 单写执行台账与 Fork License inventory；Architecture 单写五层规范；Audit 单写能力审计规范。
+- **Stage 1 依赖：** #629 R1A/R1B 已合并；Provider/Model/TaskSelection、schema v9、Credential Vault 已在 master。配置存在不等于真实 Provider 可调用。
+- **Native Gate 前置：** 原 PR #631 基于旧 master，已由 #633 的最新基线替代。#633 只修改 MainActivity 的 enable 同步确认与对应架构测试，保留同步 revoke 和 epoch 防陈旧开闸。Stage 2 不拥有 MainActivity/AiModelAccessGate/AiModelAccessPlatform 通道文件；必须在 #633 合并后从最新 master 建立实现分支。
+- **Stage 2 范围：** 单一 AI 总开关（user_settings.ai_enabled，缺失时默认 true 以保持已授权旧用户行为）、唯一 Runtime Access Coordinator、五个 taskKey 解析、Gateway 调用前门禁、通用安全 HTTP transport 基础。不得加入 Provider 专属 Adapter/SSE/真实网络请求；真实文本 Adapter 属于 Stage 3。
+- **授权合同：** verified ai_access AND entitlement active AND user ai_enabled。EntitlementService 提供验证事实；Coordinator 是唯一同步既有 Native Gate 的 Dart 写入者。checking/invalid/temporarilyUnavailable/unknown 一律 fail-closed；关闭 AI 不删除 License Token、凭证、配置、模型、索引或历史。
+- **未完成项：** 本节只是正式登记，不代表 Stage 2 运行时代码已开始或完成；五类 taskKey 的 Resolver、Gateway、HTTP transport 与全链路测试仍 NOT_STARTED。Local Embedding/Reranker 继续由 #626 独立只读审计。
+
+## 153. Yunqi oracle 外部对拍夹具接收任务登记（Task ID: YUNQI-ORACLE-FIXTURE-20261128）
+
+- **现状：** master Push 56baace 的 Flutter full regression 尚在执行；此前 exact master Push 0fd7c29 的记录为 2,280 passed / 15 skipped。15 项依赖外部 D:\tools\yunqi_ref.json，明确 MISSING/SKIPPED，不计 PASS。
+- **任务卡：** docs/tasks/YUNQI-ORACLE-FIXTURE-INTAKE-20261128.md。目标接收路径 test/fixtures/yunqi_ref.json；测试现有 YUNQI_REF_PATH 环境变量已支持替代历史本机路径。
+- **公开限制：** 仓库为公开仓库。Local 必须提供原始文件、来源/版本、schema、SHA-256 和可公开再分发权确认。未获得原文件与确认前不上传、不合成、不推测，不改变 15 项 skip 行为。
+- **CI 接入：** 收到并通过 provenance/schema 检查后，Integration 才在 Flutter workflow 设置 YUNQI_REF_PATH 指向 test/fixtures/yunqi_ref.json，并在 Local/CI 上让原有对拍断言真实执行。若对拍失败，保留失败并追查真实算法/数据差异，不删测试、不降低门槛。
+- **当前状态：** fixture bytes = MISSING；公开再分发权 = AWAITING OWNER CONFIRMATION；15 项 oracle 对拍不变更为 PASS。

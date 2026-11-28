@@ -1346,3 +1346,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-added Credential Vault task specification, platform-backed secret storage service, and focused lifecycle/security regression tests. Ownership evidence remains required.
+
+Files:
+ docs/tasks/AI-MODEL-GATEWAY-STAGE2-20261128.md
+ docs/tasks/YUNQI-ORACLE-FIXTURE-INTAKE-20261128.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned Stage 2 runtime-gateway and Yunqi oracle fixture intake task specifications. The fixture task card contains no oracle data; fixture publication remains blocked pending provenance and redistribution review.
