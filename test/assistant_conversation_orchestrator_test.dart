@@ -139,6 +139,21 @@ void main() {
       }
     });
 
+    test('不带通用学习提示词的术数关键词仍进入玄学模式', () {
+      for (final query in [
+        '大安对应什么六神',
+        '小六壬的大安对应什么六神',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
     test('工具选择待处理时的非五运六气术数知识问题仍进入玄学解释', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '八字十神的原理是什么？',
