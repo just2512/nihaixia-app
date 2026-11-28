@@ -305,13 +305,20 @@ void main() {
           'content': '元数据结构损坏的原始请求',
           'metadata': '{"schemaVersion":1,"replayable":false',
         },
+        {
+          'id': 3,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': '非整数 schemaVersion 的原始请求',
+          'metadata': '{"schemaVersion":1.0,"replayable":true}',
+        },
       ],
     );
 
     expect(result.status, SessionStateStatus.partial);
     expect(result.facts, isEmpty);
-    expect(result.omittedUserMessageCount, 2);
-    expect(result.diagnostics, contains('USER_ORIGINAL_MESSAGES_OMITTED:2'));
+    expect(result.omittedUserMessageCount, 3);
+    expect(result.diagnostics, contains('USER_ORIGINAL_MESSAGES_OMITTED:3'));
   });
 
   test('assistant-only display rows do not create restored memory facts', () {

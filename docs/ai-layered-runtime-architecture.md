@@ -654,3 +654,10 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - `restoreConversation` 的 MethodChannel envelope 必须同时包含 `completed_turns`、`omitted_completed_turn_count`、`omitted_completed_character_count` 和 `userMessages`；缺失字段、非整数计数、负数/越界计数或非字符串用户输入均在会话重置之前以 `INVALID_RESTORE_PAYLOAD` 拒绝。
 - 不再用空列表或 0 替代缺失字段，避免协议错配被误当成有效空历史而清空当前 Native 会话。合法空 `completed_turns` 仍允许用于没有完整成功轮次、仅有未完成输入的历史；独立用户输入投影仍按既有 60 条入口和 `UserReportedInputPolicy` 字符/条目边界治理。
 - 不改变历史裁剪、12 轮/10,000 UTF-16 上限、Token 预算状态、会话所有权、模型推理和业务逻辑。
+
+
+### 5.12 Core-1 SessionState metadata schemaVersion 使用严格整数合同
+
+- SessionState 记忆准入只接受 JSON metadata 中类型为整数且值为 `1` 的 `schemaVersion`；`1.0` 等数值相等但类型不符的版本值视为未知/不兼容格式，fail-closed，不得提升为 `USER_ORIGINAL`。
+- 该约束只作用于 `isReplayableForSessionMemory`；通用 `AssistantMessageMetadata.decode` 的历史/UI 兼容 fallback 不改变。
+- 回归覆盖 metadata 准入函数与 `SessionStateSnapshotBuilder` 的最终事实投影，确保该类原始消息只计入 omitted 数，快照保持 PARTIAL。
