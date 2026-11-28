@@ -64,7 +64,7 @@ Remove the Vault integration only after any stored secrets have been explicitly 
 - Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
 - Vault operations are serialized across instances within the Dart isolate. This compensates for the pinned Windows federated implementation version predating its upstream concurrent read/write fix; a cross-instance concurrency regression test guards the boundary.
 - Focused tests now cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, storage errors without underlying exception messages, empty stored values, overwrite semantics and unsupported platforms.
-- **Validation remains pending:** the lockfile still needs an actual Pub resolution; local Dart/Flutter execution has not been performed in this environment. No test or CI result is marked PASS by this record.
+- **Validation status:** `flutter pub get --enforce-lockfile` completed successfully on integrated HEAD `bb0bbaa` before the final concurrency revision. The later integrated HEAD `9b445d0` workflow was cancelled before all dependent jobs completed, so final-HEAD validation remains pending and must be rerun. Local Dart/Flutter execution outside CI and Find N2 real-device evidence remain unavailable here; no local/device PASS is asserted.
 
 
 ## Integration-owned follow-up (not Remote R1B scope)
