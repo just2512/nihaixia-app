@@ -251,7 +251,7 @@ void main() {
     expect(
       ClassicSearchService.contextualAnchorIdForReaderAsset(
         moduleId: 'neijing-reading',
-        asset: r'assets/neijing/sub\\01_上古天真论.md',
+        asset: r'assets/neijing/sub\01_上古天真论.md',
       ),
       isNull,
       reason: 'A reader asset path containing a backslash is not canonical.',
