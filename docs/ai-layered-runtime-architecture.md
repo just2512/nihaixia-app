@@ -6,7 +6,7 @@
 >
 > **核心决策：** 知识召回、证据排序、会话记忆、语言推理、业务执行五项职责必须逻辑独立、输入输出可审计、状态所有权清楚。它们不是五个互相自治的 Agent，也不要求拆成五套服务、五个数据库或五个模型。
 >
-> 本文件与 docs/product-positioning-and-boundaries.md、docs/ai-capability-audit.md 和 docs/ai-modernization-execution-ledger.md 配套使用。产品定位约束产品边界；本文件定义核心运行时职责；AI 审计规范定义实现与证据门槛。若有冲突，不得扩大模型权限或破坏确定性业务边界。
+> 本文件与 docs/product-positioning-and-boundaries.md、docs/ai-capability-audit.md、docs/pro-edition-architecture-constraints.md 和 docs/ai-modernization-execution-ledger.md 配套使用。产品定位约束产品边界；本文件定义五层运行时职责；专业版架构约束 v1.4 定义本地/云端任务模型配置与唯一授权；AI 审计规范定义实现与证据门槛。2026-11-28 起，v1.4 模型运行时补充条款优先于本文早期仅有 E4B/尚未授权 Embedding、Reranker 或云端模型的历史表述。
 
 ## 1. 架构目标：五项职责独立，而不是一个模型包办
 
@@ -15,7 +15,7 @@
 1. **知识召回（Knowledge Retrieval）**：确定“有哪些候选资料可能相关”。
 2. **证据排序（Evidence Ranking）**：确定“哪些候选证据值得进入本轮上下文、先后顺序如何、为什么保留/排除”。
 3. **会话记忆（Session Memory）**：确定“当前用户、当前会话和当前任务已经明确了什么，哪些状态可跨轮延续”。
-4. **语言推理（Language Reasoning）**：由端侧 E4B 理解问题、综合证据、解释、澄清和提出受约束的业务动作意图。
+4. **语言推理（Language Reasoning）**：由用户为 text_reasoning 选择的本地或云端生成模型理解问题、综合证据、解释、澄清和提出受约束的业务动作意图；当前端侧 E4B 是已实现的本地模型路径，不是唯一允许的推理运行时。
 5. **业务执行（Business Execution）**：由 App 现有确定性代码校验参数、权限和状态，执行规则、计算或工具，并验证真实结果。
 
 **不允许再把以下内容混成一个“AI 上下文/模型能力”：**
@@ -33,7 +33,7 @@
 - 五层必须有独立责任、输入/输出契约、状态归属和测试边界。
 - 可以先通过现有 Repository、Policy、Builder、Dispatcher 和轻量 Adapter 形成边界，不要求一开始新建五组服务或重写现有模块。
 - 不新建通用 Agent 平台、DAG、自治多 Agent 协作或重复会话数据库。
-- 不要求每层都有独立 LLM。当前 Gemma 4 E4B IT 仍承担语言推理；检索可先用现有确定性检索；Embedding/Reranker 仅在单独阶段有证据后引入。
+- 不要求每层都有独立 LLM 或 Agent。模型按 v1.4 任务能力配置选择本地或云端；现有 Gemma 4 E4B 是已接入的本地推理路径。Embedding 与 Reranker 已获准作为知识召回/排序层的独立可配置任务模型，均须提供本地与云端接入路径；未配置时保持现有确定性检索/排序。该授权不等于运行时已经实现，也不授权自动能力探测或自动模型切换。
 - 五层之间只交换定义明确的数据，不共享可任意修改的全局可变状态。
 
 ## 2. 五层职责与禁止越界
@@ -92,12 +92,12 @@
 
 约束：
 
-- 排序可组合现有标题/精确匹配、关键词、向量、RRF 或后续 Reranker；但每种策略必须单独可测。
+- 排序可组合现有标题/精确匹配、关键词、已配置 Embedding 向量召回、RRF 和已配置 Reranker；每种策略必须单独可测。Embedding/Reranker 的本地与云端 Adapter 按用户配置选择，不由模型名推断。
 - 评分只表示当前检索任务的相关性信号，不表示医学正确性、经典权威性、来源真实性或事实置信度。
 - 来源身份和核验状态只能读取数据层提供的元数据，不能由排序模型自行提升。
 - 不得静默融合版本冲突的方剂组成、剂量、条文和医案记载；冲突证据应分来源保留。
 - 不以候选数量、向量相似度或 RRF 数值代替黄金查询集验收。
-- Reranker 不是必选组件。只有出现可复现错排且对照实验有净收益时，才单独评估。
+- Reranker 未配置时不发起模型调用，继续 SourceAwareLegacyEvidenceRanker 的确定性排序；配置后必须使用用户选定的本地或云端 Reranker，并验证返回的候选 ID 只能来自本轮输入集合。配置后的失败不得静默降级或自动换模型。
 
 ### 2.3 会话记忆：独立于知识库和临时证据
 
@@ -123,7 +123,7 @@
 - 历史重建必须在 Native 串行队列中完成；若无法安全恢复，显式停止并要求用户确认，不自动重放执行状态 UNKNOWN 的请求。
 - Token 预算以运行时可取得的 token 数为准；字符数只能称字符数，截断只能按完整条目或明确定义的结构边界发生。
 
-### 2.4 语言推理：E4B 负责理解和表达，不承担其他四层的权威职责
+### 2.4 语言推理：用户选定的本地/云端模型负责理解和表达，不承担其他四层的权威职责
 
 输入必须是已组装且带来源的 ReasoningRequest：
 
@@ -133,7 +133,7 @@
 - 如有则包含确定性 Business ExecutionResult；
 - 当前模式、权限边界和响应 schema。
 
-E4B 可以：
+当前配置的生成模型可以：
 
 - 理解自然语言、处理指代和歧义；
 - 对候选证据进行归纳、比较和解释；
@@ -142,7 +142,7 @@ E4B 可以：
 - 提出一个已登记业务能力的结构化调用意图；
 - 输出带引用 ID 的解释内容。
 
-E4B 不可以：
+任何本地或云端生成模型均不可以：
 
 - 根据预训练记忆补造本地库未命中的医学事实、古籍原文、条文号、书目版本或来源；
 - 自行把 source 标成 SYSTEM/USER、AUTHORITATIVE/VERIFIED 或改变 verificationStatus；
@@ -169,7 +169,7 @@ E4B 不可以：
 1. capability 是否存在、当前模式是否允许；
 2. 用户是否提供并确认所需参数；
 3. typed argument schema、范围、单位和必填字段校验；
-4. 现有 ai_access / Native AiModelAccessGate 等访问门禁；
+4. 统一 aiEnabledForRuntime（有效 ai_access 与用户 AI 总开关同时满足）；Native LiteRT 仍由 AiModelAccessGate 最终拦截，云端 HTTP 由受控 Model Gateway 在每次请求前检查；
 5. 通过 App 已有确定性业务函数执行；
 6. 返回真实 ExecutionResult，包括执行状态、解析后的参数、结果、来源和错误；
 7. 在需要时提供可验证的幂等/重试语义。
@@ -177,12 +177,12 @@ E4B 不可以：
 约束：
 
 - 用户自然语言和 RAG 正文不能直接执行工具。
-- E4B 只能提出 ACTION_PROPOSAL；由代码进行权限与参数判断后才可能执行。
+- 当前配置的本地或云端模型只能提出 ACTION_PROPOSAL；由代码进行权限与参数判断后才可能执行。
 - 未登记、未授权、缺参、类型不符、跨领域请求均由代码拒绝或要求澄清。
 - 只有业务函数真实返回并通过结果校验，执行状态才可标 SUCCEEDED。
 - 执行状态分为 NOT_STARTED / SUCCEEDED / FAILED / UNKNOWN；UNKNOWN 不得自动重放有副作用的请求。
 - 排盘、历法、问诊规则、剂量换算及其他既有确定性计算继续由 App 既有函数执行，不能迁移给模型。
-- 业务执行与模型授权分开治理；任何 LiteRT/LiteRT-LM 模型加载/推理均遵守项目既有唯一 ai_access 和 Native AiModelAccessGate，不新增第二套门禁或收费权益。
+- 业务执行与模型授权分开治理。全部本地/云端 LLM、多模态、Embedding 和 Reranker 调用均受唯一 ai_access 与用户 AI 总开关共同约束；Native LiteRT 加载/推理继续经过 AiModelAccessGate，云端请求经过受控 Model Gateway。不得新增 cloud_ai_access 或其他独立收费权益。
 
 ### 2.6 核心 DTO 契约（v1，字段级冻结）
 
@@ -299,7 +299,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 **兼容策略**
 
 - 现有 `AssistantKnowledgeContextResult`、`ToolExecutionPlan`、`AssistantToolResult` 是 v1 的既有实现/适配源，不要求立即废弃或改名。
-- 不创建第二套会话数据库，不迁移业务算法，不新增 ai_access 或 Native `AiModelAccessGate`。
+- 不创建第二套会话数据库，不迁移业务算法，不新增授权 Feature；v1.4 已有 ai_access 与 Native `AiModelAccessGate` 继续沿用，并由统一用户 AI 开关扩展到云端请求入口。
 - 后续代码按“一个边界、一个可验证切片”逐步适配；未被调用路径消费的 DTO 只算契约资产，不算运行时能力已完成。
 
 ## 3. 五层之间的统一数据流
@@ -310,7 +310,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
   → 证据排序，输出 RankedEvidenceSet
   → 会话记忆提供有界状态和来源引用
   → 组装 ReasoningRequest
-  → E4B 语言推理
+  → 用户选定的本地/云端语言模型推理
   → ANSWER / CLARIFICATION，或输出 ACTION_PROPOSAL
   → 如有动作提案，经过业务执行 Gate
   → ExecutionResult 返回结果解释
@@ -323,10 +323,10 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 | 请求类型 | 必须经过 | 可以省略 |
 |---|---|---|
-| 纯闲聊/简单解释 | 会话记忆读取 → E4B → 状态提交 | 知识召回、证据排序、业务执行 |
-| 本地知识问答 | 会话记忆读取 → 知识召回 → 证据排序 → E4B → 引用校验 | 业务执行 |
-| 跨轮追问 | 会话记忆/实体指代解析 → 必要时重新召回 → 证据排序 → E4B | 无关历史资料重放 |
-| App 确定性工具请求 | 会话记忆读取 → E4B 意图/参数解析（必要时）→ 业务执行 Gate → 结果校验 → E4B 解释 | 无关知识召回 |
+| 纯闲聊/简单解释 | 会话记忆读取 → 默认本地/云端推理模型 → 状态提交 | 知识召回、证据排序、业务执行 |
+| 本地知识问答 | 会话记忆读取 → 知识召回（可按配置使用本地/云端 Embedding）→ 证据排序（可按配置使用本地/云端 Reranker）→ 默认本地/云端推理模型 → 引用校验 | 业务执行 |
+| 跨轮追问 | 会话记忆/实体指代解析 → 必要时重新召回/排序 → 当前配置的本地/云端推理模型 | 无关历史资料重放 |
+| App 确定性工具请求 | 会话记忆读取 → 当前配置的本地/云端模型意图/参数解析（必要时）→ 业务执行 Gate → 结果校验 → 当前配置模型解释 | 无关知识召回 |
 | 复合任务 | 各子任务按显式顺序调用对应层，并分别保存状态 | 不要求每个子任务重复加载所有资料 |
 
 ## 4. 跨层失败状态与来源语义
@@ -358,7 +358,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 1. Core-2 已完成当前约定的召回/聚合/排序责任边界：各来源输出 CandidateEvidence，MultiSourceEvidencePipeline 只做来源聚合，SourceAwareLegacyEvidenceRanker 独立产出 RankedEvidenceSet，AssistantKnowledgeContextResult 输出 metadata-only candidateSnapshot 与最终呈现引用。AssistantKnowledgeContextBuilder 仍编排查询生成和上下文物化；后续不得重复建设候选/排序审计对象或为追求分层而改变既有黄金行为。
 2. Native Conversation 重建所用的成功轮次 transcript 与临时 RAG 输入需要严格隔离；不得把检索正文或完整 modelInput 写入用于恢复的历史列表。
 3. 当前 UI transcript、Native Conversation history、结构化任务状态和检索证据是不同数据，不得彼此替代。
-4. E4B 是语言推理层；ToolRouter/HeadlessToolDispatcher、ContextResolutionGateway 和 App 既有确定性业务函数承担不同的执行/来源校验职责，不能把它们合并为模型 Agent。
+4. 配置的本地/云端生成模型承担语言推理；ToolRouter/HeadlessToolDispatcher、ContextResolutionGateway 和 App 既有确定性业务函数承担不同的执行/来源校验职责，不能把它们合并为模型 Agent。
 5. 现有授权、模型加载、Native 单线程队列、GPU/CPU fallback 和保守恢复语义必须保留；任何拆分须证明没有并发、重复执行、资源释放或数据恢复回归。
 6. 每个候选新 Adapter/DTO 必须指向实际调用链缺口和可复现测试；不因为图上有五层就机械新增五个模块。
 
@@ -466,7 +466,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - 系统知识库、用户书架、用户笔记、医案、未来其他本地资料都属于知识源输入，不能为每种来源复制一套推理/记忆/工具执行架构。
 - 只有 Core-0 的数据契约冻结，Core-1 的 RAG/Memory 隔离具备可集成条件，Core-2 的召回/排序边界与黄金行为明确后，才评估书架 C 阶段。
 - 书架导入、Embedding、后台任务、数据库拆分等不能阻塞核心五层架构，也不能要求先重写核心层来服务书架。
-- Embedding/Reranker 是召回或排序层的可选技术组件，不是独立产品主线；必须由中医黄金查询集和 Find N2 实测证明收益。
+- Embedding/Reranker 是召回或排序层的任务模型组件，不是独立产品主线；由用户选择本地或云端模型。当前代码尚未确认其独立运行时，必须按 v1.4 任务拆分实施，并用黄金查询集及适用设备证据验收。
 
 ## 8. 核心验收矩阵
 
@@ -505,14 +505,14 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - 把知识库内容或 RAG 正文写入长期 Native 会话历史；
 - 将模型动作提案绕过业务执行门禁；
 - 引入新的 Agent/DAG、第二套会话表、第二套授权门禁或第二套重复状态存储；
-- 引入 Embedding、FTS5、ANN、Reranker、独立向量数据库或云端推理；
+- 未经数据规模/性能证据引入独立向量数据库、FTS5、ANN 或第二套知识库；Embedding/Reranker 与云端模型本身已由 v1.4 授权，但必须遵循用户显式任务配置、来源边界和失败语义；
 - 改变现有黄金检索行为、GPU/CPU fallback、Native 串行队列或 UNKNOWN 请求恢复语义。
 
 所有变更都必须先回答：现有哪一层无法履行职责、用什么 CODE/TEST/TRACE 证明、最小替代方案是什么、失败如何回滚。
 
 ---
 
-**最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、E4B 负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态；书架只是未来可选知识源。先完成核心分层和多轮/证据边界，再决定是否扩展书架、Embedding 或 Reranker。
+**最终约束：** 研纪 AI 的核心不是“一个大模型负责一切”，而是五项职责独立协作：知识召回发现候选、证据排序选择本轮依据、会话记忆保存有界状态、用户选定的本地/云端模型负责语言推理、App 确定性代码负责业务执行。五层共享统一契约但不共享不受控状态。模型的本地/云端运行时、任务键、用户开关、唯一 ai_access 和上下文配置遵循本文件 §6 及专业版架构 v1.4；Embedding/Reranker 已被纳入配置范围，但不因此视为已经实现。
 
 
 ### 5.3 历史快照（2026-11-26，后续状态以 §5.5 为准）：Core-3 / Core-4 早期切片
@@ -729,3 +729,66 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - **回归：** `test/reasoning_response_codec_test.dart` 覆盖整数 v1 正常路径、缺失/未知字段、不支持版本 `2`，以及浮点版本 `1.0` 必须拒绝。
 - **边界：** 不改变 ReasoningRequest、requestId/evidence ID 校验、响应 kind/status、ACTION_PROPOSAL 确认/执行门禁、Native 调用链、业务白名单或记忆层；本修复不是 Core-3 所有设备行为的证明。Find N2 真实 E4B/媒体/多轮结果仍留在最终设备验收，未知状态继续 MISSING / UNKNOWN。
 - **验收：** 以该独立 PR 最终 HEAD 的 Flutter 静态分析/全量回归、Android arm64/JVM 和 Fork License 为准；SKIPPED 不计 PASS。
+## 6. 2026-11-28 v1.4 本地/云端统一模型运行时补充（当前规范）
+
+> 本节与 docs/pro-edition-architecture-constraints.md §18 同步，优先于本文早期只描述 E4B、未授权云端模型或将 Embedding/Reranker 延后的历史表述。历史任务记录保留作为时间轨迹，不再自动构成当前禁止项。
+
+### 6.1 任务模型配置
+
+首期任务键固定为：
+
+| taskKey | 模型职责 | 选择与继承规则 | 未配置时行为 |
+|---|---|---|---|
+| text_reasoning | 默认语言推理 | 必须由用户选定一个本地或云端生成模型 | 明确提示默认模型未配置，不自动选取 |
+| image_understanding | 图片理解 | 可选专用本地/云端模型；未配置时跟随默认推理模型 | 若用户选定的模型不支持，显示真实错误 |
+| audio_understanding | 音频理解 | 可选专用本地/云端模型；未配置时跟随默认推理模型 | 若用户选定的模型不支持，显示真实错误 |
+| embedding | 向量嵌入 | 必须独立选择本地或云端 Embedding 模型 | 保留现有确定性关键词/实体/结构化召回，不发起模型调用 |
+| reranking | 候选重排 | 必须独立选择本地或云端 Reranker 模型 | 保留 SourceAwareLegacyEvidenceRanker 确定性排序，不发起模型调用 |
+
+- 各任务选择的是具体 ModelConfig，不是助手场景或模式；不按问诊/学习/工具/玄学单独绑定模型。
+- 不建设能力探测、模型探针、能力目录或基于模型名/供应商模型列表的能力推断。
+- 不展示每轮路由原因/能力探针细节；任务不支持时以实际调用错误提示。
+- 禁止本地与云端、供应商之间或模型之间自动切换；禁止本地失败后自动上传云端或云端失败后自动回退本地。
+
+### 6.2 统一授权和 AI 总开关
+
+模型请求的统一可用条件为：有效专业版 ai_access AND 用户保存的 AI 总开关开启 AND entitlement 当前状态可用。
+
+- ai_access 是唯一签名授权权益；不新增 cloud_ai_access、embedding_access、reranker_access 或其他按任务收费 Feature。
+- 用户开关是普通用户偏好，不是授权事实；非专业版、授权校验中或授权无效时不得开启/调用模型。新增开关的默认值/升级迁移必须兼容既有用户行为，不能静默关闭既有专业版用户正在使用的 AI。
+- 所有本地/云端生成模型、多模态、Embedding 和 Reranker 请求均须在统一调用入口检查此条件。
+- Android Native LiteRT 继续由 AiModelAccessGate 在模型访问边界最终 fail-closed；云端 HTTP 通过受控 Model Gateway 在请求前检查同一状态。Provider Adapter 不得成为绕过统一 Gate 的可直接调用入口。
+- 关闭 AI 或授权失效不删除模型文件、API Key、供应商配置、索引或历史；停止新请求并按既有生命周期释放本地运行时。已发出的云请求若无法确认是否处理，标 UNKNOWN，不自动重放。
+
+### 6.3 Embedding 与 Reranker 的层间合同
+
+- Embedding 只负责把 query/chunk 转换为向量候选；候选必须映射回 App 已存在的 sourceId、chunkId、版本和 locator，模型不得生成或提升来源元数据。
+- 每个向量索引记录 runtime/provider、modelConfigId、模型 ID/指纹、模型版本、向量维度、归一化策略、索引 schema/generation 与源内容 hash；不兼容模型空间不得混用。
+- Embedding 模型变化时建立新 generation 并重建；全部构建并通过一致性检查后原子切换，失败保留旧索引。
+- Reranker 只处理本轮已召回且有界的 CandidateEvidence；输出仅接受输入集合中的候选 ID 合法排序，由 App 校验无未知/重复 ID。
+- Reranker 不得创建/改写候选正文、sourceId、verificationStatus 或来源版本；其相关性分数不是资料真实性、经典权威性、医学正确性或事实置信度。
+- 显式配置后，所选 Embedding/Reranker 失败必须报告失败；不回退到其他模型，也不把失败伪装成确定性召回/排序成功。
+
+### 6.4 上下文窗口与历史预算
+
+- 每个生成模型配置独立的用户声明 contextWindowTokens 与 maxOutputTokens，可用常见预设及自定义整数（包括 1M）；预设不是模型能力保证。
+- 云端请求按对应模型 Tokenizer/接口统计计算系统提示、当前输入、完整会话历史、证据和工具结果预算，并为输出预留 Token。不能取得准确 Token 数时标 UNKNOWN，不以字符比例冒充 Token。
+- 本地模型值不得超过模型声明、Native Runtime 和 Find N2 实测可用上限；E4B 当前 ModelInfo/KV Cache 只是只读观测，真实设备校准前不配置 App 可用 Token budget。
+- Embedding/Reranker 使用各自输入长度/候选条数合同，不使用生成模型 contextWindowTokens。
+- 长上下文不放宽 Session ID 隔离、transcript、SessionState provenance、用户确认和 UNKNOWN 不重放。
+
+### 6.5 Local / Remote / Architecture / Integration 责任
+
+| Workstream | 主要交付 | 不得声称 |
+|---|---|---|
+| Local | 本地 Embedding/Reranker 格式、运行库、Tokenizer、文件导入完整性、Find N2 内存/耗时/稳定性和真实 TRACE；现有 E4B GPU/CPU/媒体/生命周期实机验收 | 不得以云端 Mock、CI 或代码存在声称本地模型/设备 PASS |
+| Remote | Provider Adapter、Credential Vault、统一 Gateway、设置/模型配置、云端各任务 Adapter、SQLite 配置/索引方案与自动化测试 | 不得声称 Find N2 设备运行已通过 |
+| Architecture | 公共 taskKey、配置 DTO、授权状态、失败语义、Adapter 接口与五层边界冻结 | 不把规范文本当作实现完成 |
+| Integration | 当前 master 基线、文件 Owner、PR、CI、合并后主线同步和执行台账 | 不让多个分支同时写相同共享文件 |
+
+### 6.6 当前实现状态边界
+
+- 当前已确认本地生成模型为 Gemma 4 E4B + LiteRT-LM；本地 Embedding/Reranker 独立 runtime 尚未确认，标记 MISSING / NEEDS LOCAL AUDIT。
+- 云端 Provider、Credential Vault、Model Gateway、云端 LLM/图片/音频、云端 Embedding/Reranker、统一 AI 总开关、TaskModelSelection 与上下文 Token budget 端到端接线均为 NOT_STARTED / MISSING。
+- 当前 CandidateEvidence、MultiSourceEvidencePipeline 与 SourceAwareLegacyEvidenceRanker 是可复用 Core-2 基础，不等于向量索引或 Reranker 已接通。
+- v1.4 只冻结边界；全部功能仍需独立 Task ID、文件范围、源码/测试/CI/设备证据和可回滚小批量 PR。
