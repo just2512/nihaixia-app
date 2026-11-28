@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +14,6 @@ void main() {
       vault = AiCredentialVault(
         storage: storage,
         platform: TargetPlatform.android,
-        random: Random(41),
       );
     });
 
@@ -139,10 +137,10 @@ void main() {
       final collisionVault = AiCredentialVault(
         storage: storage,
         platform: TargetPlatform.android,
-        random: _ConstantRandom(),
       );
       const original = 'original-secret';
       await collisionVault.createCredential(original);
+      storage.occupyMissingKeys = true;
 
       await expectLater(
         collisionVault.createCredential('must-not-overwrite'),
@@ -211,7 +209,6 @@ void main() {
         () => AiCredentialVault(
           storage: storage,
           platform: TargetPlatform.linux,
-          random: Random(41),
         ),
         throwsA(isA<AiCredentialVaultUnsupportedPlatformException>()),
       );
@@ -219,7 +216,6 @@ void main() {
         () => AiCredentialVault(
           storage: storage,
           platform: TargetPlatform.iOS,
-          random: Random(41),
         ),
         throwsA(isA<AiCredentialVaultUnsupportedPlatformException>()),
       );
@@ -249,13 +245,14 @@ class _MemoryCredentialStorage implements AiCredentialVaultStorage {
   Object? writeFailure;
   Object? deleteFailure;
   int readCalls = 0;
+  bool occupyMissingKeys = false;
 
   @override
   Future<String?> read({required String key}) async {
     readCalls++;
     final failure = readFailure;
     if (failure != null) throw failure;
-    return values[key];
+    return values[key] ?? (occupyMissingKeys ? 'occupied' : null);
   }
 
   @override
@@ -271,15 +268,4 @@ class _MemoryCredentialStorage implements AiCredentialVaultStorage {
     if (failure != null) throw failure;
     values.remove(key);
   }
-}
-
-class _ConstantRandom implements Random {
-  @override
-  bool nextBool() => false;
-
-  @override
-  double nextDouble() => 0;
-
-  @override
-  int nextInt(int max) => 0;
 }
