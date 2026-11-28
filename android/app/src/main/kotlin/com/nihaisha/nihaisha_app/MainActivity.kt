@@ -142,6 +142,9 @@ class MainActivity : FlutterActivity() {
         if (!flutterEngine.plugins.has(LicensePlugin::class.java)) {
             flutterEngine.plugins.add(LicensePlugin())
         }
+        if (!flutterEngine.plugins.has(AiCredentialVaultPlugin::class.java)) {
+            flutterEngine.plugins.add(AiCredentialVaultPlugin())
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler handler@{ call, result ->
