@@ -5152,3 +5152,11 @@ PR HEAD 门禁证据：
 - **设备状态：** Find N2 GPU/CPU 各至少 20 轮、Gemma 4 E4B 实际推理、`state:7`、媒体、Activity/process restart、SQLite/Flutter/Native transcript 对照、真实 KV Cache/context 数值、覆盖升级和授权/Keystore 等仍为 MISSING / UNKNOWN / LOCAL ONLY。唯一设备交接文件 `docs/local-real-device-acceptance-handoff.md` 未修改；执行前必须重新 fetch 最新 master 并记录实际构建 SHA。
 - **下一步放行：** 先验收并合并 PR #621 的文档同步（所有五项 PR 门禁必须对其最终 HEAD 为 SUCCESS）。随后逐个决定旧 PR 是否重基/拆分/保留，不将它们合并为 AI 五层收尾的隐含依赖。除非后续审计找到可复现的云端 Native 缺陷，否则不新增 Core-1 运行时代码；完成云端收尾后统一交付 Find N2 本地验收。 
 
+
+## 147. 2026-11-28 PR #622 合并后 Core-1 SessionState 收尾（Task ID: DOC-AI-POST622-CLOSEOUT-20261128）
+
+- **任务登记：** 从 `master@805f006ed502c5cbf10dba4ad30428ee9761eb42` 建立独立文档分支 `docs/ai-post622-closeout-20261128`。唯一 Owner 为 just2512（Integration + Architecture）。本次文档写入范围严格限定为 `docs/ai-layered-runtime-architecture.md`、本执行台账和唯一活动交接单 `docs/local-real-device-acceptance-handoff.md`。
+- **目标：** 记录 PR #622 的 Core-1 有界 SessionState 读取合入事实、最终 HEAD/merge SHA 与五项精确 CI；同步主线与开放 PR 最新状态；刷新设备交接构建基线及 #564 图标云端状态。
+- **范围冻结：** 本任务不修改应用代码、测试、Workflow、许可证清单或授权实现；不扩展 Core-1 Token/input budget，不新增自动摘要/压缩，不启动工作流 I。
+- **设备边界：** PR #622 只证明 Dart/SQLite 记忆投影读取边界。Find N2 E4B、GPU/CPU 多轮、`state:7`、媒体、Activity/process restart、签名覆盖升级、Keystore 和 TRACE 仍为 MISSING / UNKNOWN / LOCAL ONLY；本任务不得改变这些状态。
+- **验收：** 文档 PR 最终 HEAD 必须通过 Branch validation、Flutter regression、Android arm64/JVM、PR required gate 与 Fork License，所有结果必须绑定同一最终 HEAD；SKIPPED 不计 PASS。
