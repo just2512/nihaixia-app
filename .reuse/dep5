@@ -1311,3 +1311,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored local/remote parallel execution and integration governance specification and GitHub collaboration templates; ownership evidence required.
+
+Files:
+ test/app_theme_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored regression test verifying default bottom-sheet surfaces resolve to the active light/dark AppColors surface token; ownership evidence required.
