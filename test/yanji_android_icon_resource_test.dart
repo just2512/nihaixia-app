@@ -5,6 +5,45 @@ import 'package:flutter_test/flutter_test.dart';
 
 String readText(String path) => File(path).readAsStringSync();
 
+void expectCenteredSafeZone(String source, String resourceName) {
+  final groupMatch = RegExp(r'<group\b([^>]*)>([\s\S]*?)</group>').firstMatch(source);
+  expect(groupMatch, isNotNull, reason: '$resourceName must wrap foreground paths in a transform group');
+  final attributes = groupMatch!.group(1)!;
+  expect(attributes, contains('android:scaleX="0.75"'), reason: resourceName);
+  expect(attributes, contains('android:scaleY="0.75"'), reason: resourceName);
+  expect(attributes, contains('android:pivotX="54"'), reason: resourceName);
+  expect(attributes, contains('android:pivotY="54"'), reason: resourceName);
+
+  final pathMatches = RegExp(
+    r'android:fillColor="#D71019"[^>]*android:pathData="([^"]+)"',
+  ).allMatches(groupMatch.group(2)!);
+  expect(pathMatches, isNotEmpty, reason: '$resourceName must contain red foreground paths');
+  final xs = <double>[];
+  final ys = <double>[];
+  for (final match in pathMatches) {
+    final numbers = RegExp(r'-?(?:\d+(?:\.\d*)?|\.\d+)')
+        .allMatches(match.group(1)!)
+        .map((m) => double.parse(m.group(0)!))
+        .toList();
+    expect(numbers.length.isEven, isTrue, reason: '$resourceName path coordinates must be x/y pairs');
+    for (var i = 0; i < numbers.length; i += 2) {
+      xs.add(numbers[i]);
+      ys.add(numbers[i + 1]);
+    }
+  }
+
+  double scale(double value) => 54 + (value - 54) * 0.75;
+  final left = scale(xs.reduce((a, b) => a < b ? a : b));
+  final right = scale(xs.reduce((a, b) => a > b ? a : b));
+  final top = scale(ys.reduce((a, b) => a < b ? a : b));
+  final bottom = scale(ys.reduce((a, b) => a > b ? a : b));
+  // Conservative bounds include quadratic Bézier control points.
+  expect(left, greaterThanOrEqualTo(21), reason: '$resourceName exceeds left adaptive safe-zone edge');
+  expect(right, lessThanOrEqualTo(87), reason: '$resourceName exceeds right adaptive safe-zone edge');
+  expect(top, greaterThanOrEqualTo(21), reason: '$resourceName exceeds top adaptive safe-zone edge');
+  expect(bottom, lessThanOrEqualTo(87), reason: '$resourceName exceeds bottom adaptive safe-zone edge');
+}
+
 void main() {
   group('研纪 Android Launcher 图标资源', () {
     test('Launcher 颜色与 App 现有主题 Token 完全一致', () {
@@ -63,6 +102,30 @@ void main() {
         expect(icon, contains('@color/ic_launcher_background'));
         expect(icon, contains('@drawable/ic_launcher_foreground'));
       }
+    });
+
+    test('Adaptive Icon 与 API 24–25 矢量回退的前景均处于 66x66 安全区', () {
+      final resources = {
+        'adaptive foreground': readText(
+          'android/app/src/main/res/drawable/ic_launcher_foreground.xml',
+        ),
+        'API 24–25 regular fallback': readText(
+          'android/app/src/main/res/mipmap-anydpi/ic_launcher.xml',
+        ),
+        'API 24–25 round fallback': readText(
+          'android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml',
+        ),
+      };
+      for (final entry in resources.entries) {
+        expectCenteredSafeZone(entry.value, entry.key);
+      }
+
+      final svg = readText('docs/images/logo.svg');
+      expect(
+        svg,
+        contains('transform="translate(13.5 13.5) scale(0.75)"'),
+        reason: 'SVG brand master must use the same centered 0.75 scale',
+      );
     });
 
     test('旧 API 密度回退图标资源仍完整存在', () {
@@ -138,6 +201,37 @@ void main() {
               isTrue,
               reason: '$density fallback must include cold white #EBECEE',
             );
+            int? minRedX;
+            int? minRedY;
+            int? maxRedX;
+            int? maxRedY;
+            for (var y = 0; y < frame.image.height; y++) {
+              for (var x = 0; x < frame.image.width; x++) {
+                final offset = (y * frame.image.width + x) * 4;
+                final red = rgba[offset];
+                final green = rgba[offset + 1];
+                final blue = rgba[offset + 2];
+                if (rgba[offset + 3] > 240 &&
+                    red > green + 80 &&
+                    red > blue + 80) {
+                  minRedX = minRedX == null || x < minRedX ? x : minRedX;
+                  minRedY = minRedY == null || y < minRedY ? y : minRedY;
+                  maxRedX = maxRedX == null || x > maxRedX ? x : maxRedX;
+                  maxRedY = maxRedY == null || y > maxRedY ? y : maxRedY;
+                }
+              }
+            }
+            expect(minRedX, isNotNull, reason: '$density must contain the red mark');
+            final safeMin = frame.image.width * (21 / 108);
+            final safeMax = frame.image.width * (87 / 108);
+            expect(minRedX!.toDouble(), greaterThanOrEqualTo(safeMin - 0.5),
+                reason: '$density PNG exceeds left safe-zone edge');
+            expect((maxRedX! + 1).toDouble(), lessThanOrEqualTo(safeMax + 0.5),
+                reason: '$density PNG exceeds right safe-zone edge');
+            expect(minRedY!.toDouble(), greaterThanOrEqualTo(safeMin - 0.5),
+                reason: '$density PNG exceeds top safe-zone edge');
+            expect((maxRedY! + 1).toDouble(), lessThanOrEqualTo(safeMax + 0.5),
+                reason: '$density PNG exceeds bottom safe-zone edge');
           } finally {
             frame.image.dispose();
           }
