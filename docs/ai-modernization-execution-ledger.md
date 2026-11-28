@@ -5170,3 +5170,14 @@ PR HEAD 门禁证据：
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，本轮未启动、未建分支、未实现。
 - **设备交接：** 唯一活动文件 `docs/local-real-device-acceptance-handoff.md` 已同步 #564 合并状态、#622 代码/CI 证据和运行时代码基线；所有真机项目保持 MISSING / UNKNOWN / LOCAL ONLY。执行前须再次 fetch 最新 master、确认 CI 终态、记录实际构建 SHA、APK/签名元数据。
 - **下一步放行：** 先完成 PR #623 的文档/设备交接同步并对其最终 HEAD 验收五项门禁；之后若无新的可复现云端缺陷，不再新增猜测性 Core-1 运行时代码或 Token budget 实现，统一交付 Find N2 本地验收。
+
+
+## 148. 2026-11-28 Native 多轮审计补齐 #610/#618/#622（Task ID: DOC-NATIVE-MULTITURN-AUDIT-POST610-622-20261128）
+
+- **基线：** 从 `master@57f6fbef193d28fc6c3493c8740d672038fdd52c` 创建独立文档分支 `docs/native-multiturn-audit-post610-622-20261128`；该基线已包含 PR #623 文档收尾及 PR #622 Core-1 合并代码。
+- **目标：** 仅补齐 `docs/local-ai-multiturn-audit.md` 对 #610 用户自述跨 MethodChannel 限界、#618 GPU→CPU fallback 原因观测、#622 SessionState SQLite 有界读取的交叉证据；明确哪些是 Native 运行时、哪些是 Dart/SQLite 会话记忆边界，避免将不同层的状态混记。
+- **允许路径：** `docs/local-ai-multiturn-audit.md`、本执行台账。不得修改架构规范、产品定位、应用代码、测试、Workflow、license inventory 或唯一设备交接单。
+- **文件所有权：** 本任务单一 Owner；PR #539 在本任务合入前不得覆盖执行台账。其余打开 PR 不得修改本任务允许路径。
+- **验收：** 每项结论绑定实际 PR merge/head SHA、源码/测试定位和对应精确 CI；SKIPPED 不计 PASS；区分 PR-head 检查与 master Push 检查；设备场景保持 MISSING / UNKNOWN / LOCAL ONLY；不得推导 Token 预算，不引入自动摘要/压缩。
+- **不做事项：** 本任务不是 Native 运行时代码改造，不重做五层职责，不扩展 Core-4 白名单，不启动工作流 I；若源码审计没有可云端复现的缺陷，不新建运行时代码 PR。
+- **回滚：** 只回滚本 PR 的两份文档提交；不改历史合并代码与设备结果。
