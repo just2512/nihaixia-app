@@ -1098,8 +1098,13 @@ class AssistantConversationOrchestrator {
         .toList(growable: false);
     final mentionsXiaoliurenPalace =
         _xiaoliurenPalaceCues.any(text.contains);
+    final hasMatchedMetaphysicsToolAction = metaphysicsDomainMatches.any(
+      (tool) => tool.actionWords.any(text.contains),
+    );
     if ((pureMetaphysicsAliases.isNotEmpty || mentionsXiaoliurenPalace) &&
         !hasExplicitMetaphysicsExecutionIntent &&
+        !hasMatchedMetaphysicsToolAction &&
+        !hasMetaphysicsKnowledgeCue &&
         !pendingToolSelection) {
       return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
     }
