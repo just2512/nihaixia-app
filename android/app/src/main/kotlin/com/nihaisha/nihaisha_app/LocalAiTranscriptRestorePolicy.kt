@@ -69,7 +69,7 @@ internal object LocalAiTranscriptRestorePolicy {
         return LocalAiTranscriptRestorePayload(
             completedTurns = completedTurns,
             omittedCompletedTurnCount = omittedTurnCount,
-            omittedCompletedCharacterCount = omittedCompletedCharacterCount,
+            omittedCompletedCharacterCount = omittedCharacterCount,
             userMessages = userMessages,
             userMessagesTruncated = userMessagesTruncated
         )
