@@ -20,6 +20,27 @@ class LocalAiReasoningPendingReply {
   final String? traceId;
 }
 
+/// Native authorization error codes surfaced by `AiModelAccessGate` through
+/// the local AI method channel. They must be consumed distinctly: an access
+/// denial is not a model malfunction and must not be reported as one.
+const String aiAccessRequiredCode = 'AI_ACCESS_REQUIRED';
+const String aiAccessSyncSupersededCode = 'AI_ACCESS_SYNC_SUPERSEDED';
+
+/// Human-readable wording for a Native authorization PlatformException, or
+/// null when [error] is not an authorization failure.
+String? aiAccessFailureMessage(PlatformException error) {
+  switch (error.code) {
+    case aiAccessRequiredCode:
+      return '当前功能需要有效的研纪专业版 AI 授权，模型未加载或推理未执行。'
+          '这不是模型故障；请先在设置中完成授权。';
+    case aiAccessSyncSupersededCode:
+      return '授权状态同步已被更新的请求取代，本次操作未执行。'
+          '页面将自动重新确认授权状态，请重试。';
+    default:
+      return null;
+  }
+}
+
 class LocalAiService {
   static const MethodChannel _channel =
       MethodChannel('com.nihaisha.app/local_ai');

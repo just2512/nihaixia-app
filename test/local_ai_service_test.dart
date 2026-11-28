@@ -562,6 +562,52 @@ void main() {
     });
   });
 
+  group('Native authorization error code mapping', () {
+    test('AI_ACCESS_REQUIRED maps to a licensing message, not a model failure', () {
+      final message = aiAccessFailureMessage(
+        PlatformException(
+          code: aiAccessRequiredCode,
+          message: 'AI_ACCESS_REQUIRED: 需要有效的研纪专业版 AI 授权',
+        ),
+      );
+      expect(message, isNotNull);
+      expect(message!, contains('授权'));
+      expect(message, isNot(contains('模型加载失败')));
+    });
+
+    test('AI_ACCESS_SYNC_SUPERSEDED maps to a retry guidance message', () {
+      final message = aiAccessFailureMessage(
+        PlatformException(
+          code: aiAccessSyncSupersededCode,
+          message: 'AI_ACCESS_SYNC_SUPERSEDED: 授权状态同步已被更新的状态取代',
+        ),
+      );
+      expect(message, isNotNull);
+      expect(message!, contains('重试'));
+    });
+
+    test('other Native failures are not remapped to authorization wording', () {
+      expect(
+        aiAccessFailureMessage(
+          PlatformException(
+            code: 'LOCAL_AI_ERROR',
+            message: '初始化失败',
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        aiAccessFailureMessage(
+          PlatformException(
+            code: 'LOCAL_AI_FATAL',
+            message: '信号异常',
+          ),
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('LocalAiService text conversation contract', () {
     test('restoreConversation forwards role-preserving completed turns', () async {
       MethodCall? received;
