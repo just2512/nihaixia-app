@@ -1325,3 +1325,24 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored regression tests for the About-page Three Chronicles identity, actual knowledge/tool scope, intended audiences and retained acknowledgements; ownership evidence required.
+
+Files:
+ lib/data/ai_model_config_repository.dart
+ lib/models/ai_local_model_asset.dart
+ lib/models/ai_model_config.dart
+ lib/models/ai_provider_config.dart
+ lib/models/ai_task_model_selection.dart
+ lib/utils/ai_model_config_validation.dart
+ test/ai_model_config_models_test.dart
+ test/ai_model_config_repository_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-added AI model configuration DTOs, persistence and focused regression tests. No API secrets are stored. Ownership evidence remains required.
+
+Files:
+ docs/tasks/AI-CREDENTIAL-VAULT-R1B-20261128.md
+ lib/services/ai_credential_vault.dart
+ test/ai_credential_vault_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-added Credential Vault task specification, platform-backed secret storage service, and focused lifecycle/security regression tests. Ownership evidence remains required.
