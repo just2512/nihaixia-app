@@ -15,6 +15,7 @@ void main() {
     String preferredBackend = 'gpu',
     String backend = 'not_loaded',
     bool ready = false,
+    String? backendFallbackReason,
   }) =>
       <String, Object?>{
         'installed': true,
@@ -26,6 +27,8 @@ void main() {
         'expectedSizeBytes': 3659530240,
         'backend': backend,
         'preferredBackend': preferredBackend,
+        if (backendFallbackReason != null)
+          'backendFallbackReason': backendFallbackReason,
       };
 
   setUp(() {
@@ -57,6 +60,28 @@ void main() {
     expect(find.text('GPU'), findsOneWidget);
     expect(find.text('CPU'), findsOneWidget);
     expect(find.text('当前实际运行：CPU'), findsOneWidget);
+  });
+
+  testWidgets('shows the Native GPU-to-CPU fallback reason', (tester) async {
+    messenger.setMockMethodCallHandler(
+      channel,
+      (_) async => modelStatus(
+        preferredBackend: 'gpu',
+        backend: 'cpu',
+        ready: true,
+        backendFallbackReason: 'GPU 初始化失败：OpenCL 不可用',
+      ),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: LocalAiBackendSettingsTile()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前实际运行：CPU'), findsOneWidget);
+    expect(find.text('GPU 初始化失败：OpenCL 不可用'), findsOneWidget);
   });
 
   testWidgets('selecting CPU persists the preference and rebuilds the model',
