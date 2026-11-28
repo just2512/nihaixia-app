@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -126,6 +127,22 @@ class AiCredentialVault {
   static const int _referenceEntropyBytes = 32;
   static const int _maxReferenceAttempts = 8;
 
+  // The pinned Windows backend predates its upstream concurrent read/write
+  // fix. Serialize Vault operations across instances in this Dart isolate.
+  static Future<void> _operationTail = Future<void>.value();
+
+  Future<T> _serialize<T>(Future<T> Function() operation) {
+    final result = Completer<T>();
+    _operationTail = _operationTail.then((_) async {
+      try {
+        result.complete(await operation());
+      } catch (error, stackTrace) {
+        result.completeError(error, stackTrace);
+      }
+    });
+    return result.future;
+  }
+
   static final RegExp _referencePattern =
       RegExp(r'^aicred:v1:[A-Za-z0-9_-]{43}$');
 
@@ -137,88 +154,92 @@ class AiCredentialVault {
   ///
   /// The secret is never returned, included in the reference, or included in
   /// an exception message. Empty and whitespace-only values are rejected.
-  Future<String> createCredential(String secret) async {
-    _validateSecret(secret);
+  Future<String> createCredential(String secret) =>
+      _serialize(() async {
+        _validateSecret(secret);
 
-    for (var attempt = 0; attempt < _maxReferenceAttempts; attempt++) {
-      final reference = _newReference();
-      final key = _storageKeyFor(reference);
+        for (var attempt = 0; attempt < _maxReferenceAttempts; attempt++) {
+          final reference = _newReference();
+          final key = _storageKeyFor(reference);
 
-      String? existing;
-      try {
-        existing = await _storage.read(key: key);
-      } catch (_) {
-        throw const AiCredentialVaultStorageException(
-          AiCredentialVaultOperation.read,
-        );
-      }
-      if (existing != null) continue;
+          String? existing;
+          try {
+            existing = await _storage.read(key: key);
+          } catch (_) {
+            throw const AiCredentialVaultStorageException(
+              AiCredentialVaultOperation.read,
+            );
+          }
+          if (existing != null) continue;
 
-      try {
-        await _storage.write(key: key, value: secret);
-        return reference;
-      } catch (_) {
-        throw const AiCredentialVaultStorageException(
-          AiCredentialVaultOperation.write,
-        );
-      }
-    }
+          try {
+            await _storage.write(key: key, value: secret);
+            return reference;
+          } catch (_) {
+            throw const AiCredentialVaultStorageException(
+              AiCredentialVaultOperation.write,
+            );
+          }
+        }
 
-    throw const AiCredentialVaultReferenceCollisionException();
-  }
+        throw const AiCredentialVaultReferenceCollisionException();
+      });
 
   /// Reads a secret by reference. Unknown or malformed references fail closed.
-  Future<String> readCredential(String reference) async {
-    final key = _storageKeyFor(reference);
-    final value = await _readStoredValue(key);
-    if (value == null) {
-      throw const AiCredentialVaultUnknownReferenceException();
-    }
-    if (value.trim().isEmpty) {
-      throw const AiCredentialVaultInvalidStoredValueException();
-    }
-    return value;
-  }
+  Future<String> readCredential(String reference) =>
+      _serialize(() async {
+        final key = _storageKeyFor(reference);
+        final value = await _readStoredValue(key);
+        if (value == null) {
+          throw const AiCredentialVaultUnknownReferenceException();
+        }
+        if (value.trim().isEmpty) {
+          throw const AiCredentialVaultInvalidStoredValueException();
+        }
+        return value;
+      });
 
   /// Replaces the value behind an existing reference.
   ///
   /// The reference remains unchanged, so the provider configuration does not
   /// need a database update. This is an explicit overwrite operation; it is
   /// not an automatic retry or provider-switch policy.
-  Future<void> replaceCredential(String reference, String newSecret) async {
-    _validateSecret(newSecret);
-    final key = _storageKeyFor(reference);
-    final existing = await _readStoredValue(key);
-    if (existing == null) {
-      throw const AiCredentialVaultUnknownReferenceException();
-    }
+  Future<void> replaceCredential(String reference, String newSecret) =>
+      _serialize(() async {
+        _validateSecret(newSecret);
+        final key = _storageKeyFor(reference);
+        final existing = await _readStoredValue(key);
+        if (existing == null) {
+          throw const AiCredentialVaultUnknownReferenceException();
+        }
 
-    try {
-      await _storage.write(key: key, value: newSecret);
-    } catch (_) {
-      throw const AiCredentialVaultStorageException(
-        AiCredentialVaultOperation.write,
-      );
-    }
-  }
+        try {
+          await _storage.write(key: key, value: newSecret);
+        } catch (_) {
+          throw const AiCredentialVaultStorageException(
+            AiCredentialVaultOperation.write,
+          );
+        }
+      });
 
   /// Deletes an existing secret. Unknown references are not treated as
   /// successful deletes.
-  Future<void> deleteCredential(String reference) async {
-    final key = _storageKeyFor(reference);
-    final existing = await _readStoredValue(key);
-    if (existing == null) {
-      throw const AiCredentialVaultUnknownReferenceException();
-    }
+  Future<void> deleteCredential(String reference) =>
+      _serialize(() async {
+        final key = _storageKeyFor(reference);
+        final existing = await _readStoredValue(key);
+        if (existing == null) {
+          throw const AiCredentialVaultUnknownReferenceException();
+        }
 
-    try {
-      await _storage.delete(key: key);
-    } catch (_) {
-      throw const AiCredentialVaultStorageException(
-        AiCredentialVaultOperation.delete,
-      );
-    }
-  }
+        try {
+          await _storage.delete(key: key);
+        } catch (_) {
+          throw const AiCredentialVaultStorageException(
+            AiCredentialVaultOperation.delete,
+          );
+        }
+      });
 
   String _newReference() {
     final bytes = List<int>.generate(
