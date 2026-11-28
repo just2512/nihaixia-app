@@ -5129,3 +5129,16 @@ PR HEAD 门禁证据：
 - **工作流 I：** 用户 Markdown 书架继续 `DEFERRED / NOT AUTHORIZED`，不启动，不纳入本轮验收范围。
 - **设备边界：** Find N2 GPU/CPU 各至少 20 轮、Gemma 4 E4B 实际推理、`state:7`、媒体、Activity/process restart、SQLite/Flutter/Native transcript 对照、真实 KV Cache/context 数值、覆盖升级和授权/Keystore 等场景仍按唯一 `docs/local-real-device-acceptance-handoff.md` 记录为 MISSING / UNKNOWN / LOCAL ONLY。不得修改该文件制造“设备收尾”状态。
 - **下一步放行：** 先完成本次文档同步 PR 的最终 HEAD Branch validation、Flutter regression、Android arm64/JVM、PR required gate 和 Fork License 验收。除此以外，在取得设备校准/TRACE 前不增加 Core-1 Token 预算实现或其他推测性 Native 运行时改造；全部云端门禁完成后，统一转入唯一 Find N2 本地验收交接。
+
+
+## 146. 2026-11-28 当前主线基线与 PR #620 收尾同步（Task ID: DOC-AI-POST620-MASTER-SYNC-20261128）
+
+- **任务登记状态：** DRAFT / REGISTERED；本项只处理 Integration / Architecture 文档同步，不改运行时代码或设备状态。
+- **基线：** 从完整主线 SHA `9a929398e8b15fef57d8a3f749d68cbc4a5113e4` 建立独立分支 `docs/ai-post620-master-sync-20261128`。
+- **Owner：** just2512（Integration 与 Architecture，本任务唯一写入负责人）。
+- **文件范围：** `docs/ai-layered-runtime-architecture.md`、`docs/ai-modernization-execution-ledger.md`。
+- **依赖：** PR #620 已 squash merge；本任务同步其精确 HEAD 验收、合并后 master Push CI 和当前分支保护证据。
+- **验收：** 两份文档区分 AI 运行时代码基线与当前文档 master；登记 PR #620 精确 HEAD 与 post-merge CI；复核开放 PR 的基线漂移和文件范围；五项 PR 门禁必须绑定本任务最终 HEAD 且全部 SUCCESS。SKIPPED 不计 PASS。
+- **明确不做：** 不修改 Dart/Kotlin/Native/Workflow/授权能力；不修改唯一设备交接文件；不启动工作流 I；不猜测 App Token/input budget，不把 Find N2 未测项改为 PASS。
+- **共享文档路径冲突控制：** PR #539 与 PR #416 仍含本任务两份共享文档路径且其基线已过期；它们保持未合并并暂停对共享文档的同步写入，先由本任务完成当前主线记账，再分别重审其余独有变更。该顺序不等于批准或关闭这两个 PR。
+
