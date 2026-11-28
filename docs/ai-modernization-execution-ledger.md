@@ -5054,3 +5054,14 @@ PR HEAD 门禁证据：
 - **回归：** metadata 单测明确拒绝 `{"schemaVersion":1.0,"replayable":true}`；Builder 回归确认该消息不会生成 USER_ORIGINAL fact，只增加 omitted 计数并把快照标记为 PARTIAL。
 - **范围：** 不改 SQLite schema、transcript 展示、Native prompt 协议、SessionState owner、Reasoning Ledger、Core-2 证据排序或 Core-3/4 执行路径；Find N2 设备项仍按 MISSING / UNKNOWN 记录。
 - **验收：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM 和 Fork License 为准；Branch validation 若为 SKIPPED 不计 PASS。
+
+
+## 139. 2026-11-28 Core-1 Native 历史恢复用户输入投影在跨进程前限界
+
+- **基线：** 从 PR #609 合并后的 `master@85f9a23acb07341af3fbfdd38275831f2a2f4c48` 建立独立分支 `fix/native-bounded-user-message-restore-20261128`；本批只修复 Native 历史恢复时用户自述投影的跨进程载荷边界。
+- **问题：** Flutter 原先把整个历史中的所有 user 消息累积为 `userMessages` 后直接发送给 Native；Native 到达后才保留最近 60 条，并由 `UserReportedInputPolicy` 再裁剪单条/总字符。旧实现属于接收后限界，MethodChannel 载荷本身没有先受界。
+- **修复：** 新增 Dart 增量投影器，在遍历历史时只保留最近 60 条非空自述；按 Native 最终记录格式计算 UTF-16 边界（每条加 `用户文字自述：` 后不超过 2,000，全部加标签后不超过 16,000），超长单条按完整代理对边界裁剪；投影器内部缓存有界。
+- **显式截断：** MethodChannel 新增必需 Boolean `user_messages_truncated`。数量、单条或总量发生裁剪时置 true；即使列表为空也必须显式传入 false/true。Native 在 reset 前拒绝缺失/非布尔/超界 envelope，并从显式 Boolean 恢复 `userReportedInputsTruncated`，继续沿用既有症状整理完整性提示。
+- **回归：** Dart 覆盖最近 60 条、每条 2,000（包含来源标签）UTF-16、总计 16,000（包含标签）、emoji surrogate 边界及空/短列表；Kotlin 覆盖截断 Boolean 缺失/类型错误、数量、单条、聚合上限；Service wire contract 与 Screen/Native architecture tests 覆盖两条恢复路径。
+- **范围：** 不改变成功 transcript 12 个完整轮次/10,000 UTF-16、SessionState 准入、RAG/媒体/推理上下文隔离、Reasoning Ledger、Native Gate、Core-2 排序、Core-3 Response 协议或 Core-4 四项 capability allowlist。Find N2 实际 E4B/GPU/CPU、Activity/process restart 仍为 MISSING / UNKNOWN。
+- **验收：** 以本分支最终 HEAD 的 Flutter regression/analyze、Android arm64/JVM、Fork License 为准；Branch validation 若为 SKIPPED 不计 PASS。

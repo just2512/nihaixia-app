@@ -7586,7 +7586,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[AssistantHistory] 结构化问诊状态读取失败：$error\n$stack');
     }
     if (!mounted || generation != _historyRestoreGeneration) return;
-        final replayableUserMessages = LocalAiUserMessageRestoreProjectionBuilder();
+    final replayableUserMessages = LocalAiUserMessageRestoreProjectionBuilder();
     final restoredMessages = <_InterviewMessage>[];
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;

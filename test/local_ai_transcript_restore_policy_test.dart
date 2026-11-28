@@ -157,6 +157,7 @@ void main() {
       expect(result.omittedTurnCount, 0);
       expect(result.retainedTurnCount, 1);
     });
+
     test('projects only the latest sixty user messages and preserves truncation', () {
       final projection = LocalAiTranscriptRestorePolicy.projectUserMessages(
         (1..75).map((index) => 'user-$index'),

@@ -661,3 +661,11 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有推
 - SessionState 记忆准入只接受 JSON metadata 中类型为整数且值为 `1` 的 `schemaVersion`；`1.0` 等数值相等但类型不符的版本值视为未知/不兼容格式，fail-closed，不得提升为 `USER_ORIGINAL`。
 - 该约束只作用于 `isReplayableForSessionMemory`；通用 `AssistantMessageMetadata.decode` 的历史/UI 兼容 fallback 不改变。
 - 回归覆盖 metadata 准入函数与 `SessionStateSnapshotBuilder` 的最终事实投影，确保该类原始消息只计入 omitted 数，快照保持 PARTIAL。
+
+
+### 5.13 Core-1 Native 历史恢复的用户输入投影在跨进程前限界
+
+- `userMessages` 是单独用于症状整理的用户自述投影，不属于 Native 成功 transcript，也不等同于 SessionState 事实。Flutter 在 MethodChannel 发送前增量保留最近 60 条非空用户输入；遍历历史时即淘汰较早条目，不先创建无界的完整用户消息副本。
+- 边界按 Native 最终保存格式计算，包含每条固定来源标签 `用户文字自述：`：格式化后每条最多 2,000 UTF-16 code units，合计最多 16,000 UTF-16 code units。超长单条只按完整 UTF-16 代理对边界裁剪，数量/单条/总量发生裁剪时统一将 `user_messages_truncated=true` 随载荷传给 Native。
+- Native `parsePayload` 必须收到显式 Boolean 截断状态，并再次验证最多 60 条、每条及总量（均包含来源标签）；缺失、类型错误或超界在当前 Conversation reset 之前以 `INVALID_RESTORE_PAYLOAD` 拒绝。成功恢复后，`userReportedInputsTruncated` 由显式状态初始化，继续进入既有症状来源完整性提示；不再接收无界列表后静默丢弃旧条目。
+- 本边界不改变成功 transcript 最近 12 个完整轮次 / 10,000 UTF-16 上限、SessionState memory admission、UNKNOWN/non-replayable 规则、RAG 隔离、LiteRT KV Cache 或 App Token budget。上述均为 UTF-16 字符数/条目数，不是 Token 预算。
