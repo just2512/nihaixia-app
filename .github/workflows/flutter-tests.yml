@@ -668,6 +668,7 @@ jobs:
 
   pr-required-gate:
     name: PR required gate
+    # Fork License is an independent workflow and must remain a separate required check.
     # A required check must never be silently skipped. This gate runs on every PR
     # and converts any missing, skipped, cancelled, or failed prerequisite into failure.
     if: always() && github.event_name == 'pull_request'
