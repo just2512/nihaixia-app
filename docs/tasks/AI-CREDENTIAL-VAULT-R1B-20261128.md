@@ -64,3 +64,8 @@ Remove the Vault integration only after any stored secrets have been explicitly 
 - Rotation is an explicit overwrite under the existing reference; it does not introduce automatic provider switching or a settings UI. The Vault does not claim cross-platform transactional writes.
 - Focused tests now cover create/read/delete, random-reference uniqueness and collision handling, malformed/unknown references, storage errors without underlying exception messages, empty stored values, overwrite semantics and unsupported platforms.
 - **Validation remains pending:** the lockfile still needs an actual Pub resolution; local Dart/Flutter execution has not been performed in this environment. No test or CI result is marked PASS by this record.
+
+
+## Integration-owned follow-up (not Remote R1B scope)
+
+The Fork license checker compares every changed path against the repository-wide fixed divergence baseline, not only the files in this task. When R1B is folded into PR #629, the Integration owner must update `.reuse/dep5`, `docs/fork-license-file-inventory.json`, and `docs/fork-license-file-inventory.md` on the PR aggregation branch for the newly added Vault service, focused test, and task card. This is deliberately excluded from the Remote R1B implementation branch and must not be represented as part of the Vault service implementation. Existing `pubspec.yaml`, `pubspec.lock`, and Android backup-rule inventory entries retain their existing classifications.
