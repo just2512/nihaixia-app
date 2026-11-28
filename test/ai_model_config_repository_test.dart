@@ -145,6 +145,8 @@ void main() {
         embeddingDimension: 384,
         embeddingNormalization: 'l2',
         maxBatchItems: 16,
+        tokenizerId: asset.tokenizerId,
+        tokenizerRevision: asset.tokenizerRevision,
       ),
     );
     await repository.saveTaskSelection(
@@ -418,10 +420,13 @@ void main() {
         runtimeKind: AiRuntimeKind.local,
         modelIdentifier: asset.modelIdentifier,
         localAssetId: asset.localAssetId,
+        modelFingerprint: asset.sha256,
         maxInputTokens: 512,
         embeddingDimension: 384,
         embeddingNormalization: 'l2',
         maxBatchItems: 16,
+        tokenizerId: asset.tokenizerId,
+        tokenizerRevision: asset.tokenizerRevision,
       ),
     );
     await expectLater(
@@ -510,6 +515,7 @@ void main() {
         modelIdentifier: asset.modelIdentifier,
         localAssetId: asset.localAssetId,
         modelFingerprint: asset.sha256,
+        modelRevision: asset.modelRevision,
         contextWindowTokens: 8192,
         maxOutputTokens: 1024,
         enabled: false,
