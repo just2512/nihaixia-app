@@ -45,10 +45,23 @@ void main() {
       final navigationTest = _read('test/home_screen_entry_test.dart');
 
       expect(aboutAndExport, contains("const Text('研纪'"));
-      expect(
-        aboutAndExport,
-        contains("'• 六经规则问诊与证候信息整理\\n'"),
+      final aboutStart = aboutAndExport.indexOf('Future<void> showAboutPage(');
+      final aboutEnd = aboutAndExport.indexOf(
+        '/// 关于页中的单条更新日志卡片',
+        aboutStart,
       );
+      expect(aboutStart, greaterThanOrEqualTo(0));
+      expect(aboutEnd, greaterThan(aboutStart));
+      final about = aboutAndExport.substring(aboutStart, aboutEnd);
+      expect(about, contains('名称由来与含义'));
+      expect(about, contains('《天纪》《人纪》《地纪》三纪'));
+      expect(about, contains('研习三纪、整理三纪'));
+      expect(about, contains('项目定位与目标'));
+      expect(about, contains('离线优先学习工具'));
+      expect(about, contains('知识内容与功能'));
+      expect(about, contains('适用人群'));
+      expect(about, contains('使用边界'));
+      expect(about, isNot(contains('中医诊疗软件')));
       expect(aboutAndExport, contains('【研纪·收藏导出】'));
       expect(aboutAndExport, contains('—— 来自「研纪」App'));
       expect(localAssistant, contains('【研纪辨证结果】'));
