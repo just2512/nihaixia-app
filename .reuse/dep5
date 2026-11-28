@@ -1338,3 +1338,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-added AI model configuration DTOs, persistence and focused regression tests. No API secrets are stored. Ownership evidence remains required.
+
+Files:
+ docs/tasks/AI-CREDENTIAL-VAULT-R1B-20261128.md
+ lib/services/ai_credential_vault.dart
+ test/ai_credential_vault_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-added Credential Vault task specification, platform-backed secret storage service, and focused lifecycle/security regression tests. Ownership evidence remains required.
