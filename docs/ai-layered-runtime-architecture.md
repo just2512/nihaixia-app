@@ -389,14 +389,14 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ## 6. 当前执行状态与后续放行顺序
 
-本节取代早期“各 Core 尚待接线”的排期快照。当前状态以 2026-11-27 主线和精确 PR HEAD 证据为准；历史分支描述保留作演进记录，不作为当前待办。
+本节取代早期“各 Core 尚待接线”的排期快照。当前状态以 2026-11-28 的 `master@8c444c66d368ce27f0a3d839edbd2edd0c040c66` 和已合并 PR 的精确 HEAD/CI 证据为准；历史分支描述保留作演进记录，不作为当前待办。
 
 | 顺序 | 层 | 当前主线状态 | 现有证据 | 尚未闭合 / 放行边界 |
 |---|---|---|---|---|
 | 1 | Core-0 契约与源码映射 | **DOC/CODE MAP 已完成** | §5.1–§5.5 已映射五层 DTO、数据所有权、Native 入口、失败语义和测试锚点 | 后续随主线变更维护映射；不再为已存在的类重复建第二套抽象 |
-| 2 | Core-1 会话记忆与 Native 多轮 | **云端确定性记忆隔离已落地；设备观测仍 UNKNOWN；Token 预算未配置** | #565 dirty-KV flush；#575 持久化推理请求终态；#117/#119 原子 transcript 与 TRACE 分离；#120 Activity 资源串行释放；Native 12 轮/10,000 UTF-16 边界与恢复测试；`Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 只读观测 | LiteRT KV Cache 不跨进程持久化；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，尚无 App 可用输入 Token 预算或自动压缩；Find N2 GPU/CPU、多轮数值、state:7、Activity/process restart 与三方历史一致性留给最终设备 TRACE |
+| 2 | Core-1 会话记忆与 Native 多轮 | **云端确定性记忆隔离已落地；设备观测仍 UNKNOWN；Token 预算未配置** | #565 dirty-KV flush；#575 持久化推理请求终态；#117/#119 原子 transcript 与 TRACE 分离；#120 Activity 资源串行释放；Native 12 轮/10,000 UTF-16 边界与恢复测试；PR #610 在 MethodChannel 前限界用户自述投影（≤60 条、格式化单条≤2,000、聚合≤16,000 UTF-16，显式截断 Boolean 与 Native 二次校验）；`Conversation.getTokenCount()` / `ModelInfo.maxContextTokens()` 只读观测 | LiteRT KV Cache 不跨进程持久化；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`，尚无 App 可用输入 Token 预算或自动压缩；Find N2 GPU/CPU、多轮数值、state:7、Activity/process restart 与三方历史一致性留给最终设备 TRACE |
 | 3 | Core-2 知识召回与证据排序 | **当前约定范围已完成** | #527 RankedEvidenceSet；#568 五类结构化资料 CandidateEvidence；metadata-only candidateSnapshot、query/retrieval provenance、KEEP/DROP reason、strategy/version 和 6,500 UTF-16 呈现预算 | 保留 legacy query/matching/order/per-source caps 与 golden 行为；不将字符预算说成 Token，不扩展语义评分/Embedding/Reranker 作为虚假收尾条件 |
-| 4 | Core-3 语言推理 | **主对话与媒体结构化协议已落地；旧自由文本入口退役** | #573 five modes；#583 image/audio structured Request/Response 与 Native finalize/reject；#594 删除旧 LocalAiService 包装 API，Native sendMessage/sendImage/sendAudio 均 fail-closed；全仓静态审计覆盖旧 Dart 调用，当前批次进一步删除两个无调用点的 Native 私有自由文本媒体 helper | resolveAssistantIntent、extractBaziSlots、extractSymptoms、understandTcmInterviewAnswer 继续使用各自窄 DTO；保留的旧 MethodChannel 名称只作拒绝兼容，不得触发模型；真实 E4B/Find N2 行为留给设备 TRACE |
+| 4 | Core-3 语言推理 | **主对话与媒体结构化协议已落地；旧自由文本入口退役** | #573 five modes；#583 image/audio structured Request/Response 与 Native finalize/reject；#594 删除旧 LocalAiService 包装 API，Native sendMessage/sendImage/sendAudio 均 fail-closed；全仓静态审计覆盖旧 Dart 调用，当前批次进一步删除两个无调用点的 Native 私有自由文本媒体 helper；PR #611 严格要求 ReasoningResponse v1 `schemaVersion` 为整数，拒绝浮点 `1.0` | resolveAssistantIntent、extractBaziSlots、extractSymptoms、understandTcmInterviewAnswer 继续使用各自窄 DTO；保留的旧 MethodChannel 名称只作拒绝兼容，不得触发模型；真实 E4B/Find N2 行为留给设备 TRACE |
 | 5 | Core-4 业务执行 | **四项受限能力闭环与能力级审计已完成当前云端范围** | #561/#566 闭环；#126 已逐项记录四项 capability 的输入 schema、数据来源、副作用、幂等/时间依赖与补偿适用性；显式确认、持久 one-shot claim、终态安全读回和 UNKNOWN 不重放均有回归 | 只开放 dosage、solar_terms、yuxiaji_omen、sanshan_lingqian；执行中通用取消/deadline 未实现，但四项当前为纯计算或本地只读、没有外部业务写入，不作为本轮收尾阻塞；不扩权 |
 | 6 | Core-5 端到端验收 | **云端 20 轮 + 单次工具闭环 PASS；设备部分 UNKNOWN** | #585 widget E2E 覆盖 20 轮、owner/requestId、记忆隔离、一次确认动作与只读结果回流；PR #585 应用层 20 轮与单次工具闭环 E2E 已合并；本轮 PR #597 文档同步的精确 HEAD `6e69c907c7117bb859f37b4979394b07b388a571` Flutter 完整回归、Android arm64 验证 APK/JVM 与 Fork License 均 SUCCESS | fake executor 不证明 E4B Native/GPU/CPU 或真机进程恢复；设备实测统一放到所有云端改造/CI/文档收尾之后 |
 
@@ -408,6 +408,14 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 - Core-4 不扩大四项白名单，不允许模型跳过 App 显式确认，不允许 UNKNOWN 自动重放。
 - 小批量集成继续从最新 master 建独立分支；最终 HEAD 要有适用的 Flutter、Android arm64/JVM、Fork License 和静态分析证据。SKIPPED 不计 PASS，旧 SHA CI 不替代最新 HEAD。
 - 全部云端事项收尾后，本地按唯一 docs/local-real-device-acceptance-handoff.md 执行 Find N2 TRACE；MISSING/UNKNOWN 保持原状态，不预填 PASS。
+
+**2026-11-28 集成闭环：**
+
+- PR #610（Native 用户自述恢复投影跨进程前限界）最终 HEAD `39e841917139bb2b9036d615cb7bacb30031b75f`，merge commit `bcfa2e36440689d7d5cd12abfd80cf191c6d66dc`；Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。该 PR 的 Branch validation 为 SKIPPED，不计 PASS。
+- PR #611（ReasoningResponse schemaVersion 严格整数）最终 HEAD `46ceb7490f0afb43c357dc59d0a15939a2f33803`，merge commit `178bf925a667e93a26539d2967a34519fc4ca5ff`；Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。该 PR 的 Branch validation 为 SKIPPED，不计 PASS。
+- PR #612（本地—远程并行治理与 PR 汇总门禁）最终 HEAD `0a98a8a374ee5bb037a25a468c550d60296af5db`，merge commit `8c444c66d368ce27f0a3d839edbd2edd0c040c66`；Branch validation、Flutter regression、Android arm64/JVM、PR required gate、Fork License 五项均 SUCCESS。后续实现任务按 `docs/parallel-execution-and-integration-spec.md` 执行。
+- **保护状态未完成：** 本次复核时 `master.protected=false` 且 Rulesets 为空。PR required gate 已在 PR workflow 内运行成功，但尚未通过仓库管理员的 branch protection / Ruleset 配置强制要求；不得将“有工作流门禁”表述成“master 已受保护”。
+- 当前唯一设备交接仍是 `docs/local-real-device-acceptance-handoff.md`。Find N2 实测未执行的项目继续 MISSING / UNKNOWN / LOCAL ONLY。
 
 ## 7. 书架和其他知识源的优先级
 
