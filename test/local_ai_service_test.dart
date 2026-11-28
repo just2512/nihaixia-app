@@ -545,6 +545,21 @@ void main() {
 
       expect(status.preferredBackend, 'gpu');
     });
+
+    test('Native GPU fallback reason is preserved in model status', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'cpu',
+        'preferredBackend': 'gpu',
+        'backendFallbackReason': 'GPU 初始化失败：OpenCL 不可用',
+      });
+
+      expect(status.backend, 'cpu');
+      expect(status.preferredBackend, 'gpu');
+      expect(status.backendFallbackReason, 'GPU 初始化失败：OpenCL 不可用');
+    });
   });
 
   group('LocalAiService text conversation contract', () {

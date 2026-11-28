@@ -5087,3 +5087,32 @@ PR HEAD 门禁证据：
 - **尚未完成的仓库级设置：** 当前核对 `master.protected=false` 且 Rulesets 为空。PR workflow 的自动门禁已验证，但仓库管理员尚未将 `PR required gate` 和 `Fork license inventory and boundary` 配置为 master required checks；不得将其标记为已启用。执行命令和核对要求见 `docs/parallel-execution-and-integration-spec.md` §6.2。
 - **范围边界：** 仅为协作与集成治理，不改 AI 运行时代码、五层职责、Native 行为、四项 capability allowlist、工作流 I 或设备验收状态。Find N2 未测事项继续 MISSING / UNKNOWN / LOCAL ONLY。
 
+## 142. 2026-11-28 master Flutter Quality Gate 自动触发去重（PR #619）
+
+- **基线与合并：** 以 `master@5665b093f40f67909c9c7a08329ceab6b3519f40` 为起点；PR 最终 HEAD `33163d91f736959454d386c657340f920a98ec5f`，squash merge commit `6ec027592dd6915aafd0353818214ed87675a86e`。
+- **问题：** master Push 同时触发 `Flutter tests` 与 `Flutter Quality Gate`，两者重复执行完整 Flutter/Dart、Android Native/JVM 与 arm64 构建。保留双自动触发没有增加与主门禁相独立的覆盖，只延长主线 CI 并发和等待时间。
+- **修复：** `.github/workflows/flutter-quality.yml` 移除 `push: branches: [master]`，保留 `workflow_dispatch`；文件内 Flutter analyze、assistant history resume、完整 Dart 测试、Android Native/JVM 单测及 Find N2 arm64 Debug 诊断步骤全部保留，未删除或缩减测试。
+- **精确 HEAD CI：** Branch validation job `140838053127` SUCCESS；Flutter regression job `140838053340` SUCCESS；Android arm64/JVM job `140839506843` SUCCESS；PR required gate job `140840474683` SUCCESS；Fork License run `46099363860` SUCCESS。
+- **边界：** 只改变 master 的自动触发频率；手动 Quality Gate 仍可运行。PR 的阻断门禁、Fork License 独立检查与 master Flutter tests 不变。
+
+## 143. 2026-11-28 Native GPU→CPU fallback 原因状态可观测（PR #618）
+
+- **基线与树完整性：** 初始功能分支后续一次同步错误地将 Git tree 覆盖为仅含 `MainActivity.kt` 的不完整 tree；合并前从最新完整 master tree 恢复，排除全仓无关删除。最终 PR changed files 严格为 5 个：Native `MainActivity.kt`、`LocalAiModelStatus` 服务模型、backend settings tile、两份聚焦 Dart 测试；完整 tree 2,628 entries / 2,538 files。
+- **合并：** 最终 HEAD `0b2aff6963e6fe79dabe788b05a529a273840567`，squash merge commit `73a79b9ac36879b22db60c8be9c1cd25ef31037a`。
+- **行为：** GPU 初始化失败且 CPU fallback 成功时保存当前 Native runtime 的 `backendFallbackReason`，在 `LocalAiModelStatus` 中返回并由设置 tile 显示；GPU 成功、显式选择 CPU、runtime/model release 时清空。没有改变 fallback 策略、模型调用入口、业务权限或四项 capability allowlist。
+- **回归：** `test/local_ai_service_test.dart` 的“Native GPU fallback reason is preserved in model status”；`test/local_ai_backend_settings_tile_test.dart` 的“shows the Native GPU-to-CPU fallback reason”；Android arm64/JVM job 覆盖 Native 单元测试。
+- **精确 HEAD CI：** Branch validation job `140844538153` SUCCESS；Flutter regression job `140844538488` SUCCESS；Android arm64/JVM job `140846198464` SUCCESS（22/22）；PR required gate job `140847230585` SUCCESS；Fork License run `46101434294` SUCCESS。
+- **合并后主线：** `master@73a79b9a` Push run `46102435178` 的 Flutter regression job `140847654952`、Android arm64/JVM job `140849750121` 与 Fork License run `46102435181` 均 SUCCESS；Push 上的 Branch validation / PR required gate SKIPPED，不计 PASS。
+- **边界：** CI 仅证明结构化状态、Dart/UI 回归和 JVM/Native 单测；Find N2 GPU 初始化失败、真实 CPU fallback、切换和长时稳定性必须由实机 TRACE 验证，继续 MISSING / UNKNOWN。
+
+## 144. 2026-11-28 五运六气与小六壬宫名模式路由优先级（PR #615）
+
+- **基线与合并：** 从 `master@6ec027592dd6915aafd0353818214ed87675a86e` 建立独立路由任务，后同步到 PR #618 合并后的最新 master。最终 PR HEAD `4a916dd8847404406364a59a43865b21149a8310`，squash merge commit `f4b2aaab42e498bdca48ed55f45d39b8f18319cd`；PR 变更严格为 `lib/services/assistant_conversation_orchestrator.dart` 与对应测试文件两项。
+- **路由修正：** `AssistantConversationOrchestrator.resolve` 为确定性入口模式路由。小六壬宫名短路限定于非 Yunqi-only domain；“五运六气空亡”不会因单独出现“空亡”被误判为 metaphysics；“五运六气空亡的含义是什么”进入 learning；独立“空亡”进入 metaphysics。
+- **工具边界：** 显式术数动作词、已匹配工具动作、知识解释 cue、pending tool selection 继续受既有优先级保护；路由只决定模式/澄清，不执行工具、不创建授权，不扩大 Core-4 四项 capability allowlist。
+- **回归：** 新增“**五运六气领域优先于同句的小六壬宫名，独立宫名仍进入玄学**”；保留原有 78 个以上路由/工具动作相关用例，没有删除测试或降低断言。
+- **精确 HEAD CI：** Branch validation job `140847951174` SUCCESS（16/16）；Flutter regression job `140847950958` SUCCESS；Android arm64/JVM job `140849888468` SUCCESS（22/22）；PR required gate job `140850831785` SUCCESS；Fork License run `46102527332` SUCCESS。
+- **合并后主线：** 当前 `master@f4b2aaab42e498bdca48ed55f45d39b8f18319cd` Push run `46103578217` 的 Flutter regression job `140851236286` 与 Android arm64/JVM job `140852758501` 均 SUCCESS；Fork License run `46103578205` SUCCESS。Push 的 Branch validation job `140851237663` 与 PR required gate job `140853757013` 为 SKIPPED，不计 PASS。
+- **边界：** 不改五层 AI 合同、Reasoning DTO、知识召回/排序、SessionState、业务执行或 UI 产品定位；这是一项确定性模式路由优先级修复，不是新增 Agent 或工具执行权限。
+
+

@@ -139,6 +139,66 @@ void main() {
       }
     });
 
+    test('不带通用学习提示词的术数关键词仍进入玄学模式', () {
+      for (final query in [
+        '大安对应什么六神',
+        '小六壬的大安对应什么六神',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
+    test('六宫名结合五行、方位等知识词进入玄学解释', () {
+      for (final query in [
+        '大安的五行是什么',
+        '大安五行属什么',
+        '大安的方位在哪里',
+        '留连的五行是什么',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
+    test('五运六气领域优先于同句的小六壬宫名，独立宫名仍进入玄学', () {
+      final yunqiTermWithoutKnowledgeCue =
+          AssistantConversationOrchestrator.resolve(
+        query: '五运六气空亡',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(
+        yunqiTermWithoutKnowledgeCue.mode,
+        AssistantMode.automatic,
+      );
+      expect(yunqiTermWithoutKnowledgeCue.tool, isNull);
+
+      final yunqiKnowledgeQuestion =
+          AssistantConversationOrchestrator.resolve(
+        query: '五运六气空亡的含义是什么',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(yunqiKnowledgeQuestion.mode, AssistantMode.learning);
+      expect(yunqiKnowledgeQuestion.tool, isNull);
+
+      final palaceOnly = AssistantConversationOrchestrator.resolve(
+        query: '空亡',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(palaceOnly.mode, AssistantMode.metaphysics);
+      expect(palaceOnly.tool, isNull);
+    });
+
     test('工具选择待处理时的非五运六气术数知识问题仍进入玄学解释', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '八字十神的原理是什么？',
