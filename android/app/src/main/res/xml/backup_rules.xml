@@ -5,4 +5,8 @@
     <!-- TRACE contains operational metadata and is local audit material only. -->
     <exclude domain="file" path="ai_trace.jsonl" />
     <exclude domain="file" path="ai_trace.jsonl.tmp" />
+    <!-- Do not restore encrypted credentials without their device-bound Keystore key. -->
+    <exclude domain="sharedpref" path="nihaixia_ai_credentials_v1.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage:nihaixia_ai_credentials_v1.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:nihaixia_ai_credentials_v1.xml" />
 </full-backup-content>
