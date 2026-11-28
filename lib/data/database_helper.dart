@@ -32,7 +32,7 @@ class DatabaseHelper implements AssistantConversationStore {
     return factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 8,
+        version: 9,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -202,6 +202,8 @@ class DatabaseHelper implements AssistantConversationStore {
         created_at INTEGER NOT NULL
       )
     ''');
+
+    await _createAiModelConfigTables(db);
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -321,9 +323,106 @@ class DatabaseHelper implements AssistantConversationStore {
         WHERE invocation_key IS NOT NULL
       ''');
     }
+    if (oldVersion < 9) {
+      await _createAiModelConfigTables(db);
+    }
   }
 
-
+  Future<void> _createAiModelConfigTables(Database db) async {
+    // API secrets must never be stored in SQLite. Provider rows only retain
+    // an opaque credentialRef owned by the platform Credential Vault.
+    await db.execute('''
+      CREATE TABLE ai_provider_configs(
+        provider_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        protocol_adapter_id TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        credential_ref TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        config_schema_version INTEGER NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE ai_local_model_assets(
+        local_asset_id TEXT PRIMARY KEY,
+        model_identifier TEXT NOT NULL,
+        task_kind TEXT NOT NULL CHECK(task_kind IN ('embedding', 'reranking')),
+        runtime_adapter_id TEXT NOT NULL,
+        model_format TEXT NOT NULL,
+        private_relative_path TEXT NOT NULL,
+        byte_length INTEGER NOT NULL CHECK(byte_length > 0),
+        sha256 TEXT NOT NULL,
+        manifest_json TEXT NOT NULL,
+        install_status TEXT NOT NULL CHECK(install_status IN ('installed', 'missing', 'invalid', 'unknown')),
+        model_revision TEXT,
+        tokenizer_id TEXT,
+        tokenizer_revision TEXT,
+        max_input_tokens INTEGER,
+        embedding_dimension INTEGER,
+        embedding_normalization TEXT,
+        max_batch_items INTEGER,
+        max_candidates INTEGER,
+        output_protocol_id TEXT,
+        license_id TEXT,
+        license_url TEXT,
+        notice TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE ai_model_configs(
+        model_config_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        task_kind TEXT NOT NULL CHECK(task_kind IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
+        runtime_kind TEXT NOT NULL CHECK(runtime_kind IN ('local', 'cloud')),
+        model_identifier TEXT NOT NULL,
+        provider_id TEXT,
+        local_asset_id TEXT,
+        api_protocol_id TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+        model_revision TEXT,
+        model_fingerprint TEXT,
+        context_window_tokens INTEGER,
+        max_output_tokens INTEGER,
+        tokenizer_id TEXT,
+        tokenizer_revision TEXT,
+        max_input_tokens INTEGER,
+        embedding_dimension INTEGER,
+        embedding_normalization TEXT,
+        max_batch_items INTEGER,
+        max_candidates INTEGER,
+        max_candidate_tokens INTEGER,
+        output_protocol_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        config_schema_version INTEGER NOT NULL,
+        CHECK(
+          (runtime_kind = 'cloud' AND provider_id IS NOT NULL AND local_asset_id IS NULL AND api_protocol_id IS NOT NULL)
+          OR
+          (runtime_kind = 'local' AND provider_id IS NULL AND local_asset_id IS NOT NULL AND api_protocol_id IS NULL)
+        )
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE ai_task_model_selections(
+        task_key TEXT PRIMARY KEY CHECK(task_key IN ('text_reasoning', 'image_understanding', 'audio_understanding', 'embedding', 'reranking')),
+        model_config_id TEXT,
+        selection_mode TEXT NOT NULL CHECK(selection_mode IN ('explicit', 'inherit_text_reasoning', 'deterministic_unconfigured')),
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ai_model_configs_provider_idx ON ai_model_configs(provider_id)',
+    );
+    await db.execute(
+      'CREATE INDEX ai_model_configs_local_asset_idx ON ai_model_configs(local_asset_id)',
+    );
+    await db.execute(
+      'CREATE INDEX ai_task_model_selections_model_idx ON ai_task_model_selections(model_config_id)',
+    );
+  }
 
   Future<int> insertBookmark(Bookmark bookmark) async {
     final db = await database;
