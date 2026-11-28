@@ -265,8 +265,17 @@ internal class LocalAiConversationHistory(
             "A model response rejected by the output quality gate cannot be persisted: $rejectionReason"
         }
 
+        val turn = LocalAiCompletedTurn(userText, modelText)
+        require(characterCount(turn) <= maxRetainedCharacters) {
+            "A single completed turn exceeds the retained-character budget " +
+                "(${characterCount(turn)} > $maxRetainedCharacters); refusing to " +
+                "silently evict it and report success"
+        }
+
         successfulTurnCount += 1L
-        turns.add(LocalAiCompletedTurn(userText, modelText))
+        turns.add(turn)
+        // Only older turns are evicted. The just-appended turn fits the budget
+        // (checked above), so this loop can never empty the retained history.
         while (
             turns.size > maxRetainedTurns ||
             retainedCharacterCount() > maxRetainedCharacters

@@ -248,23 +248,47 @@ class LocalAiConversationHistoryPolicyTest {
     }
 
     @Test
-    fun omitsAnOversizedNewestTurnWholeAndKeepsSuccessStateForFallback() {
+    fun rejectsOversizedSingleTurnInsteadOfSilentlyEvictingIt() {
         val history = LocalAiConversationHistory(
             maxRetainedTurns = 10,
             maxRetainedCharacters = 8
         )
-        history.appendSuccessfulTurn("1234567", "xx")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            history.appendSuccessfulTurn("1234567", "xx")
+        }
 
         val snapshot = history.snapshot()
         assertTrue(snapshot.turns.isEmpty())
-        assertEquals(1, snapshot.omittedTurnCount)
-        assertEquals(9L, snapshot.omittedCharacterCount)
+        assertEquals(0, snapshot.omittedTurnCount)
+        assertEquals(0L, snapshot.omittedCharacterCount)
+        assertEquals(0L, snapshot.successfulTurnCount)
+        assertFalse(history.hasSuccessfulTurn())
+    }
+
+    @Test
+    fun oversizedSingleTurnKeepsPriorHistoryIntactAndFailsClosed() {
+        val history = LocalAiConversationHistory(
+            maxRetainedTurns = 10,
+            maxRetainedCharacters = 20
+        )
+        history.appendSuccessfulTurn("older", "answer")
+        assertTrue(history.hasSuccessfulTurn())
+        assertEquals(1L, history.snapshot().successfulTurnCount)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            // 21 characters: exceeds the 20-character retained budget on its own.
+            history.appendSuccessfulTurn(
+                "12345678901",
+                "1234567890"
+            )
+        }
+
+        val snapshot = history.snapshot()
+        assertEquals(listOf(LocalAiCompletedTurn("older", "answer")), snapshot.turns)
+        assertEquals(0, snapshot.omittedTurnCount)
         assertEquals(1L, snapshot.successfulTurnCount)
         assertTrue(history.hasSuccessfulTurn())
-        assertTrue(
-            LocalAiConversationHistoryPolicy.systemInstruction("base", snapshot)
-                .contains("已省略 1 轮")
-        )
     }
 
     @Test
