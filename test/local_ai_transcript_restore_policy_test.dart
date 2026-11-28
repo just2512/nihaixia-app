@@ -157,5 +157,80 @@ void main() {
       expect(result.omittedTurnCount, 0);
       expect(result.retainedTurnCount, 1);
     });
+
+    test('projects only the latest sixty user messages and preserves truncation', () {
+      final projection = LocalAiTranscriptRestorePolicy.projectUserMessages(
+        Iterable<int>.generate(75, (index) => index + 1)
+            .map((index) => 'user-$index'),
+      );
+
+      expect(projection.messages, hasLength(60));
+      expect(projection.messages.first, 'user-16');
+      expect(projection.messages.last, 'user-75');
+      expect(projection.truncated, isTrue);
+    });
+
+    test('bounds each formatted user entry without splitting a surrogate pair', () {
+      final prefix = List<String>.filled(
+        LocalAiTranscriptRestorePolicy.maxUserMessageCharacters - 1,
+        'a',
+      ).join();
+      final raw = '${prefix}😀z';
+      final projection = LocalAiTranscriptRestorePolicy.projectUserMessages([raw]);
+
+      expect(projection.truncated, isTrue);
+      expect(projection.messages, hasLength(1));
+      expect(
+        projection.messages.single.length,
+        LocalAiTranscriptRestorePolicy.maxUserMessageCharacters - 1,
+      );
+      expect(projection.messages.single, endsWith('a'));
+      final lastCodeUnit = projection.messages.single.codeUnitAt(
+        projection.messages.single.length - 1,
+      );
+      expect(lastCodeUnit, lessThan(0xD800));
+    });
+
+    test('bounds formatted aggregate characters while retaining newest entries', () {
+      final body = List<String>.filled(
+        LocalAiTranscriptRestorePolicy.maxUserMessageCharacters - 8,
+        'x',
+      ).join();
+      final rawMessages = [
+        for (var index = 0; index < 9; index++) 'entry-$index $body',
+      ];
+      final projection =
+          LocalAiTranscriptRestorePolicy.projectUserMessages(rawMessages);
+
+      expect(projection.truncated, isTrue);
+      expect(projection.messages, hasLength(8));
+      expect(projection.messages.first, startsWith('entry-1 '));
+      expect(projection.messages.last, startsWith('entry-8 '));
+      final formattedCharacters = projection.messages.fold<int>(
+        0,
+        (sum, message) => sum + message.length +
+            LocalAiTranscriptRestorePolicy.userMessageSourcePrefix.length,
+      );
+      expect(
+        formattedCharacters,
+        lessThanOrEqualTo(
+          LocalAiTranscriptRestorePolicy.maxTotalUserMessageCharacters,
+        ),
+      );
+    });
+
+    test('does not mark an empty or short user projection as truncated', () {
+      final empty = LocalAiTranscriptRestorePolicy.projectUserMessages(
+        const <String>[' ', '\n'],
+      );
+      final short = LocalAiTranscriptRestorePolicy.projectUserMessages(
+        const <String>['第一条自述', '第二条自述'],
+      );
+
+      expect(empty.messages, isEmpty);
+      expect(empty.truncated, isFalse);
+      expect(short.messages, ['第一条自述', '第二条自述']);
+      expect(short.truncated, isFalse);
+    });
   });
 }

@@ -298,3 +298,13 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 - **Token 观察边界：** `Conversation.getTokenCount()` 和 `ModelInfo.maxContextTokens()` 是 Native 运行时只读观察；`conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。它们不代表 App 可用输入 Token 预算、剩余空间、输出预留或安全截断阈值。没有 Find N2 实测数据前，不添加推测性 token budget 或自动压缩。
 - **设备未决项：** GPU/CPU 各至少 20 轮、state:7、图片/语音、多轮上下文行为、Activity/process restart、SQLite/Flutter/Native transcript 三方对照、真实 KV Cache 数值、长会话边界仍为 `DEVICE UNKNOWN / LOCAL ONLY / NOT RUN`。不得用 Android CI build、JVM、Widget 或 fake executor 改写为设备 PASS。
 - **交接路径：** 设备所有执行状态和本地证据只回填 `docs/local-real-device-acceptance-handoff.md` §7.1；本审计文档保留 Native 多轮技术边界与代码审计，不另开设备进度表。
+
+
+## 12. 2026-11-28 Native restore 用户自述载荷跨进程前限界
+
+- **基线：** PR #609 合并后 `master@85f9a23acb07341af3fbfdd38275831f2a2f4c48`。
+- **问题：** 历史恢复此前把全部历史 user messages 传入 Native，再在 Native 侧取最近 60 条并由 `UserReportedInputPolicy` 裁剪；这只能证明接收后有上限，不能证明跨 MethodChannel 的载荷有限。
+- **云端修复：** Flutter 在遍历持久化历史时以增量 Builder 保留最近 60 条非空用户输入；按每条附加固定来源标签 `用户文字自述：` 后不超过 2,000 UTF-16、聚合不超过 16,000 UTF-16 计算边界。截断不拆分 surrogate pair，数量/单条/总量裁剪通过必需 `user_messages_truncated` Boolean 传入 Native。
+- **Native 复核：** `parsePayload` 对 Boolean 类型、条目数、每条及聚合格式化长度进行第二次校验；不合法载荷在当前 Native Conversation reset 前拒绝。成功恢复后，Native 使用显式截断状态初始化症状来源完整性标记，不再在收到无界列表后静默丢弃旧条目。
+- **数据边界：** 该投影只用于症状整理的用户自述输入，不提升为 Native 成功轮次、SessionState 事实或可重放工具动作。成功 transcript 仍最多 12 个完整轮次/10,000 UTF-16；KV Cache 不持久化，App Token budget 仍 `NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。
+- **设备状态：** 真实 E4B 症状整理效果、Find N2 GPU/CPU 多轮、Activity/process restart 和 SQLite/Flutter/Native 三方历史一致性继续 MISSING / UNKNOWN / LOCAL ONLY；CI 不替代设备 PASS。

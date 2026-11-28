@@ -8,12 +8,15 @@ internal data class LocalAiTranscriptRestorePayload(
     val completedTurns: List<*>,
     val omittedCompletedTurnCount: Int,
     val omittedCompletedCharacterCount: Long,
-    val userMessages: List<String>
+    val userMessages: List<String>,
+    val userMessagesTruncated: Boolean
 )
 
 internal object LocalAiTranscriptRestorePolicy {
     const val maxTranscriptCharacters = 10_000
     const val maxUserMessages = 60
+    const val userMessageSource = "用户文字自述"
+    const val userMessageSourcePrefix = "用户文字自述："
 
     /**
      * Parse the required MethodChannel envelope without defaulting missing
@@ -23,7 +26,8 @@ internal object LocalAiTranscriptRestorePolicy {
         rawCompletedTurns: Any?,
         rawOmittedCompletedTurnCount: Any?,
         rawOmittedCompletedCharacterCount: Any?,
-        rawUserMessages: Any?
+        rawUserMessages: Any?,
+        rawUserMessagesTruncated: Any?
     ): LocalAiTranscriptRestorePayload {
         val completedTurns = rawCompletedTurns as? List<*>
             ?: throw IllegalArgumentException("completed_turns is required and must be a list")
@@ -38,15 +42,36 @@ internal object LocalAiTranscriptRestorePolicy {
         )
         val rawMessages = rawUserMessages as? List<*>
             ?: throw IllegalArgumentException("userMessages is required and must be a list")
+        require(rawMessages.size <= maxUserMessages) {
+            "userMessages exceeds the bounded Native restore entry limit"
+        }
+        val userMessagesTruncated = rawUserMessagesTruncated as? Boolean
+            ?: throw IllegalArgumentException(
+                "user_messages_truncated is required and must be a boolean"
+            )
+        var formattedUserMessageCharacters = 0L
         val userMessages = rawMessages.mapIndexed { index, value ->
-            value as? String
+            val message = value as? String
                 ?: throw IllegalArgumentException("userMessages[$index] must be a string")
+            require(message.isNotBlank() && message == message.trim()) {
+                "userMessages[$index] must be a non-empty trimmed string"
+            }
+            val formattedLength = message.length.toLong() + userMessageSourcePrefix.length
+            require(formattedLength <= UserReportedInputPolicy.MAX_ENTRY_CHARS) {
+                "userMessages[$index] exceeds the formatted Native entry character limit"
+            }
+            formattedUserMessageCharacters += formattedLength
+            require(formattedUserMessageCharacters <= UserReportedInputPolicy.MAX_TOTAL_CHARS) {
+                "userMessages exceeds the formatted Native aggregate character limit"
+            }
+            message
         }
         return LocalAiTranscriptRestorePayload(
             completedTurns = completedTurns,
             omittedCompletedTurnCount = omittedTurnCount,
             omittedCompletedCharacterCount = omittedCharacterCount,
-            userMessages = userMessages
+            userMessages = userMessages,
+            userMessagesTruncated = userMessagesTruncated
         )
     }
 
@@ -118,11 +143,6 @@ internal object LocalAiTranscriptRestorePolicy {
         )
     }
 
-    fun recentUserMessages(messages: List<String>): List<String> =
-        messages.takeLast(maxUserMessages)
-
-    fun hasOmittedUserMessages(messages: List<String>): Boolean =
-        messages.size > maxUserMessages
 
     private fun hasUnpairedSurrogate(value: String): Boolean {
         var index = 0

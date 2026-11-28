@@ -453,7 +453,9 @@ class MainActivity : FlutterActivity() {
                                     call.argument<Any>("omitted_completed_turn_count"),
                                 rawOmittedCompletedCharacterCount =
                                     call.argument<Any>("omitted_completed_character_count"),
-                                rawUserMessages = call.argument<Any>("userMessages")
+                                rawUserMessages = call.argument<Any>("userMessages"),
+                                rawUserMessagesTruncated =
+                                    call.argument<Any>("user_messages_truncated")
                             )
                         } catch (error: IllegalArgumentException) {
                             result.error(
@@ -469,7 +471,8 @@ class MainActivity : FlutterActivity() {
                                 restorePayload.completedTurns,
                                 restorePayload.omittedCompletedTurnCount,
                                 restorePayload.omittedCompletedCharacterCount,
-                                restorePayload.userMessages
+                                restorePayload.userMessages,
+                                restorePayload.userMessagesTruncated
                             )
                         }
                     }
@@ -1988,7 +1991,8 @@ class MainActivity : FlutterActivity() {
         completedTurns: List<*>,
         omittedCompletedTurnCount: Int,
         omittedCompletedCharacterCount: Long,
-        userMessages: List<String>
+        userMessages: List<String>,
+        userMessagesTruncated: Boolean
     ): Map<String, Any> {
         aiModelAccessGate.requireAccess()
 
@@ -2004,13 +2008,11 @@ class MainActivity : FlutterActivity() {
         // the replacement Native Conversation, without an empty intermediate one.
         resetLocalConversation(conversationId, restoredSnapshot)
 
-        // Keep explicit user-authored text in the independent symptom input
-        // projection. Incomplete user-only input is never Native successful memory.
-        if (LocalAiTranscriptRestorePolicy.hasOmittedUserMessages(userMessages)) {
-            userReportedInputsTruncated = true
-        }
-        LocalAiTranscriptRestorePolicy.recentUserMessages(userMessages).forEach { message ->
-            recordUserInput("用户文字自述", message)
+        // Flutter bounds the independent symptom-input projection before
+        // MethodChannel transfer. Preserve its explicit truncation state.
+        userReportedInputsTruncated = userMessagesTruncated
+        userMessages.forEach { message ->
+            recordUserInput(LocalAiTranscriptRestorePolicy.userMessageSource, message)
         }
         return mapOf(
             "restored" to true,

@@ -80,4 +80,36 @@ void main() {
       expect(handler, isNot(contains('?: 0')));
     },
   );
+  test(
+    'Native restore bounds user-only symptom inputs before MethodChannel transfer',
+    () async {
+      final screen = await File(
+        'lib/screens/local_ai_interview_screen.dart',
+      ).readAsString();
+      final service = await File('lib/services/local_ai_service.dart').readAsString();
+      final policy = await File(
+        'lib/services/local_ai_transcript_restore_policy.dart',
+      ).readAsString();
+      final nativePolicy = await File(
+        'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt',
+      ).readAsString();
+      final nativeActivity = await File(
+        'android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt',
+      ).readAsString();
+
+      expect(screen, contains('LocalAiTranscriptRestorePolicy.projectUserMessages'));
+      expect(screen, contains('LocalAiUserMessageRestoreProjectionBuilder'));
+      expect(screen, contains('userMessagesTruncated: userInputProjection.truncated'));
+      expect(screen, contains('userMessagesTruncated: userMessagesTruncated'));
+      expect(service, contains("'user_messages_truncated': userMessagesTruncated"));
+      expect(policy, contains('maxUserMessages = 60'));
+      expect(policy, contains('maxTotalUserMessageCharacters = 16000'));
+      expect(policy, contains('userMessageSourcePrefix'));
+      expect(nativePolicy, contains('rawUserMessagesTruncated: Any?'));
+      expect(nativePolicy, contains('formatted Native aggregate character limit'));
+      expect(nativeActivity, contains('userReportedInputsTruncated = userMessagesTruncated'));
+      expect(nativeActivity, isNot(contains('recentUserMessages(userMessages)')));
+      expect(nativeActivity, isNot(contains('hasOmittedUserMessages(userMessages)')));
+    },
+  );
 }
