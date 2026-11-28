@@ -11,7 +11,7 @@ void main() {
 
     setUp(() {
       storage = _MemoryCredentialStorage();
-      vault = AiCredentialVault(
+      vault = AiCredentialVault.forTesting(
         storage: storage,
         platform: TargetPlatform.android,
       );
@@ -134,7 +134,7 @@ void main() {
 
     test('does not overwrite an existing random reference on collision',
         () async {
-      final collisionVault = AiCredentialVault(
+      final collisionVault = AiCredentialVault.forTesting(
         storage: storage,
         platform: TargetPlatform.android,
       );
@@ -206,14 +206,14 @@ void main() {
     test('rejects platforms without an explicitly supported secure store',
         () {
       expect(
-        () => AiCredentialVault(
+        () => AiCredentialVault.forTesting(
           storage: storage,
           platform: TargetPlatform.linux,
         ),
         throwsA(isA<AiCredentialVaultUnsupportedPlatformException>()),
       );
       expect(
-        () => AiCredentialVault(
+        () => AiCredentialVault.forTesting(
           storage: storage,
           platform: TargetPlatform.iOS,
         ),
