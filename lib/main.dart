@@ -90,7 +90,7 @@ ThemeData _buildTheme(Brightness brightness) {
       titleTextStyle: titleTextStyle.merge(const TextStyle(fontSize: AppType.headline)),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: Colors.transparent,
+      backgroundColor: tokens.surface,
       surfaceTintColor: scheme.surfaceTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
