@@ -150,7 +150,7 @@ Fork License 由独立 workflow 触发，必须作为独立 required check 配�
 - `PR required gate`
 - `Fork license inventory and boundary`
 
-单人仓库不设置无法满足的自审 approval 数；`required_pull_request_reviews` 可保持 null / 不要求审批。管理员也应受状态检查约束（`enforce_admins=true`）。
+单人仓库不要求自审批准，但必须保留 `required_pull_request_reviews` 对象并设置 `required_approving_review_count: 0`：这样仍要求通过 PR 合并，但不要求另一个审批人；把整个对象设为 `null` 会关闭 PR 审查保护。管理员也应受状态检查约束（`enforce_admins=true`）。
 
 仓库管理员在本地已认证的 GitHub CLI 中执行以下命令；不要把 Token 写进仓库或命令历史：
 
@@ -165,7 +165,9 @@ Fork License 由独立 workflow 触发，必须作为独立 required check 配�
     ]
   },
   "enforce_admins": true,
-  "required_pull_request_reviews": null,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 0
+  },
   "restrictions": null,
   "allow_force_pushes": false,
   "allow_deletions": false
