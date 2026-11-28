@@ -17,7 +17,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = null,
                 rawOmittedCompletedTurnCount = 0,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(missingTurns.message!!.contains("completed_turns"))
@@ -27,7 +28,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = null,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(missingOmittedCount.message!!.contains("omitted_completed_turn_count"))
@@ -38,7 +40,8 @@ class LocalAiTranscriptRestorePolicyTest {
                     rawCompletedTurns = validTurns,
                     rawOmittedCompletedTurnCount = 0,
                     rawOmittedCompletedCharacterCount = null,
-                    rawUserMessages = validMessages
+                    rawUserMessages = validMessages,
+                    rawUserMessagesTruncated = false,
                 )
             }
         assertTrue(missingOmittedCharacters.message!!.contains("omitted_completed_character_count"))
@@ -48,7 +51,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = "not-a-list",
                 rawOmittedCompletedTurnCount = 0,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(invalidTurnsType.message!!.contains("completed_turns"))
@@ -58,7 +62,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = 1.5,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(invalidNumericType.message!!.contains("integer"))
@@ -68,7 +73,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = -1,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(negativeCount.message!!.contains("non-negative"))
@@ -78,7 +84,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = Long.MAX_VALUE,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = validMessages
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(overflowCount.message!!.contains("range"))
@@ -88,7 +95,8 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = 0,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = listOf("用户自述", 42)
+                rawUserMessages = listOf("用户自述", 42),
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(malformedUserMessages.message!!.contains("userMessages[1]"))
@@ -98,21 +106,54 @@ class LocalAiTranscriptRestorePolicyTest {
                 rawCompletedTurns = validTurns,
                 rawOmittedCompletedTurnCount = 0,
                 rawOmittedCompletedCharacterCount = 0L,
-                rawUserMessages = null
+                rawUserMessages = null,
+                rawUserMessagesTruncated = false,
             )
         }
         assertTrue(missingUserMessages.message!!.contains("userMessages"))
+
+        val missingTruncationFlag = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = null
+            )
+        }
+        assertTrue(missingTruncationFlag.message!!.contains("user_messages_truncated"))
+
+        val invalidTruncationFlag = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = validMessages,
+                rawUserMessagesTruncated = 1
+            )
+        }
+        assertTrue(invalidTruncationFlag.message!!.contains("user_messages_truncated"))
 
         val payload = LocalAiTranscriptRestorePolicy.parsePayload(
             rawCompletedTurns = validTurns,
             rawOmittedCompletedTurnCount = 2L,
             rawOmittedCompletedCharacterCount = 24,
-            rawUserMessages = validMessages
+            rawUserMessages = validMessages,
+            rawUserMessagesTruncated = false,
         )
         assertEquals(validTurns, payload.completedTurns)
         assertEquals(2, payload.omittedCompletedTurnCount)
         assertEquals(24L, payload.omittedCompletedCharacterCount)
         assertEquals(validMessages, payload.userMessages)
+        assertFalse(payload.userMessagesTruncated)
+        val truncatedPayload = LocalAiTranscriptRestorePolicy.parsePayload(
+            rawCompletedTurns = validTurns,
+            rawOmittedCompletedTurnCount = 0,
+            rawOmittedCompletedCharacterCount = 0L,
+            rawUserMessages = validMessages,
+            rawUserMessagesTruncated = true
+        )
+        assertTrue(truncatedPayload.userMessagesTruncated)
 
         // An explicitly empty transcript is valid for a session that only
         // contains unfinished user input; omitted envelope fields are not.
@@ -120,12 +161,14 @@ class LocalAiTranscriptRestorePolicyTest {
             rawCompletedTurns = emptyList<Any>(),
             rawOmittedCompletedTurnCount = 0,
             rawOmittedCompletedCharacterCount = 0L,
-            rawUserMessages = emptyList<String>()
+            rawUserMessages = emptyList<String>(),
+            rawUserMessagesTruncated = false,
         )
         assertTrue(emptyPayload.completedTurns.isEmpty())
         assertEquals(0, emptyPayload.omittedCompletedTurnCount)
         assertEquals(0L, emptyPayload.omittedCompletedCharacterCount)
         assertTrue(emptyPayload.userMessages.isEmpty())
+        assertFalse(emptyPayload.userMessagesTruncated)
     }
 
     @Test
@@ -234,17 +277,41 @@ class LocalAiTranscriptRestorePolicyTest {
     }
 
     @Test
-    fun keepsOnlyMostRecentSixtyUserMessages() {
-        val messages = (1..75).map { "user-$it" }
+    fun rejectsUserMessageListsThatExceedNativeTransportBounds() {
+        val validTurns = emptyList<Any>()
+        val tooManyMessages = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = (1..61).map { "user-$it" },
+                rawUserMessagesTruncated = true
+            )
+        }
+        assertTrue(tooManyMessages.message!!.contains("entry limit"))
 
-        assertEquals("user-16", LocalAiTranscriptRestorePolicy.recentUserMessages(messages).first())
-        assertEquals("user-75", LocalAiTranscriptRestorePolicy.recentUserMessages(messages).last())
-        assertEquals(60, LocalAiTranscriptRestorePolicy.recentUserMessages(messages).size)
-    }
+        val maxRawEntryCharacters = UserReportedInputPolicy.MAX_ENTRY_CHARS -
+            LocalAiTranscriptRestorePolicy.userMessageSourcePrefix.length
+        val oversizedEntry = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = listOf("x".repeat(maxRawEntryCharacters + 1)),
+                rawUserMessagesTruncated = true
+            )
+        }
+        assertTrue(oversizedEntry.message!!.contains("entry character limit"))
 
-    @Test
-    fun marksUserMessageHistoryIncompleteOnlyWhenOlderMessagesWereOmitted() {
-        assertFalse(LocalAiTranscriptRestorePolicy.hasOmittedUserMessages((1..60).map { "$it" }))
-        assertTrue(LocalAiTranscriptRestorePolicy.hasOmittedUserMessages((1..61).map { "$it" }))
+        val oversizedAggregate = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.parsePayload(
+                rawCompletedTurns = validTurns,
+                rawOmittedCompletedTurnCount = 0,
+                rawOmittedCompletedCharacterCount = 0L,
+                rawUserMessages = List(9) { "x".repeat(maxRawEntryCharacters) },
+                rawUserMessagesTruncated = true
+            )
+        }
+        assertTrue(oversizedAggregate.message!!.contains("aggregate character limit"))
     }
 }
