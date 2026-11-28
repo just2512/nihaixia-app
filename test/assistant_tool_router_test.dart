@@ -1,0 +1,729 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
+import 'package:nihaisha_app/screens/saved_charts_screen.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/tool_execution_plan.dart';
+import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
+
+void main() {
+  test('工具注册表 ID 唯一且每个 ID 都能精确恢复同一工具定义', () {
+    final tools = AssistantToolRouter.all;
+    final ids = tools.map((tool) => tool.id).toList(growable: false);
+    expect(ids, isNotEmpty);
+    expect(ids.toSet(), hasLength(ids.length));
+    for (final tool in tools) {
+      expect(AssistantToolRouter.byId(tool.id), same(tool));
+      expect(tool.id.trim(), isNotEmpty);
+      expect(tool.title.trim(), isNotEmpty);
+      expect(tool.aliases, isNotEmpty);
+      expect(tool.actionWords, isNotEmpty);
+    }
+  });
+
+  test('每个工具定义都声明显式且稳定的业务 capability ID', () {
+    final tools = AssistantToolRouter.all;
+    expect(tools, isNotEmpty);
+    for (final tool in tools) {
+      expect(tool.capabilityId.trim(), isNotEmpty, reason: tool.id);
+      expect(tool.capabilityId, tool.capabilityId.trim(), reason: tool.id);
+    }
+    expect(AssistantToolRouter.bazi.capabilityId, 'bazi');
+    expect(AssistantToolRouter.yunqi.capabilityId, 'yunqi');
+    expect(AssistantToolRouter.structuredDiagnosis.capabilityId,
+        'structured_diagnosis');
+  });
+
+  test('玄学模式允许回答非计算型术数常识，但禁止伪造出处', () {
+    final hint = AssistantMode.metaphysics.promptHint;
+    expect(hint, contains('一般术数知识及非计算型学习、原理、历史问题'));
+    expect(hint, contains('模型已有知识'));
+    expect(hint, contains('不编造典籍原文、出处或引文'));
+    expect(hint, contains('必须调用 App 内置工具'));
+  });
+
+  test('问诊助手允许完整解释 App 规则结果且诊断依据必须来自知识库', () {
+    final prompt = AssistantMode.consultation.promptHint;
+    expect(prompt, contains('DiagnosticEngine'));
+    expect(prompt, contains('本地知识库'));
+    expect(prompt, contains('病机、治法、方剂组成与配伍、针灸思路'));
+    expect(prompt, isNot(contains('仅用于模拟学习')));
+    expect(prompt, isNot(contains('不提供个体治疗')));
+  });
+
+  test('问诊模式只把明确结构化辨证请求交给规则问诊', () {
+    expect(
+      AssistantToolRouter.match('请开始结构化辨证问诊', AssistantMode.consultation)?.id,
+      'structured_diagnosis',
+    );
+    expect(
+      AssistantToolRouter.match('我想了解六经辨证的概念', AssistantMode.consultation),
+      isNull,
+    );
+  });
+
+  test('旧结构化辨证页面入口必须 fail closed，问诊只能在统一对话内继续', () {
+    final tool = AssistantToolRouter.byId('structured_diagnosis');
+    expect(tool, isNotNull);
+    expect(() => tool!.builder(), throwsA(isA<StateError>()));
+  });
+
+  test('工具模式按明确动作路由五运六气和剂量换算', () {
+    expect(
+      AssistantToolRouter.match('帮我推算五运六气', AssistantMode.tools)?.id,
+      'yunqi',
+    );
+    expect(
+      AssistantToolRouter.match('帮我做经方剂量换算', AssistantMode.tools)?.id,
+      'dosage',
+    );
+  });
+
+  test('玄学模式只路由明确排盘或起卦动作', () {
+    expect(
+      AssistantToolRouter.match('帮我排一个紫微斗数命盘', AssistantMode.metaphysics)?.id,
+      'ziwei',
+    );
+    expect(
+      AssistantToolRouter.match('帮我排八字', AssistantMode.metaphysics)?.id,
+      'bazi',
+    );
+    expect(
+      AssistantToolRouter.match('易经六十四卦是什么', AssistantMode.metaphysics),
+      isNull,
+    );
+    expect(
+      AssistantToolRouter.match('帮我用易经起卦', AssistantMode.metaphysics)?.id,
+      'yijing',
+    );
+  });
+
+  test('玄学角色名称和子午流注工具回传配置一致', () {
+    expect(AssistantMode.metaphysics.label, '玄学大师');
+    final tool = AssistantToolRouter.match(
+      '帮我做子午流注开穴',
+      AssistantMode.tools,
+    );
+    expect(tool?.id, 'ziwu_liuzhu');
+    final screen = tool!.builder();
+    expect(screen, isA<ZiWuLiuZhuScreen>());
+    expect((screen as ZiWuLiuZhuScreen).returnResultOnComplete, isTrue);
+  });
+
+  test('学习模式不会因为提到工具名称而自动跳转', () {
+    expect(
+      AssistantToolRouter.match('介绍一下五运六气', AssistantMode.learning),
+      isNull,
+    );
+  });
+
+  test('自动调度遇到多个明确工具动作时必须返回歧义而不是抢先执行', () {
+    const request = '先帮我排紫微斗数，再推算五运六气';
+    final matches = AssistantToolRouter.matchAll(
+      request,
+      AssistantMode.automatic,
+    );
+    expect(matches.map((tool) => tool.id), containsAll(['ziwei', 'yunqi']));
+    expect(AssistantToolRouter.match(request, AssistantMode.automatic), isNull);
+  });
+
+  test('自动调度可识别单一工具动作，学习提问不因工具名误触发', () {
+    expect(
+      AssistantToolRouter.match('请帮我排一个紫微斗数命盘', AssistantMode.automatic)?.id,
+      'ziwei',
+    );
+    expect(
+      AssistantToolRouter.match('请解释紫微斗数的历史来源', AssistantMode.automatic),
+      isNull,
+    );
+  });
+
+  test('工具澄清短答必须由调用方验证唯一候选', () {
+    final candidates = AssistantToolRouter.matchAliases(
+      '紫微斗数和八字',
+      AssistantMode.metaphysics,
+    );
+    expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
+    expect(candidates.length, 2);
+  });
+  test('页面路由由不可变的结构化导航意图承载', () {
+    final intent = AssistantToolRouter.navigationIntent(
+      tool: AssistantToolRouter.yunqi,
+      arguments: const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-23'},
+      ),
+      pageOwnsInput: true,
+    );
+
+    expect(intent.toolId, 'yunqi');
+    expect(intent.arguments, {'date': '2026-11-23'});
+    expect(intent.pageOwnsInput, isTrue);
+    expect(
+      () => intent.arguments['date'] = '2026-11-24',
+      throwsUnsupportedError,
+    );
+  });
+
+  test('导航意图公开构造函数防御复制并冻结参数', () {
+    final source = {'date': '2026-11-23'};
+    final intent = AssistantToolNavigationIntent(
+      toolId: 'yunqi',
+      arguments: source,
+    );
+
+    source['date'] = '2026-11-24';
+    expect(intent.arguments, {'date': '2026-11-23'});
+    expect(
+      () => intent.arguments['date'] = '2026-11-25',
+      throwsUnsupportedError,
+    );
+  });
+
+  test('页面导航意图拒绝与工具定义不一致的 tool ID', () {
+    expect(
+      () => AssistantToolRouter.navigationIntent(
+        tool: AssistantToolRouter.yunqi,
+        arguments: const AssistantToolArguments(toolId: 'bazi'),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('工具参数契约拒绝非法日期、未声明字段和错误工具标识', () {
+    final tool = AssistantToolRouter.yunqi;
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-02-30'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06', 'rawPrompt': 'run arbitrary'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'bazi').validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+
+  test('五运六气注册项同时保留页面入口并提供 Headless 执行器', () async {
+    final tool = AssistantToolRouter.yunqi;
+    expect(tool.builderWithArguments, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+
+    const arguments = {'date': '2026-11-12'};
+    final execution = await const HeadlessToolDispatcher().executePlan(
+      plan: ToolExecutionPlan(
+        planId: 'router-yunqi-smoke',
+        origin: InvocationOrigin.userManual,
+        steps: [
+          ToolExecutionStep(
+            toolId: tool.id,
+            capabilityId: tool.capabilityId,
+            arguments: arguments,
+          ),
+        ],
+      ),
+    );
+    expect(execution.isCompleted, isTrue);
+    final result = execution.results.single;
+    expect(result.toolId, 'yunqi');
+    expect(result.validateFor('yunqi'), isEmpty);
+    expect(result.validateArgumentsMatch(arguments), isEmpty);
+    expect(result.sourceIds, ['local-engine:yunqi']);
+  });
+
+  test('每日黄历注册项提供受日期约束的 Headless 执行器', () async {
+    final tool = AssistantToolRouter.almanac;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.single.key, 'date');
+    expect(tool.parameters.single.isRequired, isTrue);
+
+    const arguments = {'date': '2026-11-12'};
+    final execution = await const HeadlessToolDispatcher().executePlan(
+      plan: ToolExecutionPlan(
+        planId: 'router-almanac-smoke',
+        origin: InvocationOrigin.userManual,
+        steps: [
+          ToolExecutionStep(
+            toolId: tool.id,
+            capabilityId: tool.capabilityId,
+            arguments: arguments,
+          ),
+        ],
+      ),
+    );
+    expect(execution.isCompleted, isTrue);
+    final result = execution.results.single;
+    expect(result.toolId, 'almanac');
+    expect(result.validateFor('almanac'), isEmpty);
+    expect(result.validateArgumentsMatch(arguments), isEmpty);
+    expect(result.values['公历'], '2026-11-12');
+    expect(result.sourceIds, ['local-engine:almanac']);
+  });
+
+  test('紫微注册项要求四项出生资料并提供 Headless 执行器', () {
+    final tool = AssistantToolRouter.ziwei;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((parameter) => parameter.key), [
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    ]);
+    expect(tool.parameters.every((parameter) => parameter.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(tool.parameters[2].choices, ['male', 'female']);
+    expect(tool.parameters[3].type, AssistantToolParameterType.text);
+    const valid = AssistantToolArguments(
+      toolId: 'ziwei',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(valid.validateAgainst(tool), isEmpty);
+    final invalidDate = AssistantToolArguments(
+      toolId: 'ziwei',
+      values: {
+        'birth_date': '1990-02-30',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(invalidDate.validateAgainst(tool), isNotEmpty);
+  });
+
+  test('八字注册项要求四项出生参数并提供 Headless 执行器', () {
+    final tool = AssistantToolRouter.bazi;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((parameter) => parameter.key), [
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    ]);
+    const valid = AssistantToolArguments(
+      toolId: 'bazi',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(valid.validateAgainst(tool), isEmpty);
+    const invalidTime = AssistantToolArguments(
+      toolId: 'bazi',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '25:70',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(invalidTime.validateAgainst(tool), isNotEmpty);
+  });
+
+  test('必填参数在没有传参时也会被拒绝', () {
+    final tool = AssistantToolDefinition(
+      id: 'test_required',
+      capabilityId: 'test_required',
+      title: '测试工具',
+      description: '测试必填参数。',
+      modes: const {AssistantMode.tools},
+      aliases: const ['测试工具'],
+      actionWords: const ['执行'],
+      builder: () => const SizedBox.shrink(),
+      parameters: const [
+        AssistantToolParameter(
+          key: 'count',
+          label: '数量',
+          type: AssistantToolParameterType.integer,
+          isRequired: true,
+        ),
+      ],
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'test_required')
+          .validateAgainst(tool),
+      contains('缺少必填参数：数量'),
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'test_required',
+        values: {'count': '3'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+  test('助手消息元数据往返保留知识状态、来源引用和工具重试参数', () {
+    const metadata = AssistantMessageMetadata(
+      mode: 'tools',
+      selectedMode: 'automatic',
+      toolId: 'yunqi',
+      toolStatus: 'FAILED',
+      sourceIds: ['neijing:chapter-1', 'medical_case:internal-seq:42'],
+      toolArguments: {'date': '2026-11-07', 'location': 'Shanghai'},
+      knowledgeStatus: 'PARTIAL',
+      replayable: false,
+    );
+
+    final restored = AssistantMessageMetadata.decode(metadata.encode());
+    expect(restored.mode, 'tools');
+    expect(restored.selectedMode, 'automatic');
+    expect(restored.toolId, 'yunqi');
+    expect(restored.toolStatus, 'FAILED');
+    expect(restored.sourceIds, metadata.sourceIds);
+    expect(restored.toolArguments, metadata.toolArguments);
+    expect(restored.knowledgeStatus, 'PARTIAL');
+    expect(restored.replayable, isFalse);
+  });
+
+  test('旧版分号元数据仍可恢复模式与工具标识', () {
+    final restored = AssistantMessageMetadata.decode(
+      'mode=tools;selectedMode=automatic;tool=yunqi;tool_choice=false;replayable=false',
+    );
+    expect(restored.mode, 'tools');
+    expect(restored.selectedMode, 'automatic');
+    expect(restored.toolId, 'yunqi');
+    expect(restored.replayable, isFalse);
+    expect(restored.sourceIds, isEmpty);
+    expect(restored.knowledgeStatus, isNull);
+  });
+
+  test('学习与工具角色明确要求知识综合和已执行结果解释', () {
+    expect(AssistantMode.learning.promptHint, contains('总结、比较、归纳和解释'));
+    expect(AssistantMode.learning.promptHint, contains('明确区分课程讲稿、古籍文本、医案'));
+    expect(AssistantMode.tools.promptHint, contains('工具结果返回对话后'));
+    expect(AssistantMode.tools.promptHint, contains('区分 App 确定性计算与 AI 解释'));
+    expect(AssistantMode.consultation.promptHint, contains('只有结果返回并通过校验后才交给 AI 解读'));
+    expect(AssistantMode.metaphysics.promptHint, contains('基于回传字段归纳结构'));
+  });
+
+
+  test('梅花三种起卦方式都声明 Headless 参数契约并按方式约束输入', () {
+    final tool = AssistantToolRouter.meihua;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['method', 'first', 'second', 'date', 'hour_branch'],
+    );
+    expect(tool.parameters.first.isRequired, isTrue);
+    expect(
+      tool.parameters.first.choices,
+      ['number', 'time', 'random'],
+    );
+    expect(tool.parameters.skip(1).every((item) => !item.isRequired), isTrue);
+    expect(
+      tool.parameters
+          .where((item) => item.type == AssistantToolParameterType.integer)
+          .map((item) => item.key),
+      ['first', 'second'],
+    );
+    expect(
+      tool.parameters.last.choices,
+      ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
+    );
+  });
+
+  test('称骨注册项在助手对话中收集公历日期和出生钟表时间', () {
+    final tool = AssistantToolRouter.chenggu;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'chenggu',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '08:30',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+
+  test('节气养生注册为 Headless，目标节气可选且来自现有二十四节气目录', () {
+    final tool = AssistantToolRouter.solarTerms;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['term'],
+    );
+    expect(tool.parameters.single.isRequired, isFalse);
+    expect(tool.parameters.single.choices, AssistantToolRouter.solarTermNames);
+    expect(
+      AssistantToolRouter.match('查询立春养生', AssistantMode.automatic)?.id,
+      'solar_terms',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'solar_terms',
+        values: {'term': '立春'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'solar_terms',
+        values: {'term': '不存在的节气'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+  });
+
+  test('小六壬注册为 Headless，要求用户明确提供日期、时辰和起课口径', () {
+    final tool = AssistantToolRouter.xiaoliuren;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'date',
+      'hour',
+      'rule',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.choice);
+    expect(
+      tool.parameters[1].choices,
+      ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', '午时', '未时', '申时', '酉时', '戌时', '亥时'],
+    );
+    expect(tool.parameters[2].choices, ['common', 'duoneng']);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'xiaoliuren',
+        values: {
+          'date': '2026-11-14',
+          'hour': '午时',
+          'rule': 'common',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'xiaoliuren',
+        values: {'date': '2026-11-14', 'hour': '午时'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+  });
+
+  test('黄帝四季歌注册为 Headless，必需参数为公历出生日期和当地钟表时间', () {
+    final tool = AssistantToolRouter.huangdiSiji;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'huangdi_siji',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '20:30',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+  test('易经注册为 Headless，并声明四种起卦方式及回放参数', () {
+    final tool = AssistantToolRouter.yijing;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'method',
+      'first',
+      'second',
+      'upper',
+      'lower',
+      'moving',
+      'at',
+      'coins',
+    ]);
+    expect(tool.parameters.first.isRequired, isTrue);
+    expect(tool.parameters.first.choices, ['number', 'time', 'manual', 'coins']);
+    expect(tool.parameters.skip(1).every((item) => !item.isRequired), isTrue);
+    expect(
+      tool.parameters
+          .where((item) => item.type == AssistantToolParameterType.integer)
+          .map((item) => item.key),
+      ['first', 'second', 'upper', 'lower', 'moving'],
+    );
+    expect(
+      AssistantToolRouter.match('帮我用易经铜钱摇卦', AssistantMode.automatic)?.id,
+      'yijing',
+    );
+    expect(
+      AssistantToolRouter.match('帮我用易经手动选卦', AssistantMode.automatic)?.id,
+      'yijing',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yijing',
+        values: {
+          'method': 'manual',
+          'upper': '1',
+          'lower': '8',
+          'moving': '0',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+  test('经方换算注册为 Headless，并声明最小参数契约', () {
+    final tool = AssistantToolRouter.dosage;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['value', 'unit', 'standard'],
+    );
+    expect(tool.parameters[0].isRequired, isTrue);
+    expect(tool.parameters[1].isRequired, isTrue);
+    expect(tool.parameters[2].isRequired, isFalse);
+    expect(tool.parameters[1].choices, [
+      '两', '铢', '斤', '石', '钱', '升', '合', '圭', '撮', '尺', '寸',
+    ]);
+    expect(tool.parameters[2].choices, ['han', 'taiwan', 'tang']);
+    expect(
+      AssistantToolRouter.match('打开经方剂量换算', AssistantMode.tools)?.id,
+      'dosage',
+    );
+  });
+
+  test('子午流注注册为 Headless 并保留设备本地时间槽位', () {
+    final tool = AssistantToolRouter.ziwu;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), ['at', 'date', 'time']);
+    expect(tool.parameters.every((item) => !item.isRequired), isTrue);
+    expect(
+      AssistantToolRouter.match(
+        '帮我计算现在子午流注时辰开穴',
+        AssistantMode.automatic,
+      )?.id,
+      'ziwu_liuzhu',
+    );
+  });
+
+
+  test('周公解梦注册为对话内 Headless 工具并声明梦境描述参数', () {
+    final tool = AssistantToolRouter.dream;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), ['dream_text']);
+    expect(tool.parameters.single.isRequired, isTrue);
+    expect(tool.parameters.single.type, AssistantToolParameterType.text);
+    expect(
+      AssistantToolRouter.match('帮我解梦', AssistantMode.automatic)?.id,
+      'dream',
+    );
+    expect(
+      AssistantToolRouter.match('梦见蛇是什么意思', AssistantMode.automatic)?.id,
+      'dream',
+    );
+  });
+
+
+  test('三山国王灵签的抽签动作可 Headless 执行，签谱浏览仍保留页面入口', () {
+    final tool = AssistantToolRouter.sanshan;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters, isEmpty);
+    expect(
+      AssistantToolRouter.match(
+        '帮我抽签三山国王灵签',
+        AssistantMode.automatic,
+      )?.id,
+      'sanshan_lingqian',
+    );
+  });
+
+  test('受生债注册为 Headless 并要求出生日期、时间和明确查询体系', () {
+    final tool = AssistantToolRouter.shoushengDebt;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+      'method',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters.last.type, AssistantToolParameterType.choice);
+    expect(tool.parameters.last.choices, ['luku', 'wudou']);
+    expect(
+      AssistantToolRouter.match('查询受生债', AssistantMode.automatic)?.id,
+      'shousheng_debt',
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'shousheng_debt').validateAgainst(tool),
+      isNotEmpty,
+      reason: '不得继承页面默认日期、时间或查询体系',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'shousheng_debt',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '08:30',
+          'method': 'luku',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+
+  test('已保存命盘 Headless 支持对话调度，同时保留原页面入口', () {
+    final tool = AssistantToolRouter.savedCharts;
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
+    expect(tool.parameters.map((item) => item.key), [
+      'saved_chart_id',
+      'chart_type',
+    ]);
+    expect(tool.parameters.every((item) => !item.isRequired), isTrue);
+    expect(tool.parameters.last.type, AssistantToolParameterType.choice);
+    expect(tool.parameters.last.choices, ['bazi', 'ziwei']);
+    expect(
+      AssistantToolRouter.match('查看我的命盘库', AssistantMode.automatic)?.id,
+      'saved_charts',
+    );
+    expect(
+      AssistantToolRouter.match('帮我解读保存的命盘', AssistantMode.metaphysics)?.id,
+      'saved_charts',
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'saved_charts').validateAgainst(tool),
+      isEmpty,
+      reason: '记录和排盘类型在对话中由用户逐轮明确选择',
+    );
+    expect(tool.builder(), isA<SavedChartsScreen>());
+  });
+
+}

@@ -1,0 +1,873 @@
+import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import '../models/bookmark.dart';
+import '../models/tcm_interview_task_state.dart';
+import 'assistant_conversation_store.dart';
+
+class DatabaseHelper implements AssistantConversationStore {
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+  static String? _testDatabaseFileName;
+  static String? _testDatabaseDirectoryPath;
+  static DatabaseFactory? _testDatabaseFactory;
+
+  static final ValueNotifier<int> bookmarkVersion = ValueNotifier<int>(0);
+
+  DatabaseHelper._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB(_testDatabaseFileName ?? 'nihaisha.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    // Keep the path lookup and open operation on the same factory. Tests use
+    // an explicitly injected FFI factory instead of relying on package-global
+    // sqflite state shared across imports.
+    final factory = _testDatabaseFactory ?? databaseFactory;
+    final dbPath = _testDatabaseDirectoryPath ?? await factory.getDatabasesPath();
+    final path = join(dbPath, filePath);
+    return factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 8,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+      ),
+    );
+  }
+
+  /// 仅供测试：重置已打开的数据库连接（下次访问重新打开）。
+  @visibleForTesting
+  static void resetForTest() {
+    _database = null;
+  }
+
+  @visibleForTesting
+  static void configureTestDatabase(
+    String fileName, {
+    DatabaseFactory? factory,
+    String? directoryPath,
+  }) {
+    if (fileName.trim().isEmpty) {
+      throw ArgumentError.value(fileName, 'fileName');
+    }
+    if (directoryPath != null && directoryPath.trim().isEmpty) {
+      throw ArgumentError.value(directoryPath, 'directoryPath');
+    }
+    _testDatabaseFileName = fileName;
+    _testDatabaseDirectoryPath = directoryPath;
+    _testDatabaseFactory = factory;
+    _database = null;
+  }
+
+  @visibleForTesting
+  static Future<void> closeTestDatabase() async {
+    final opened = _database;
+    _database = null;
+    _testDatabaseFileName = null;
+    _testDatabaseDirectoryPath = null;
+    _testDatabaseFactory = null;
+    if (opened != null && opened.isOpen) await opened.close();
+  }
+
+  Future<void> _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE bookmarks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT NOT NULL,
+        source TEXT NOT NULL,
+        folder_id INTEGER DEFAULT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE chat_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT NOT NULL,
+        is_user INTEGER NOT NULL,
+        timestamp TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE search_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query TEXT NOT NULL,
+        timestamp TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE bookmark_folders(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        icon TEXT DEFAULT 'folder',
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE diagnosis_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        meridian TEXT,
+        pattern TEXT,
+        formula TEXT,
+        confidence REAL,
+        answers TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE user_settings(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE medical_case_bookmarks(
+        seq INTEGER PRIMARY KEY,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE medical_case_recent(
+        seq INTEGER PRIMARY KEY,
+        viewed_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE assistant_conversations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        mode TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_preview TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE assistant_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        metadata TEXT,
+        invocation_key TEXT,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
+    );
+    await db.execute('''
+      CREATE UNIQUE INDEX assistant_messages_invocation_key_unique
+      ON assistant_messages(conversation_id, invocation_key)
+      WHERE invocation_key IS NOT NULL
+    ''');
+
+    await db.execute('''
+      CREATE TABLE tcm_interview_tasks(
+        conversation_id INTEGER PRIMARY KEY,
+        task_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+    ''');
+
+    // 自定义命盘库（首次安装即建表；旧库由 onUpgrade 的 <5 分支补齐）
+    await db.execute('''
+      CREATE TABLE user_charts(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        gender INTEGER NOT NULL,
+        solar_iso TEXT NOT NULL,
+        lng REAL,
+        lat REAL,
+        city_name TEXT,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE search_history(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          query TEXT NOT NULL,
+          timestamp TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      // bookmarks 表增加 folder_id 字段
+      await db.execute('ALTER TABLE bookmarks ADD COLUMN folder_id INTEGER DEFAULT NULL');
+      await db.execute('''
+        CREATE TABLE bookmark_folders(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          icon TEXT DEFAULT 'folder',
+          sort_order INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE diagnosis_history(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          meridian TEXT,
+          pattern TEXT,
+          formula TEXT,
+          confidence REAL,
+          answers TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE user_settings(
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE medical_case_bookmarks(
+          seq INTEGER PRIMARY KEY,
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE medical_case_recent(
+          seq INTEGER PRIMARY KEY,
+          viewed_at TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      // 自定义命盘库（保存用户排盘生辰，便于随时回看）
+      await db.execute('''
+        CREATE TABLE user_charts(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          gender INTEGER NOT NULL,
+          solar_iso TEXT NOT NULL,
+          lng REAL,
+          lat REAL,
+          city_name TEXT,
+          created_at INTEGER NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE assistant_conversations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          mode TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_message_preview TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE assistant_messages(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          metadata TEXT,
+          FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
+      );
+    }
+    if (oldVersion < 7) {
+      await db.execute('''
+      CREATE TABLE tcm_interview_tasks(
+        conversation_id INTEGER PRIMARY KEY,
+        task_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+      ''');
+    }
+    if (oldVersion < 8) {
+      await db.execute(
+        'ALTER TABLE assistant_messages ADD COLUMN invocation_key TEXT',
+      );
+      await db.execute('''
+        CREATE UNIQUE INDEX assistant_messages_invocation_key_unique
+        ON assistant_messages(conversation_id, invocation_key)
+        WHERE invocation_key IS NOT NULL
+      ''');
+    }
+  }
+
+
+
+  Future<int> insertBookmark(Bookmark bookmark) async {
+    final db = await database;
+    final id = await db.insert('bookmarks', bookmark.toJson()..remove('id'));
+    bookmarkVersion.value++;
+    return id;
+  }
+
+  Future<List<Bookmark>> getAllBookmarks() async {
+    final db = await database;
+    final result = await db.query('bookmarks', orderBy: 'created_at DESC');
+    return result.map((json) => Bookmark.fromJson(json)).toList();
+  }
+
+  Future<List<Bookmark>> getBookmarksByCategory(String category) async {
+    final db = await database;
+    final result = await db.query(
+      'bookmarks',
+      where: 'category = ?',
+      whereArgs: [category],
+      orderBy: 'created_at DESC',
+    );
+    return result.map((json) => Bookmark.fromJson(json)).toList();
+  }
+
+  Future<int> deleteBookmark(int id) async {
+    final db = await database;
+    final count = await db.delete('bookmarks', where: 'id = ?', whereArgs: [id]);
+    bookmarkVersion.value++;
+    return count;
+  }
+
+  Future<bool> isBookmarked(String title) async {
+    final db = await database;
+    final result = await db.query(
+      'bookmarks',
+      where: 'title = ?',
+      whereArgs: [title],
+    );
+    return result.isNotEmpty;
+  }
+
+  Future<void> saveChatMessage(String text, bool isUser) async {
+    final db = await database;
+    await db.insert('chat_history', {
+      'text': text,
+      'is_user': isUser ? 1 : 0,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> clearChatHistory() async {
+    final db = await database;
+    await db.delete('chat_history');
+  }
+
+
+  // === 统一 AI 助手会话历史 ===
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    return db.insert('assistant_conversations', {
+      'title': title.trim().isEmpty ? '新对话' : title.trim(),
+      'mode': mode,
+      'created_at': now,
+      'updated_at': now,
+      'last_message_preview': '',
+    });
+  }
+
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+    String? invocationKey,
+  }) async {
+    final normalizedRole = role.trim().toLowerCase();
+    if (invocationKey != null &&
+        (normalizedRole != 'tool' ||
+            invocationKey.trim().isEmpty ||
+            invocationKey != invocationKey.trim() ||
+            invocationKey.length > 160)) {
+      throw ArgumentError.value(
+        invocationKey,
+        'invocationKey',
+        'Invocation keys are bounded and allowed only for tool ledger events',
+      );
+    }
+    if (!const {'user', 'assistant', 'system', 'tool'}.contains(normalizedRole)) {
+      throw ArgumentError.value(role, 'role', 'Unsupported assistant message role');
+    }
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final preview = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final messageId = await db.transaction((txn) async {
+      final exists = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+      final id = await txn.insert('assistant_messages', {
+        'conversation_id': conversationId,
+        'role': normalizedRole,
+        'content': content,
+        'created_at': now,
+        'metadata': metadata,
+        'invocation_key': invocationKey,
+      });
+      await txn.rawUpdate(
+        '''
+        UPDATE assistant_conversations
+        SET updated_at = ?,
+            last_message_preview = CASE
+              WHEN ? = 'tool' THEN last_message_preview
+              ELSE ?
+            END,
+            title = CASE
+              WHEN title = '新对话' AND ? = 'user' THEN substr(?, 1, 48)
+              ELSE title
+            END
+        WHERE id = ?
+        ''',
+        [
+          now,
+          normalizedRole,
+          preview.length > 120 ? preview.substring(0, 120) : preview,
+          normalizedRole,
+          preview,
+          conversationId,
+        ],
+      );
+      return id;
+    });
+    return messageId;
+  }
+
+
+  /// Atomically persists an ordered group of transcript rows. Both message
+  /// inserts and conversation preview/title updates share one SQLite commit.
+  @override
+  Future<List<int>> saveAssistantMessagesAtomically({
+    required int conversationId,
+    required List<AssistantMessageDraft> messages,
+  }) async {
+    if (messages.isEmpty) return const <int>[];
+    final normalizedRoles = messages.map((message) {
+      final role = message.role.trim().toLowerCase();
+      if (!const {'user', 'assistant', 'system', 'tool'}.contains(role)) {
+        throw ArgumentError.value(
+          message.role,
+          'role',
+          'Unsupported assistant message role',
+        );
+      }
+      return role;
+    }).toList(growable: false);
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    return db.transaction((txn) async {
+      final exists = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+
+      final messageIds = <int>[];
+      for (var index = 0; index < messages.length; index++) {
+        final message = messages[index];
+        final role = normalizedRoles[index];
+        final preview = message.content.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final id = await txn.insert('assistant_messages', {
+          'conversation_id': conversationId,
+          'role': role,
+          'content': message.content,
+          'created_at': now,
+          'metadata': message.metadata,
+        });
+        await txn.rawUpdate(
+          '''
+          UPDATE assistant_conversations
+          SET updated_at = ?,
+              last_message_preview = ?,
+              title = CASE
+                WHEN title = '新对话' AND ? = 'user' THEN substr(?, 1, 48)
+                ELSE title
+              END
+          WHERE id = ?
+          ''',
+          [
+            now,
+            preview.length > 120 ? preview.substring(0, 120) : preview,
+            role,
+            preview,
+            conversationId,
+          ],
+        );
+        messageIds.add(id);
+      }
+      return messageIds;
+    });
+  }
+
+  /// Persists both sides of a successful assistant turn in one SQLite
+  /// transaction. [userContent] may be null for assistant-only system turns.
+  @override
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  }) async {
+    final messages = <AssistantMessageDraft>[];
+    if (userContent != null && userContent.trim().isNotEmpty) {
+      messages.add(AssistantMessageDraft(
+        role: 'user',
+        content: userContent,
+        metadata: userMetadata,
+      ));
+    }
+    messages.add(AssistantMessageDraft(
+      role: 'assistant',
+      content: assistantContent,
+      metadata: assistantMetadata,
+    ));
+    final ids = await saveAssistantMessagesAtomically(
+      conversationId: conversationId,
+      messages: messages,
+    );
+    return ids.last;
+  }
+
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async {
+    if (limit != null && limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'Must be positive or null');
+    }
+    final db = await database;
+    final limitClause = limit == null ? '' : 'LIMIT ?';
+    final arguments = limit == null ? <Object?>[] : <Object?>[limit];
+    return db.rawQuery(
+      '''
+      SELECT conversation.*,
+             (SELECT COUNT(*) FROM assistant_messages message
+              WHERE message.conversation_id = conversation.id) AS message_count
+      FROM assistant_conversations conversation
+      WHERE EXISTS (
+        SELECT 1 FROM assistant_messages message
+        WHERE message.conversation_id = conversation.id
+      )
+      ORDER BY conversation.updated_at DESC, conversation.id DESC
+      $limitClause
+      ''',
+      arguments,
+    );
+  }
+
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async {
+    final db = await database;
+    return db.query(
+      'assistant_messages',
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      orderBy: 'id ASC',
+    );
+  }
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    final db = await database;
+    final updatedAt = (state.updatedAt ?? DateTime.now()).toUtc().toIso8601String();
+    await db.transaction((txn) async {
+      final conversations = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (conversations.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+      await txn.insert(
+        'tcm_interview_tasks',
+        {
+          'conversation_id': conversationId,
+          'task_id': state.taskId,
+          'status': state.status,
+          'state_json': state.encode(),
+          'updated_at': updatedAt,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      'tcm_interview_tasks',
+      columns: ['state_json'],
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final encoded = rows.single['state_json'];
+    if (encoded is! String) {
+      throw const FormatException('Stored TCM interview state is not text');
+    }
+    return TcmInterviewTaskState.decode(encoded);
+  }
+
+  Future<int> renameAssistantConversation({
+    required int conversationId,
+    required String title,
+  }) async {
+    final normalized = title.trim();
+    if (normalized.isEmpty) throw ArgumentError.value(title, 'title');
+    final db = await database;
+    return db.update(
+      'assistant_conversations',
+      {'title': normalized, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [conversationId],
+    );
+  }
+
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    final ids = conversationIds.toSet().toList();
+    if (ids.isEmpty) return;
+    final db = await database;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.transaction((txn) async {
+      await txn.delete(
+        'assistant_messages',
+        where: 'conversation_id IN ($placeholders)',
+        whereArgs: ids,
+      );
+      // Interview task snapshots belong to the conversation and must not
+      // outlive it; remove them before deleting the parent rows.
+      await txn.delete(
+        'tcm_interview_tasks',
+        where: 'conversation_id IN ($placeholders)',
+        whereArgs: ids,
+      );
+      await txn.delete(
+        'assistant_conversations',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    });
+  }
+
+
+  /// Removes persisted AI conversation content without touching diagnosis
+  /// history, bookmarks, user settings, charts, or the installed model.
+  ///
+  /// Attachment files and Native runtime caches are owned by the E cleanup
+  /// orchestrator and are deliberately not deleted by this database primitive.
+  Future<void> clearAllAiConversationData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('assistant_messages');
+      await txn.delete('tcm_interview_tasks');
+      await txn.delete('assistant_conversations');
+      // Legacy chat_history is also conversational AI content. Keep it in
+      // the same transaction so partial database clearing cannot be reported.
+      await txn.delete('chat_history');
+    });
+  }
+
+  // === 收藏文件夹 ===
+  Future<int> insertFolder(String name) async {
+    final db = await database;
+    return await db.insert('bookmark_folders', {
+      'name': name,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllFolders() async {
+    final db = await database;
+    return await db.query('bookmark_folders', orderBy: 'sort_order ASC');
+  }
+
+  Future<int> deleteFolder(int id) async {
+    final db = await database;
+    // 将该文件夹下的收藏的 folder_id 置空
+    await db.update('bookmarks', {'folder_id': null},
+        where: 'folder_id = ?', whereArgs: [id]);
+    return await db.delete('bookmark_folders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> moveBookmarkToFolder(int bookmarkId, int? folderId) async {
+    final db = await database;
+    await db.update('bookmarks', {'folder_id': folderId},
+        where: 'id = ?', whereArgs: [bookmarkId]);
+  }
+
+  Future<List<Map<String, dynamic>>> getBookmarksWithFolder() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT b.*, f.name as folder_name
+      FROM bookmarks b
+      LEFT JOIN bookmark_folders f ON b.folder_id = f.id
+      ORDER BY b.created_at DESC
+    ''');
+  }
+
+  // === 诊断历史 ===
+  Future<int> saveDiagnosisHistory(String? meridian, String? pattern,
+      String? formula, double? confidence, String? answers) async {
+    final db = await database;
+    return await db.insert('diagnosis_history', {
+      'meridian': meridian,
+      'pattern': pattern,
+      'formula': formula,
+      'confidence': confidence,
+      'answers': answers,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getDiagnosisHistory({int limit = 50}) async {
+    final db = await database;
+    return await db.query('diagnosis_history',
+        orderBy: 'created_at DESC', limit: limit);
+  }
+
+  Future<void> clearDiagnosisHistory() async {
+    final db = await database;
+    await db.delete('diagnosis_history');
+  }
+
+  // === 通用键值设置（user_settings 表，key 主键） ===
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final rows = await db.query('user_settings',
+        where: 'key = ?', whereArgs: [key]);
+    if (rows.isNotEmpty) return rows.first['value'] as String;
+    return null;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'user_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // === 收藏导出 ===
+  Future<List<Map<String, dynamic>>> exportBookmarks() async {
+    final db = await database;
+    final bookmarks = await db.query('bookmarks', orderBy: 'created_at DESC');
+    final folders = await db.query('bookmark_folders', orderBy: 'sort_order ASC');
+    return [
+      {'folders': folders, 'bookmarks': bookmarks},
+    ];
+  }
+
+  // === 医案收藏（按医案 seq 唯一） ===
+  Future<bool> isMedicalCaseBookmarked(int seq) async {
+    final db = await database;
+    final rows = await db.query(
+      'medical_case_bookmarks',
+      where: 'seq = ?',
+      whereArgs: [seq],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<void> setMedicalCaseBookmarked(int seq, bool bookmarked) async {
+    final db = await database;
+    if (bookmarked) {
+      await db.insert('medical_case_bookmarks', {
+        'seq': seq,
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else {
+      await db.delete(
+        'medical_case_bookmarks',
+        where: 'seq = ?',
+        whereArgs: [seq],
+      );
+    }
+  }
+
+  Future<List<int>> getBookmarkedMedicalCaseSeqs() async {
+    final db = await database;
+    final rows = await db.query(
+      'medical_case_bookmarks',
+      orderBy: 'created_at DESC',
+    );
+    return rows.map((r) => r['seq'] as int).toList();
+  }
+
+  // === 医案最近浏览（按医案 seq 唯一，时间倒序） ===
+  Future<void> upsertMedicalCaseRecent(int seq) async {
+    final db = await database;
+    await db.insert('medical_case_recent', {
+      'seq': seq,
+      'viewed_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<int>> getRecentMedicalCaseSeqs({int limit = 20}) async {
+    final db = await database;
+    final rows = await db.query(
+      'medical_case_recent',
+      orderBy: 'viewed_at DESC',
+      limit: limit,
+    );
+    return rows.map((r) => r['seq'] as int).toList();
+  }
+
+  Future<void> clearMedicalCaseRecent() async {
+    final db = await database;
+    await db.delete('medical_case_recent');
+  }
+}

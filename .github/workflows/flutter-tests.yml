@@ -1,0 +1,706 @@
+name: Flutter tests
+
+on:
+  push:
+    branches: [master, integration, 'work/**']
+  pull_request:
+    branches: [master, integration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-tests-v4-${{ github.ref }}
+  # A newer commit on the same branch supersedes an older in-flight CI run.
+  cancel-in-progress: true
+
+jobs:
+  branch-validation:
+    name: Branch validation (analyze + changed tests)
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/work/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout with history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle for native Kotlin tests
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Verify Headless executor import graph (Analyzer AST)
+        working-directory: tool/import_graph_audit
+        run: |
+          dart pub get
+          dart analyze
+          dart run bin/audit.dart ../../lib
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Inventory color usage and reject new hardcoded UI colors
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          python3 tool/audit_color_tokens.py --inventory
+          python3 tool/audit_color_tokens.py --changed-only --base-ref origin/master
+
+      # The Android target uses a separate immutable arm64 native asset.
+      # Verify it against sqlite3 3.5.2's published digest before the Flutter hook.
+      - name: Prewarm verified SQLite Android arm64 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite asset prewarm hashes for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
+          expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380065"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$api_url"
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-0c2d3bfc/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
+
+      - name: Static analysis
+        run: flutter analyze --no-pub --no-fatal-infos
+
+      - name: Run changed tests and enforce test pairing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master
+          changed_files="$(git diff --name-only origin/master...HEAD)"
+          # Pair native Kotlin production changes with native Kotlin unit tests.
+          code_changed=0
+          dart_test_files=()
+          kotlin_test_files=()
+          printf 'Changed files relative to origin/master:\n%s\n' "$changed_files"
+          while IFS= read -r file; do
+            case "$file" in
+              lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
+            esac
+            # Git diff --name-only includes deleted paths; only execute
+            # regression files that still exist in this checkout.
+            if [[ "$file" =~ ^test/.+_test[.]dart$ && -f "$file" ]]; then
+              dart_test_files+=("$file")
+            fi
+            case "$file" in
+              android/app/src/test/**/*.kt|android/app/src/test/*.kt)
+                if [[ -f "$file" ]]; then kotlin_test_files+=("$file"); fi
+                ;;
+            esac
+          done <<< "$changed_files"
+          printf 'Detected changed Dart regression tests (%s):\n' "${#dart_test_files[@]}"
+          printf '  %s\n' "${dart_test_files[@]}"
+          printf 'Detected changed Kotlin regression tests (%s):\n' "${#kotlin_test_files[@]}"
+          printf '  %s\n' "${kotlin_test_files[@]}"
+          if [[ "$code_changed" == "1" && "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
+            echo "Production changes require at least one changed Dart or Android Kotlin regression test." >&2
+            exit 1
+          fi
+          if [[ "${#dart_test_files[@]}" -gt 0 ]]; then
+            flutter test --no-pub "${dart_test_files[@]}"
+          fi
+          if [[ "${#kotlin_test_files[@]}" -gt 0 ]]; then
+            gradle -p android :app:testDebugUnitTest --no-daemon
+          fi
+          if [[ "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
+            echo "Documentation/workflow-only change: no language regression test required."
+          fi
+
+
+  test:
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request'
+    name: Flutter regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python for offline license issuer tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run offline Yanji license issuer tests
+        run: |
+          python -m pip install --disable-pip-version-check -r tool/license_issuer/requirements.txt
+          python -m unittest discover -s tool/license_issuer -p 'test_*.py' -v
+
+      - name: Verify README and pubspec version source
+        run: bash tool/check_version_source.sh
+
+      - name: Audit product brand identity across tracked text files
+        run: python3 tool/audit_product_brand.py --strict
+
+      - name: Inventory color usage and reject new hardcoded UI colors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tool/audit_color_tokens.py --inventory
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            # Fetch complete base history so the changed-line audit can compute
+            # a merge base against the checked-out PR merge commit.
+            git fetch --no-tags origin "$GITHUB_BASE_REF"
+            python3 tool/audit_color_tokens.py --changed-only --base-ref "origin/$GITHUB_BASE_REF"
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Verify Headless executor import graph (Analyzer AST)
+        working-directory: tool/import_graph_audit
+        run: |
+          dart pub get
+          dart run bin/audit.dart ../../lib
+
+      - name: Install dependencies
+        id: dependencies
+        run: flutter pub get --enforce-lockfile
+
+      # sqlite3 3.5.2 downloads immutable native assets from GitHub Releases.
+      # Seed the hook cache with the official release bytes after checking the
+      # package-pinned SHA-256. The sqlite3 hook performs its own hash check too.
+      - name: Prewarm verified SQLite Linux host asset
+        id: sqlite_asset
+        if: steps.dependencies.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite asset prewarm hashes for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.x64.linux.so"
+          expected="b17729184e5a2818055ecbddd5ed6642521bfe6e56aafa472330e483c0e2e0d2"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380082"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$api_url"
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-b1772918/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
+
+      - name: Run Dart and Flutter static analysis
+        if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter analyze --no-pub --no-fatal-infos 2>&1 | tee build/ci-diagnostics/flutter-analyze.log
+
+      - name: Upload Flutter static analysis diagnostics
+        if: always() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-static-analysis-diagnostics
+          path: build/ci-diagnostics/flutter-analyze.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Run local AI contract tests
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_service_test.dart
+
+      - name: Run recorder retry widget regression
+        id: recorder_retry
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry" 2>&1 | tee build/ci-diagnostics/recorder-retry.log
+
+      - name: Run native status-unknown widget regression
+        id: model_status_unknown
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "disables local AI actions when native status cannot be verified"
+
+      - name: Run post-send native status readback regression
+        id: post_send_status
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native status readback"
+      - name: Run post-send native model teardown regression
+        id: post_send_teardown
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.post_send_status.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native model teardown"
+
+      - name: Run local AI photo picker lifecycle regression
+        id: photo_picker
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.post_send_teardown.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI photo picker lifecycle"
+
+      - name: Run local AI model control serialization regression
+        id: model_control
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.photo_picker.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model control serialization"
+
+      - name: Run local AI model setup serialization regression
+        id: model_setup
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_control.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model setup serialization"
+
+      - name: Run assistant history resume regression
+        id: history_resume
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_setup.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_history_resume_test.dart
+
+      - name: Run TCM interview task snapshot contract regression
+        id: tcm_task_snapshot
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.history_resume.outcome == 'success' }}
+        run: flutter test --no-pub test/models/tcm_interview_task_state_test.dart
+
+      - name: Run structured TCM interview resume widget regression
+        id: tcm_task_resume
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' }}
+        run: flutter test --no-pub test/chat_screen_task_resume_test.dart
+
+      - name: Run clause 268 pulse gate and legacy fallback regressions
+        id: tcm_rule_gates
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/engine/three_yang_clause268_gate_test.dart test/engine/diagnostic_engine_test.dart
+
+      - name: Run unified assistant dispatch regression
+        id: assistant_dispatch
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart 2>&1 | tee build/ci-diagnostics/assistant-dispatch.log
+
+      - name: Run SQLite persistence and reopen regression
+        id: sqlite_persistence
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s flutter test --no-pub test/assistant_history_persistence_test.dart test/assistant_conversation_storage_test.dart
+
+      - name: Run assistant tool argument and retry contract regressions
+        id: assistant_tool_contracts
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_tool_result_test.dart
+
+      - name: Run assistant knowledge citation contract regression
+        id: assistant_knowledge_citations
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_knowledge_context_test.dart
+
+      - name: Run AI retrieval golden snapshot
+        id: ai_retrieval_golden
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/ai_retrieval_golden_snapshot_test.dart
+
+      - name: Upload AI retrieval golden snapshot
+        if: ${{ !cancelled() && steps.ai_retrieval_golden.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-retrieval-golden-snapshot
+          path: build/ai-retrieval-golden/current.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Run full Dart repository legacy ChatScreen audit
+        id: chat_screen_retirement_audit
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
+        run: flutter test --no-pub test/chat_screen_retirement_audit_test.dart
+
+      - name: Run full regression suite
+        id: regression
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' && steps.sqlite_persistence.outcome == 'success' && steps.assistant_tool_contracts.outcome == 'success' && steps.assistant_knowledge_citations.outcome == 'success' && steps.ai_retrieval_golden.outcome == 'success' && steps.chat_screen_retirement_audit.outcome == 'success' }}
+        run: flutter test --no-pub
+
+      - name: Upload Flutter test failure diffs
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.regression.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-test-failure-diffs
+          path: test/failures/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Upload Flutter CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-ci-diagnostics
+          path: build/ci-diagnostics/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build-apk:
+    name: Android arm64 CI verification APK + unit tests
+    needs: test
+    # Keep Android diagnostics independent of Flutter regression failures, but never run after cancellation.
+    if: always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request') && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ORG_GRADLE_PROJECT_ciArm64Only: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Verify README and pubspec version source
+        run: bash tool/check_version_source.sh
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        id: dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Prewarm verified SQLite Android arm64 asset
+        id: sqlite_android_asset
+        if: steps.dependencies.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite Android arm64 asset hash for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
+          expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380065"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$api_url"
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite Android arm64 asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite Android arm64 asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite Android arm64 asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-0c2d3bfc/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
+
+      - name: Report available disk space
+        run: |
+          df -h /
+          df -h "$GITHUB_WORKSPACE"
+
+      - name: Verify Release-signed Debug mode is forbidden in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(flutter build apk --debug --no-pub --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true 2>&1)"
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "A Release-signed Debug build unexpectedly configured in CI." >&2
+            exit 1
+          fi
+          if ! grep -Fq "localDebugUsesReleaseSigning is local-only and is forbidden in CI." <<< "$output"; then
+            printf '%s\n' "$output"
+            echo "Gradle failed for a reason other than the CI signing guard." >&2
+            exit 1
+          fi
+          echo "PASS: local Release-signed Debug mode is rejected in CI."
+
+      - name: Build Android arm64 CI Debug APK (ABI verification only)
+        id: build_apk
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true 2>&1 | tee build/ci-diagnostics/android-arm64-build.log
+
+      - name: Verify merged Android backup manifest
+        id: verify_backup_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$(find build/app/intermediates -type f -name AndroidManifest.xml | grep -E '/merged_manifests?/debug/' | head -n 1 || true)"
+          if [[ -z "$manifest" ]]; then
+            echo "Merged debug AndroidManifest.xml was not found." >&2
+            find build/app/intermediates -type f -name AndroidManifest.xml -print || true
+            exit 1
+          fi
+          grep -F 'android:fullBackupContent="@xml/backup_rules"' "$manifest"
+          grep -F 'android:dataExtractionRules="@xml/data_extraction_rules"' "$manifest"
+          if grep -F 'android:allowBackup="false"' "$manifest"; then
+            echo "Global Android backup disablement is not allowed by this scoped change." >&2
+            exit 1
+          fi
+          mkdir -p build/android-backup-manifest
+          cp "$manifest" build/android-backup-manifest/AndroidManifest.xml
+      - name: Verify Android APK ABI and calculate SHA-256
+        id: verify_apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk = Path("build/app/outputs/flutter-apk/app-debug.apk")
+          if not apk.is_file() or apk.stat().st_size == 0:
+              raise SystemExit(f"APK missing or empty: {apk}")
+          with ZipFile(apk) as archive:
+              names = set(archive.namelist())
+          required = "lib/arm64-v8a/libflutter.so"
+          if required not in names:
+              raise SystemExit(f"Required arm64 Flutter library missing: {required}")
+          native_abis = {
+              name.split("/")[1] for name in names
+              if name.startswith("lib/") and name.endswith(".so") and len(name.split("/")) >= 3
+          }
+          if native_abis != {"arm64-v8a"}:
+              raise SystemExit(f"Unexpected native ABI set: {sorted(native_abis)}")
+          print(f"APK size: {apk.stat().st_size} bytes")
+          print(f"Native ABIs: {', '.join(sorted(native_abis))}")
+          print("Required arm64 Flutter/JNI libraries are present.")
+          PY
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
+          printf '%s\n' "CI Debug APK: ABI verification only; do not install over the installed Release APK." > build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
+
+      - name: Run Android local unit tests
+        id: android_unit_tests
+        run: cd android && ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64
+
+      - name: Verify Release build is blocked without local signing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(cd android && ./gradlew :app:assembleRelease --dry-run --no-daemon 2>&1)"
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "Release task unexpectedly configured without a signing key." >&2
+            exit 1
+          fi
+          if ! grep -Fq "Release signing is required" <<< "$output"; then
+            printf '%s\\n' "$output"
+            echo "Release task failed for a reason other than the expected signing guard." >&2
+            exit 1
+          fi
+          echo "PASS: Release configuration is blocked without the local signing key; no Release APK was built."
+
+      - name: Verify Android unit test result XML
+        id: verify_android_unit_tests
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          reports = sorted(Path("build/app/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          if not reports:
+              raise SystemExit("No Android unit-test XML reports found; Gradle task success alone is not accepted as test execution.")
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, "0"))
+          print("Android unit-test totals:", totals)
+          if totals["tests"] <= 0:
+              raise SystemExit("Android unit-test suite discovered zero tests.")
+          if totals["failures"] or totals["errors"]:
+              raise SystemExit("Android unit-test failures/errors detected.")
+          PY
+
+      - name: Upload Android CI APK ABI evidence
+        if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success' && steps.verify_backup_manifest.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-arm64-ci-debug-abi-evidence
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256
+            build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
+            build/android-backup-manifest/AndroidManifest.xml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Android unit test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-unit-test-reports
+          path: |
+            build/app/test-results/testDebugUnitTest/
+            build/app/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Android CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-ci-diagnostics
+          path: build/ci-diagnostics/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+
+  pr-required-gate:
+    name: PR required gate
+    # Fork License is an independent workflow and must remain a separate required check.
+    # A required check must never be silently skipped. This gate runs on every PR
+    # and converts any missing, skipped, cancelled, or failed prerequisite into failure.
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - branch-validation
+      - test
+      - build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every PR validation job to succeed
+        env:
+          BRANCH_VALIDATION_RESULT: ${{ needs.branch-validation.result }}
+          FLUTTER_REGRESSION_RESULT: ${{ needs.test.result }}
+          ANDROID_RESULT: ${{ needs.build-apk.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for check in \
+            "branch-validation:${BRANCH_VALIDATION_RESULT}" \
+            "flutter-regression:${FLUTTER_REGRESSION_RESULT}" \
+            "android-arm64-jvm:${ANDROID_RESULT}"; do
+            name="${check%%:*}"
+            result="${check#*:}"
+            printf '%-24s %s\n' "$name" "$result"
+            if [[ "$result" != "success" ]]; then
+              echo "Required PR validation did not succeed: $name=$result" >&2
+              failed=1
+            fi
+          done
+          if [[ "$failed" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "PASS: all PR validation jobs completed successfully."

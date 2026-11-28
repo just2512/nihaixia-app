@@ -1,0 +1,994 @@
+{
+  "schemaVersion": 2,
+  "request": "查桂枝汤组成，并找《伤寒论》对应条文",
+  "formula": {
+    "name": "桂枝汤",
+    "components": [
+      "桂枝",
+      "芍药",
+      "生姜",
+      "大枣",
+      "炙甘草"
+    ]
+  },
+  "sourceManifest": {
+    "classicIndex": {
+      "asset": "assets/guji/classic_index.json.gz",
+      "sha256": "1154d465782316455ae3289af55bd4a7ae148898d6490076383a0d4663ee4a7e",
+      "entryLocator": "App-local asset or chapter locator plus stable sourceId"
+    },
+    "formulaData": {
+      "asset": "assets/data/formulas.json",
+      "sha256": "b128ec37b1644e6135e5cbdecb8f6ce89d8d5fe3976e51095a16484eeee5bc08"
+    }
+  },
+  "queryProvenance": [
+    {
+      "query": "查桂枝汤组成，并找《伤寒论》对应条文",
+      "reasons": [
+        "ORIGINAL_QUERY"
+      ]
+    },
+    {
+      "query": "桂枝汤",
+      "reasons": [
+        "FORMULA_ID:guizhi_tang"
+      ]
+    },
+    {
+      "query": "桂枝",
+      "reasons": [
+        "HERB_NAME:桂枝"
+      ]
+    },
+    {
+      "query": "伤寒论",
+      "reasons": [
+        "DOMAIN_PHRASE:伤寒论"
+      ]
+    }
+  ],
+  "classicQueries": {
+    "查桂枝汤组成，并找《伤寒论》对应条文": {
+      "total": 0,
+      "capturedCount": 0,
+      "topSourceIds": [],
+      "sourceCounts": {},
+      "localBacklinkStatusCounts": {}
+    },
+    "桂枝汤": {
+      "total": 208,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_001.md",
+        "shanghan:assets/shanghan/clause_014.md",
+        "shanghan:assets/shanghan/clause_015.md"
+      ],
+      "sourceCounts": {
+        "shanghan": 40
+      },
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
+    },
+    "桂枝": {
+      "total": 331,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_001.md",
+        "shanghan:assets/shanghan/clause_014.md",
+        "shanghan:assets/shanghan/clause_015.md"
+      ],
+      "sourceCounts": {
+        "shanghan": 40
+      },
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
+    },
+    "伤寒论": {
+      "total": 141,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_000.md",
+        "shanghan:assets/shanghan/clause_008.md",
+        "shanghan:assets/shanghan/clause_013.md"
+      ],
+      "sourceCounts": {
+        "shanghan": 40
+      },
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
+    }
+  },
+  "core2": {
+    "knownCandidateCount": 42,
+    "candidateDecisionRows": [
+      {
+        "ordinal": 0,
+        "sourceId": "formula:guizhi_tang",
+        "sourceKey": "formula",
+        "sourceLabel": "App 方剂库",
+        "hasLocalBacklink": true,
+        "materialKind": "formula",
+        "title": "桂枝汤",
+        "query": "查桂枝汤组成，并找《伤寒论》对应条文",
+        "queryReasons": [
+          "LEGACY_STRUCTURED_BUILDER_ADAPTER"
+        ],
+        "retrievalMethod": "LOCAL_FORMULA_LEGACY_MATCH",
+        "matchBasis": "LEGACY_FORMULA_NAME_ALIAS_KEYWORD_OR_COMPONENT",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_FORMULA_ORDER_WITHIN_LIMIT",
+        "orderIndex": 0
+      },
+      {
+        "ordinal": 1,
+        "sourceId": "herb:桂枝",
+        "sourceKey": "herb",
+        "sourceLabel": "App 本草库",
+        "hasLocalBacklink": true,
+        "materialKind": "herb",
+        "title": "桂枝",
+        "query": "查桂枝汤组成，并找《伤寒论》对应条文",
+        "queryReasons": [
+          "LEGACY_STRUCTURED_BUILDER_ADAPTER"
+        ],
+        "retrievalMethod": "LOCAL_HERB_LEGACY_MATCH",
+        "matchBasis": "LEGACY_HERB_NAME_ALIAS_OR_TERM",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_HERB_ORDER_WITHIN_LIMIT",
+        "orderIndex": 1
+      },
+      {
+        "ordinal": 2,
+        "sourceId": "shanghan:assets/shanghan/clause_001.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文2：太阳病中风（桂枝汤证）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT",
+        "orderIndex": 2
+      },
+      {
+        "ordinal": 3,
+        "sourceId": "shanghan:assets/shanghan/clause_014.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文15：桂枝汤证（调和阴阳第一方）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT",
+        "orderIndex": 3
+      },
+      {
+        "ordinal": 4,
+        "sourceId": "shanghan:assets/shanghan/clause_015.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文16：桂枝汤四主证",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT",
+        "orderIndex": 4
+      },
+      {
+        "ordinal": 5,
+        "sourceId": "shanghan:assets/shanghan/clause_017.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文18：误下后气上冲可与桂枝汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "keep",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT",
+        "orderIndex": 5
+      },
+      {
+        "ordinal": 6,
+        "sourceId": "shanghan:assets/shanghan/clause_019.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文20：桂枝汤禁忌——无汗伤寒禁用",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 7,
+        "sourceId": "shanghan:assets/shanghan/clause_020.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文21：酒客病禁用桂枝汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 8,
+        "sourceId": "shanghan:assets/shanghan/clause_022.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文23：吐家禁服桂枝汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 9,
+        "sourceId": "shanghan:assets/shanghan/clause_023.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文24：初服桂枝汤反烦不解（先刺风池风府）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 10,
+        "sourceId": "shanghan:assets/shanghan/clause_034.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文109：柴胡桂枝汤（太阳少阳合病）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 11,
+        "sourceId": "shanghan:assets/shanghan/clause_016.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文17：桂枝加葛根汤（项背强几几）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 12,
+        "sourceId": "shanghan:assets/shanghan/clause_018.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文19：坏病救逆原则",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 13,
+        "sourceId": "shanghan:assets/shanghan/clause_021.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文22：喘家作——桂枝加厚朴杏子仁",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 14,
+        "sourceId": "shanghan:assets/shanghan/clause_024.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文25：桂枝二麻黄一汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 15,
+        "sourceId": "shanghan:assets/shanghan/clause_025.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文26：白虎加人参汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 16,
+        "sourceId": "shanghan:assets/shanghan/clause_026.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文27：桂枝二越婢一汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 17,
+        "sourceId": "shanghan:assets/shanghan/clause_027.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文28：桂枝去桂加茯苓白术汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 18,
+        "sourceId": "shanghan:assets/shanghan/clause_028.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文29：甘草干姜汤/芍药甘草汤（四大救逆方）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 19,
+        "sourceId": "shanghan:assets/shanghan/clause_029.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文30：证象阳旦（误治救逆问答）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 20,
+        "sourceId": "shanghan:assets/shanghan/clause_032.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文43：外证未解脉浮弱当以汗解",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 21,
+        "sourceId": "shanghan:assets/shanghan/clause_035.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文33：误治救逆问答（承前启后）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 22,
+        "sourceId": "shanghan:assets/shanghan/clause_036.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文34：甘草干姜汤（救逆第一方）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 23,
+        "sourceId": "shanghan:assets/shanghan/clause_040.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文35：葛根汤（太阳温病/项背强几几无汗恶风）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 24,
+        "sourceId": "shanghan:assets/shanghan/clause_043.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文38：葛根黄芩黄连汤（表未解下利不止）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 25,
+        "sourceId": "shanghan:assets/shanghan/clause_044.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文39：麻黄汤（太阳伤寒主方）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 26,
+        "sourceId": "shanghan:assets/shanghan/clause_045.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文40：太阳与阳明合病喘而胸满",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 27,
+        "sourceId": "shanghan:assets/shanghan/clause_047.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文42-43：大青龙汤（表寒里热）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 28,
+        "sourceId": "shanghan:assets/shanghan/clause_048.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文44：伤寒脉浮缓（大青龙汤）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 29,
+        "sourceId": "shanghan:assets/shanghan/clause_049.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文45：小青龙汤（表寒里寒）",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 30,
+        "sourceId": "shanghan:assets/shanghan/clause_052.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文47：外证未解脉浮弱当以汗解",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 31,
+        "sourceId": "shanghan:assets/shanghan/clause_053.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文48：误下微喘表未解",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 32,
+        "sourceId": "shanghan:assets/shanghan/clause_054.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文49：外证未解不可下",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 33,
+        "sourceId": "shanghan:assets/shanghan/clause_055.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文50：先发汗不解复下之",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 34,
+        "sourceId": "shanghan:assets/shanghan/clause_058.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文53：二阳并病",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 35,
+        "sourceId": "shanghan:assets/shanghan/clause_059.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文54：脉浮数下之身重心悸",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 36,
+        "sourceId": "shanghan:assets/shanghan/clause_062.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文57：脉浮数者可发汗",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 37,
+        "sourceId": "shanghan:assets/shanghan/clause_063.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文58：营卫不和",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 38,
+        "sourceId": "shanghan:assets/shanghan/clause_064.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文59：卫气不和",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 39,
+        "sourceId": "shanghan:assets/shanghan/clause_065.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文60：伤寒致衄仍用麻黄汤",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 40,
+        "sourceId": "shanghan:assets/shanghan/clause_066.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文61：不大便六七日辨表里",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      },
+      {
+        "ordinal": 41,
+        "sourceId": "shanghan:assets/shanghan/clause_067.md",
+        "sourceKey": "shanghan",
+        "sourceLabel": "伤寒论讲稿",
+        "hasLocalBacklink": true,
+        "materialKind": "lecture",
+        "title": "条文62：发汗后复烦",
+        "query": "桂枝汤",
+        "queryReasons": [
+          "FORMULA_ID:guizhi_tang"
+        ],
+        "retrievalMethod": "CLASSIC_SUBSTRING_INDEX",
+        "matchBasis": "UNKNOWN",
+        "completeness": "unknown",
+        "disposition": "drop",
+        "reasonCode": "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT",
+        "orderIndex": null
+      }
+    ],
+    "sourceSelection": {
+      "strategyId": "LEGACY_SOURCE_ORDER_WITH_PER_SOURCE_LIMITS",
+      "strategyVersion": "1",
+      "status": "budgetTruncated",
+      "orderedCandidateOrdinals": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "rankedCandidateSourceIds": [
+        "formula:guizhi_tang",
+        "herb:桂枝",
+        "shanghan:assets/shanghan/clause_001.md",
+        "shanghan:assets/shanghan/clause_014.md",
+        "shanghan:assets/shanghan/clause_015.md",
+        "shanghan:assets/shanghan/clause_017.md"
+      ]
+    },
+    "presentedCandidateOrdinals": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "contextSourceIds": [
+      "formula:guizhi_tang",
+      "herb:桂枝",
+      "shanghan:assets/shanghan/clause_001.md",
+      "shanghan:assets/shanghan/clause_014.md",
+      "shanghan:assets/shanghan/clause_015.md",
+      "shanghan:assets/shanghan/clause_017.md"
+    ],
+    "legacyBaseContextSourceIds": [],
+    "presentationBudget": {
+      "unit": "characters",
+      "limit": 6500,
+      "used": 1875,
+      "applied": true,
+      "omittedCandidateOrdinals": [],
+      "truncatedCandidateOrdinals": [
+        5
+      ]
+    },
+    "diagnostics": [
+      "LEGACY_SOURCE_SPECIFIC_COUNT_LIMITS",
+      "BUDGET_NOT_APPLIED",
+      "CONTEXT_PRESENTATION_BUDGET_CHARACTERS_APPLIED",
+      "CONTEXT_PRESENTATION_EVIDENCE_TRUNCATED",
+      "CONTEXT_BUDGET_USED_UTF16_CODE_UNITS"
+    ]
+  },
+  "context": {
+    "status": "RETRIEVED",
+    "sourceIds": [
+      "formula:guizhi_tang",
+      "herb:桂枝",
+      "shanghan:assets/shanghan/clause_001.md",
+      "shanghan:assets/shanghan/clause_014.md",
+      "shanghan:assets/shanghan/clause_015.md",
+      "shanghan:assets/shanghan/clause_017.md"
+    ],
+    "rankingStrategyId": "LEGACY_SOURCE_ORDER_WITH_PER_SOURCE_LIMITS",
+    "rankedEvidenceSourceIds": [
+      "formula:guizhi_tang",
+      "herb:桂枝",
+      "shanghan:assets/shanghan/clause_001.md",
+      "shanghan:assets/shanghan/clause_014.md",
+      "shanghan:assets/shanghan/clause_015.md"
+    ],
+    "rankingDecisionReasonCounts": {
+      "LEGACY_FORMULA_ORDER_WITHIN_LIMIT": 1,
+      "LEGACY_HERB_ORDER_WITHIN_LIMIT": 1,
+      "LEGACY_CLASSIC_INDEX_ORDER_WITHIN_LIMIT": 4,
+      "LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT": 36
+    },
+    "presentationBudgetOmittedCount": 0,
+    "presentationBudgetTruncatedCount": 1,
+    "presentationStatus": "budgetTruncated",
+    "textLength": 1875,
+    "localBacklinkStatusCounts": {
+      "AVAILABLE": 6
+    }
+  }
+}

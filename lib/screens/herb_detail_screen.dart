@@ -1,0 +1,689 @@
+import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
+import '../utils/fold_aware_routes.dart';
+import '../models/herb.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/context_resolution_gateway.dart';
+import '../services/classic_search_service.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
+import '../theme/app_colors.dart';
+import '../models/bookmark.dart';
+import '../data/formula_repository.dart';
+import '../data/herb_repository.dart';
+import '../data/database_helper.dart';
+import '../data/medical_case_data.dart';
+import '../data/bencao_lecture_index.dart';
+import '../data/critical_illness_data.dart';
+import 'herb_related_screens.dart';
+import 'markdown_doc_screen.dart';
+
+class HerbDetailScreen extends StatefulWidget {
+  final Herb herb;
+
+  const HerbDetailScreen({super.key, required this.herb});
+
+  @override
+  State<HerbDetailScreen> createState() => _HerbDetailScreenState();
+}
+
+class _HerbDetailScreenState extends State<HerbDetailScreen> {
+  final ScrollController _pageScrollController = ScrollController();
+  bool _isBookmarked = false;
+  List<MedicalCase> _relatedCases = const [];
+  bool _casesReady = false;
+  List<CriticalIllness> _relatedCritical = const [];
+  late final Future<BenCaoLectureIndex> _bencaoLectureIndexFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBookmark();
+    _loadBacklinks();
+    _bencaoLectureIndexFuture = BenCaoLectureIndex.load();
+  }
+
+  void _checkBookmark() async {
+    final db = DatabaseHelper.instance;
+    final bookmarked = await db.isBookmarked(widget.herb.name);
+    if (!mounted) return;
+    setState(() => _isBookmarked = bookmarked);
+  }
+
+  Future<void> _askAiAboutHerb() async {
+    final herb = widget.herb;
+    final contextRef = AiContextResolver.buildHerbContextRef(herb);
+    const gateway = ContextResolutionGateway();
+    final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveHerb(ref: contextRef),
+      referenceOf: (entry) => entry.ref,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '本草知识上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final initialUserMessage =
+        AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
+      entry: resolved,
+    );
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialUserMessage: initialUserMessage,
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
+      initialMode: AssistantMode.learning,
+      contextualTitle: herb.name,
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
+  }
+
+  /// 计算后向关联：含此药的闭门课（静态 const，同步即可）+ 含此药的医案（全量解析较重，异步避免首帧卡顿）。
+  Future<void> _loadBacklinks() async {
+    _relatedCritical = kCriticalIllnesses
+        .where((it) =>
+            it.tags.any((t) => HerbRepository.canonicalOf(t) == widget.herb.name))
+        .toList();
+    try {
+      final cases = await getAllMedicalCases();
+      if (!mounted) return;
+      setState(() {
+        _relatedCases =
+            cases.where((c) => c.herbNames.contains(widget.herb.name)).toList();
+        _casesReady = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _casesReady = true);
+    }
+  }
+
+  void _toggleBookmark() async {
+    final db = DatabaseHelper.instance;
+    if (_isBookmarked) {
+      final bookmarks = await db.getAllBookmarks();
+      final match = bookmarks.firstWhere(
+        (b) => b.title == widget.herb.name,
+        orElse: () => Bookmark(title: '', content: '', category: '', source: ''),
+      );
+      if (match.id != null) {
+        await db.deleteBookmark(match.id!);
+      }
+    } else {
+      await db.insertBookmark(Bookmark(
+        title: widget.herb.name,
+        content: _buildBookmarkContent(),
+        category: '本草',
+        source: 'herb_detail',
+      ));
+    }
+    if (mounted) setState(() => _isBookmarked = !_isBookmarked);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isBookmarked ? '已收藏' : '已取消收藏'),
+        ),
+      );
+    }
+  }
+
+  String _buildBookmarkContent() {
+    final h = widget.herb;
+    return '${h.name} (${h.category})\n'
+        '${h.flavor.isNotEmpty ? "味${h.flavor} " : ""}'
+        '${h.meridians.isNotEmpty ? "归${h.meridians.join(" ")}" : ""}\n\n'
+        '${h.action ?? ""}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final herb = widget.herb;
+    final cs = Theme.of(context).colorScheme;
+    final relatedFormulas = FormulaRepository.getAll()
+        .where((f) => f.components
+            .any((c) => HerbRepository.canonicalOf(c.name) == herb.name))
+        .toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(herb.name),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+            ),
+            onPressed: _toggleBookmark,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(herb.natureIcon, size: 18),
+                  const SizedBox(width: 4),
+                  Text(
+                    herb.natureCategory,
+                    style: const TextStyle(fontSize: AppType.title),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        controller: _pageScrollController,
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Header: name + category + flavor
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    herb.name,
+                    style: const TextStyle(
+                        fontSize: AppType.headline, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Chip(
+                        label: Text(herb.category),
+                        backgroundColor: cs.primaryContainer,
+                        labelStyle: TextStyle(color: cs.onPrimaryContainer),
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (herb.flavor.isNotEmpty)
+                        Chip(
+                          label: Text('味${herb.flavor}'),
+                          backgroundColor: cs.secondaryContainer,
+                          labelStyle:
+                              TextStyle(color: cs.onSecondaryContainer),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (herb.meridians.isNotEmpty)
+                        Chip(
+                          label: Text('归经: ${herb.meridians.join(" ")}'),
+                          backgroundColor: cs.tertiaryContainer,
+                          labelStyle:
+                              TextStyle(color: cs.onTertiaryContainer),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: _askAiAboutHerb,
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: const Text('问 AI 解读当前本草'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 性味
+          if (herb.nature != null) _buildSection('性味', herb.nature!, cs),
+
+          // 主治
+          if (herb.action != null) _buildSection('主治', herb.action!, cs),
+
+          // 本经原文
+          if (herb.original != null)
+            _buildSection('本经原文', herb.original!, cs),
+
+          // 倪注
+          if (herb.niNote != null) _buildSection('倪注', herb.niNote!, cs),
+
+          // 容川注
+          if (herb.rongchuan != null)
+            _buildSection('容川注', herb.rongchuan!, cs),
+
+          // 用量
+          if (herb.dosage != null) _buildSection('用量', herb.dosage!, cs),
+
+          // 禁忌
+          if (herb.contraindication != null)
+            Card(
+              color: cs.errorContainer,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber,
+                            color: cs.onErrorContainer),
+                        const SizedBox(width: 8),
+                        Text(
+                          '禁忌',
+                          style: TextStyle(
+                            fontSize: AppType.title,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onErrorContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      herb.contraindication!,
+                      style: TextStyle(
+                          fontSize: AppType.body,
+                          height: 1.6,
+                          color: cs.onErrorContainer),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // 倪师临床口述
+          if (herb.clinicalNotes != null)
+            Card(
+              color: cs.tertiaryContainer,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.record_voice_over,
+                            color: cs.onTertiaryContainer),
+                        const SizedBox(width: 8),
+                        Text(
+                          '倪师临床口述',
+                          style: TextStyle(
+                            fontSize: AppType.title,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onTertiaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      herb.clinicalNotes!,
+                      style: TextStyle(
+                          fontSize: AppType.body,
+                          height: 1.6,
+                          color: cs.onTertiaryContainer),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // 历代医家注释
+          if (herb.historicalNotes != null && herb.historicalNotes!.isNotEmpty)
+            Card(
+              color: cs.surfaceContainerHighest,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.history_edu,
+                            color: cs.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(
+                          '历代医家注释',
+                          style: TextStyle(
+                            fontSize: AppType.title,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      herb.historicalNotes!,
+                      style: TextStyle(
+                          fontSize: AppType.body,
+                          height: 1.6,
+                          color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // 药物比较
+          if (herb.herbComparisons.isNotEmpty)
+            Card(
+              color: context.colors.primaryContainer,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.compare_arrows,
+                            color: cs.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          '药物比较',
+                          style: TextStyle(
+                            fontSize: AppType.title,
+                            fontWeight: FontWeight.bold,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...herb.herbComparisons.map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '· $c',
+                        style: TextStyle(
+                            fontSize: AppType.body,
+                            height: 1.5,
+                            color: cs.onSurface),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+
+          _buildLectureEntry(cs),
+
+          // 相关内容入口（三级结构第一级：药物页仅放入口按钮，列表/详情各自独立加载）
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  _entryButton(
+                    context,
+                    icon: Icons.article_outlined,
+                    label: '关联医案',
+                    count: _casesReady ? _relatedCases.length : null,
+                    onTap: () => Navigator.push(
+                      context,
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
+                        builder: (_) => HerbRelatedCasesScreen(herb: herb),
+                      ),
+                    ),
+                  ),
+                  _entryDivider(cs),
+                  _entryButton(
+                    context,
+                    icon: Icons.menu_book,
+                    label: '关联闭门课',
+                    count: _relatedCritical.length,
+                    onTap: () => Navigator.push(
+                      context,
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
+                        builder: (_) => HerbRelatedCriticalScreen(herb: herb),
+                      ),
+                    ),
+                  ),
+                  _entryDivider(cs),
+                  _entryButton(
+                    context,
+                    icon: Icons.medication,
+                    label: '含此药方剂',
+                    count: relatedFormulas.length,
+                    onTap: () => Navigator.push(
+                      context,
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
+                        builder: (_) => HerbRelatedFormulasScreen(herb: herb),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 相关内容入口按钮：图标 + 标签 + 数量徽标（count 为 null 时显示 …，表示加载中）。
+  Widget _entryButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int? count,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 22, color: cs.primary),
+              const SizedBox(height: 4),
+              Text(label, style: const TextStyle(fontSize: AppType.caption)),
+              const SizedBox(height: 2),
+              Text(
+                count == null ? '…' : '$count 条',
+                style:
+                    TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLectureEntry(ColorScheme colorScheme) {
+    return FutureBuilder<BenCaoLectureIndex>(
+      future: _bencaoLectureIndexFuture,
+      builder: (context, snapshot) {
+        final hits = snapshot.data?.hitsFor(widget.herb.name) ?? const [];
+        if (hits.isEmpty) return const SizedBox.shrink();
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: Icon(Icons.menu_book_outlined, color: colorScheme.primary),
+            title: const Text('讲义讲解', style: TextStyle(fontSize: AppType.title)),
+            subtitle: Text(
+              '倪师本草讲稿中 ${hits.length} 篇提及本药',
+              style: const TextStyle(fontSize: AppType.caption),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showLectureSheet(context, hits, colorScheme),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLectureSheet(
+    BuildContext context,
+    List<LectureHit> hits,
+    ColorScheme colorScheme,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                '${widget.herb.name} · 讲义提及',
+                style: Theme.of(sheetContext)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final hit in hits)
+              ListTile(
+                dense: true,
+                leading: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Text(
+                    '${hit.seq + 1}',
+                    style: TextStyle(
+                      fontSize: AppType.micro,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  BenCaoLectureIndex.nameOf(hit.seq),
+                  style: const TextStyle(fontSize: AppType.body),
+                ),
+                trailing: Text(
+                  '提及 ${hit.count} 次',
+                  style: TextStyle(
+                    fontSize: AppType.caption,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  final asset = BenCaoLectureIndex.assetOf(hit.seq);
+                  Navigator.push(
+                    context,
+                    FoldAwareMaterialPageRoute(
+                      sourceContext: context,
+                      builder: (_) => MarkdownDocScreen(
+                        title: BenCaoLectureIndex.nameOf(hit.seq),
+                        asset: asset,
+                        linkFormulas: true,
+                        contextualAskModuleId: 'bencao-reading',
+                        contextualAskAnchorId:
+                            ClassicSearchService.contextualAnchorIdForReaderAsset(
+                          moduleId: 'bencao-reading',
+                          asset: asset,
+                        ),
+                        contextualAskSourceId: asset,
+                        contextualAskParagraphs: true,
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _entryDivider(ColorScheme cs) => Container(
+        width: 1,
+        height: 32,
+        color: cs.outlineVariant,
+      );
+
+  Widget _buildSection(String title, String content, ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: AppType.title,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            content,
+            style: const TextStyle(fontSize: AppType.body, height: 1.6),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
+}

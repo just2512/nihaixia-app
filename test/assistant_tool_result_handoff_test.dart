@@ -1,0 +1,1312 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/engine/yijing_engine.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/screens/yijing_result_screen.dart';
+import 'package:nihaisha_app/screens/yijing_screen.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
+import 'package:nihaisha_app/data/sanshan_lingqian_data.dart';
+import 'package:nihaisha_app/data/saved_chart_repository.dart';
+import 'package:nihaisha_app/services/sanshan_lingqian_tool_executor.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/screens/yunqi_screen.dart';
+import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_transcript_restore_policy.dart';
+import 'package:nihaisha_app/services/bazi_tool_executor.dart';
+import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
+import 'package:nihaisha_app/services/yuxiaji_omen_tool_executor.dart';
+
+
+const _readyStatus = LocalAiModelStatus(
+  installed: true,
+  fileExists: true,
+  ready: true,
+  modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+  sizeBytes: 3659530240,
+  expectedSizeBytes: 3659530240,
+  backend: 'litert',
+);
+
+class _NoLostImagePicker implements LocalAiImagePicker {
+  @override
+  Future<String?> pickCameraImagePath() async => null;
+
+  @override
+  Future<String?> pickGalleryImagePath() async => null;
+
+  @override
+  Future<String?> retrieveLostImagePath() async => null;
+}
+
+class _NoopAssistantConversationStore implements AssistantConversationStore {
+  final savedMessages = <Map<String, Object?>>[];
+
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async => 1;
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+    String? invocationKey,
+  }) async {
+    if (invocationKey != null &&
+        savedMessages.any((message) =>
+            message['conversationId'] == conversationId &&
+            message['invocation_key'] == invocationKey)) {
+      throw StateError('Duplicate invocation key: $invocationKey');
+    }
+    savedMessages.add({
+      'conversationId': conversationId,
+      'role': role,
+      'content': content,
+      'metadata': metadata,
+      'invocation_key': invocationKey,
+    });
+    return savedMessages.length;
+  }
+
+  @override
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  }) async {
+    if (userContent != null && userContent.trim().isNotEmpty) {
+      await saveAssistantMessage(
+        conversationId: conversationId,
+        role: 'user',
+        content: userContent,
+        metadata: userMetadata,
+      );
+    }
+    return saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: assistantContent,
+      metadata: assistantMetadata,
+    );
+  }
+
+  @override
+  Future<List<int>> saveAssistantMessagesAtomically({
+    required int conversationId,
+    required List<AssistantMessageDraft> messages,
+  }) async {
+    final ids = <int>[];
+    for (final message in messages) {
+      ids.add(await saveAssistantMessage(
+        conversationId: conversationId,
+        role: message.role,
+        content: message.content,
+        metadata: message.metadata,
+      ));
+    }
+    return ids;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async => const [];
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async => savedMessages
+      .where((message) => message['conversationId'] == conversationId)
+      .map((message) => Map<String, Object?>.unmodifiable(message))
+      .toList(growable: false);
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {}
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async => null;
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {}
+}
+
+class _RecordingAssistantService extends LocalAiService {
+  String? restoredTranscript;
+  List<String> restoredUserMessages = const [];
+  final sentTexts = <String>[];
+  final sentContexts = <String>[];
+  final _pendingReplies = <String, String>{};
+  int modelCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  Future<LocalAiReasoningPendingReply> _sendStructuredReply(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final separator = reasoningContext.indexOf('\n');
+    if (separator < 0) {
+      throw StateError('测试结构化请求缺少元数据 JSON');
+    }
+    final envelope = jsonDecode(
+      reasoningContext.substring(separator + 1),
+    ) as Map<String, dynamic>;
+    final mode = envelope['mode'] as String;
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final references = rankedEvidence
+        .map((item) => item['evidenceId'] as String)
+        .toList(growable: false);
+    final canAnswerWithoutEvidence = const {
+      'automatic',
+      'consultation',
+      'metaphysics',
+    }.contains(mode);
+    final isAnswer = references.isNotEmpty || canAnswerWithoutEvidence;
+    final reply = jsonEncode({
+      'schemaVersion': 1,
+      'requestId': requestId,
+      'responseKind': isAnswer ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
+      'status': isAnswer ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
+      'segments': [
+        isAnswer ? '已收到：$text' : '本轮没有足够资料支持确定回答。',
+      ],
+      'referencedEvidenceIds': references,
+      'unknowns': <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+    modelCalls++;
+    sentTexts.add(text);
+    sentContexts.add(context);
+    _pendingReplies[requestId] = reply;
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: 'cpu',
+      traceId: traceId,
+    );
+  }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructuredReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+  );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendStructuredReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
+
+  @override
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {
+    if (_pendingReplies.remove(requestId) == null) {
+      throw StateError('测试服务没有对应的待提交推理轮次');
+    }
+  }
+
+  @override
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {
+    if (_pendingReplies.remove(requestId) == null) {
+      throw StateError('测试服务没有对应的待拒绝推理轮次');
+    }
+  }
+
+  @override
+  Future<void> restoreConversation({
+    required int conversationId,
+    required LocalAiTranscriptRestoreResult restore,
+    required List<String> userMessages,
+    required bool userMessagesTruncated,
+  }) async {
+    restoredTranscript = restore.transcript;
+    restoredUserMessages = List<String>.from(userMessages);
+  }
+}
+
+void main() {
+  testWidgets('旧页面字符串只显示为 UNKNOWN，不作为业务来源或模型上下文', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    String? openedToolId;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            openedToolId = tool.id;
+            return Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).pop('旧页面未结构化文本：未校验计算结果'),
+                  child: const Text('返回旧页面文本'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工具助手').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('调用 App 工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('诊断历史趋势').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开诊断历史趋势').last);
+    await tester.pumpAndSettle();
+
+    expect(openedToolId, 'diagnosis_history');
+    expect(find.text('返回旧页面文本'), findsOneWidget);
+    await tester.tap(find.text('返回旧页面文本'));
+    await tester.pumpAndSettle();
+
+    final resultText = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('旧页面未结构化文本'),
+    );
+    expect(resultText, findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            (widget.data ?? '').contains('执行状态：UNKNOWN'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            (widget.data ?? '').contains('来源标识：MISSING'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('AI总结解读'), findsNothing);
+    expect(service.modelCalls, 0);
+    expect(service.restoredTranscript, isNot(contains('旧页面未结构化文本')));
+    expect(service.restoredTranscript, isNot(contains('local-page-tool:')));
+
+    final storedResult = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('旧页面未结构化文本'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      storedResult['metadata'] as String,
+    );
+    expect(metadata.toolId, 'diagnosis_history');
+    expect(metadata.toolStatus, 'UNKNOWN');
+    expect(metadata.sourceIds, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('五运六气工具可把实际推算结果返回统一助手', (tester) async {
+    Object? returned;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                returned = await Navigator.push<Object?>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const YunQiScreen(returnResultOnComplete: true),
+                  ),
+                );
+              },
+              child: const Text('打开五运六气'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开五运六气'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('将本次推算结果带回助手对话'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('将本次推算结果带回助手对话'), findsOneWidget);
+
+    await tester.tap(find.text('将本次推算结果带回助手对话'));
+    await tester.pumpAndSettle();
+
+    expect(returned, isA<AssistantToolResult>());
+    final result = returned! as AssistantToolResult;
+    expect(result.toolId, 'yunqi');
+    expect(result.title, '五运六气推算');
+    expect(result.values['推算日期'], isNotEmpty);
+    expect(result.values['岁运'], isNotEmpty);
+    expect(result.values['司天'], isNotEmpty);
+    expect(result.values['在泉'], isNotEmpty);
+    expect(result.disclaimer, contains('仅供理论学习'));
+    expect(result.toConversationText().split('\n').length, greaterThan(2));
+    expect(result.toConversationText(), isNot(contains(r'\n')));
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('五运六气结果回到统一时间线并同步进本地模型上下文', (tester) async {
+    final service = _RecordingAssistantService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _NoopAssistantConversationStore(),
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(find.text('打开五运六气推算'), findsOneWidget);
+
+    await tester.tap(find.text('打开五运六气推算').last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('将本次推算结果带回助手对话'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('将本次推算结果带回助手对话'));
+    await tester.pumpAndSettle();
+
+    final returnedToolResult = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('五运六气推算') &&
+          (widget.data ?? '').contains('司天：') &&
+          (widget.data ?? '').contains('在泉：'),
+    );
+    expect(returnedToolResult, findsOneWidget);
+    expect(service.restoredTranscript, contains('司天：'));
+    expect(service.restoredTranscript, contains('在泉：'));
+    expect(service.restoredUserMessages, contains('打开五运六气推算页面'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('统一助手对用户指定日期直接执行五运六气并持久化已校验参数', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我推算五运六气，日期 2026-11-06',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('打开五运六气推算'), findsNothing);
+    final resultMessage = store.savedMessages.where((message) =>
+        message['role'] == 'assistant' &&
+        (message['content'] as String).contains('工具：五运六气推算'));
+    expect(resultMessage, hasLength(1));
+    expect(resultMessage.single['content'], contains('推算日期：2026-11-06'));
+
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage.single['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yunqi');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {'date': '2026-11-06'});
+    expect(metadata.sourceIds, const ['local-engine:yunqi']);
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains('岁运：'));
+    expect(
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释')),
+      isEmpty,
+    );
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('从普通工具入口打开时不显示助手专用返回操作', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: YunQiScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('将本次推算结果带回助手对话'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('易经起卦结果可以返回统一助手', (tester) async {
+    final cast = YiJingEngine.castByNumbers(3, 7);
+    String? returnedResult;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                returnedResult = await Navigator.push<String>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => YiJingResultScreen(
+                      cast: cast,
+                      executionArguments: const {
+                        'method': 'number',
+                        'first': '3',
+                        'second': '7',
+                      },
+                      returnResultOnComplete: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('打开易经结果'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开易经结果'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('返回 AI 助手'));
+    await tester.pumpAndSettle();
+
+    expect(returnedResult, isNotNull);
+    expect(returnedResult, contains('易经起卦结果'));
+    expect(returnedResult, contains(cast.primary.name));
+    expect(returnedResult, contains('民俗文化参考'));
+  });
+
+
+  testWidgets('易经结果页返回时会继续退出工具页并回到统一助手', (tester) async {
+    String? returnedResult;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                returnedResult = await Navigator.push<String>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const YiJingScreen(returnResultOnComplete: true),
+                  ),
+                );
+              },
+              child: const Text('打开易经工具'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开易经工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '起卦').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
+    await tester.tap(find.byTooltip('返回 AI 助手'));
+    await tester.pumpAndSettle();
+
+    expect(returnedResult, isNotNull);
+    expect(returnedResult, contains('易经起卦结果'));
+    expect(tester.takeException(), isNull);
+  });
+
+
+
+  testWidgets('退出统一助手工具页回传 CANCELLED，不与 NO_RESULT 混淆', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开五运六气推算'));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    final cancelledResult = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('执行状态：CANCELLED'),
+    );
+    expect(cancelledResult, findsOneWidget);
+    // Cancellation remains visible and persisted, but an unexecuted tool
+    // outcome must not be replayed to the model as a business fact.
+    expect(service.restoredTranscript, isNot(contains('执行状态：CANCELLED')));
+    expect(service.restoredTranscript, isNot(contains('执行状态：NO_RESULT')));
+    final savedCancellation = store.savedMessages.singleWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('执行状态：CANCELLED'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      savedCancellation['metadata'] as String,
+    );
+    expect(metadata.toolStatus, 'CANCELLED');
+    expect(metadata.sourceIds, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('每日黄历在统一助手中本地执行并保存日期、结果和来源', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我查询今日黄历');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.modelCalls, 1);
+    expect(find.text('AI总结解读'), findsNothing);
+    final resultMessages = store.savedMessages.where((message) =>
+        message['role'] == 'assistant' &&
+        (message['content'] as String).contains('工具：每日黄历'));
+    expect(resultMessages, hasLength(1));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+      reason: '已校验的黄历结果应由助手自动归纳',
+    );
+
+    final content = resultMessages.single['content'] as String;
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessages.single['metadata'] as String,
+    );
+    final now = DateTime.now();
+    final expectedDate =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    expect(content, contains('公历：$expectedDate'));
+    expect(content, contains('来源标识：local-engine:almanac'));
+    expect(content, contains('传统民俗文化参考'));
+    expect(metadata.toolId, 'almanac');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, {'date': expectedDate});
+    expect(metadata.sourceIds, const ['local-engine:almanac']);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('玉匣灵兆在助手对话中按 App 本机时辰查询并只解释民俗资料',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final fixedTime = DateTime(2026, 11, 16, 0, 30);
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'yuxiaji_omen') pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = YuxiajiOmenToolExecutor.execute(
+              arguments,
+              clock: () => fixedTime,
+            );
+            return executedResult!;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '查询玉匣灵兆');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse, reason: '常规当前时辰查询应留在助手对话中');
+    expect(executedArguments, isEmpty);
+    expect(executedResult?.status, AssistantToolExecutionStatus.succeeded);
+    expect(executedResult?.validateFor('yuxiaji_omen'), isEmpty);
+    expect(executedResult?.sourceIds, ['local-data:yuxiaji-omen']);
+    expect(executedResult?.values['当前时辰'], '子时 23:00–00:59');
+    expect(service.modelCalls, 1);
+    expect(
+      service.sentTexts.any((text) => text.contains('不是医学诊断')),
+      isTrue,
+      reason: '民俗结果的解释提示必须显式排除医学诊断',
+    );
+    final savedResult = store.savedMessages.singleWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('工具：玉匣灵兆'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      savedResult['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yuxiaji_omen');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, isEmpty);
+    expect(metadata.sourceIds, ['local-data:yuxiaji-omen']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('玉匣灵兆的方向与灯花占法保留原页面，不猜测用户观察输入',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    var pageOpened = false;
+    var executorCalled = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'yuxiaji_omen') pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executorCalled = true;
+            return YuxiajiOmenToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '查询鸦鸣鹊噪方向');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executorCalled, isFalse,
+        reason: '方向占需要用户观察到的来向，不应由本机时间查询代替');
+    expect(pageOpened, isFalse);
+    expect(find.text('打开玉匣灵兆'), findsOneWidget);
+    await tester.tap(find.text('打开玉匣灵兆'));
+    await tester.pumpAndSettle();
+    expect(pageOpened, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('八字助手在当前对话后台调用本地引擎并把完整结果交给 AI 解读',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    const expectedArguments = <String, String>{
+      'birth_date': '1995-08-16',
+      'birth_time': '12:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    };
+    // Run the resource-backed deterministic engine before mounting the widget.
+    // This keeps the engine's rootBundle IO out of the widget's fake-async zone.
+    String? enginePreparationError;
+    final preparedResult = await tester.runAsync(() async {
+      try {
+        return await BaziToolExecutor.execute(expectedArguments);
+      } catch (error, stackTrace) {
+        enginePreparationError = '$error\\n$stackTrace';
+        rethrow;
+      }
+    });
+    expect(
+      preparedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '本地八字引擎准备真实结果失败：$enginePreparationError',
+    );
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = preparedResult;
+            return preparedResult!;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我排八字；出生日期：1995-08-16；出生时间：12:00；性别：男；出生地：上海市',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(
+      executedArguments,
+      expectedArguments,
+      reason: '后台执行必须收到从用户原话提取并校验的完整出生参数',
+    );
+    expect(
+      executedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '助手必须把独立执行并验证过的真实本地排盘结果交给会话；失败原因：${executedResult?.values['未执行原因']}',
+    );
+    expect(executedResult?.validateFor('bazi'), isEmpty);
+    expect(
+      executedResult?.validateArgumentsMatch(executedArguments!),
+      isEmpty,
+    );
+    expect(find.text('AI总结解读'), findsNothing);
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains('【八字排盘完整结果】'));
+    expect(service.restoredTranscript, contains('出生时间：1995-08-16 12:00'));
+    expect(service.restoredTranscript, contains('日主强弱：'));
+    expect(service.restoredTranscript, contains('格局说明：'));
+    expect(service.restoredTranscript, contains('五行分布状态：'));
+    expect(service.restoredTranscript, contains('用神：'));
+    expect(service.restoredTranscript, contains('忌神：'));
+    expect(service.restoredTranscript, contains('【大运】'));
+    expect(
+      service.sentTexts.any((text) => text.contains('总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
+      isTrue,
+    );
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('日主强弱：')),
+      isTrue,
+    );
+    expect(
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains(
+              '总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('紫微助手在对话中调用本地引擎并把完整十二宫结果交给 AI 解读',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    const expectedArguments = <String, String>{
+      'birth_date': '1990-06-15',
+      'birth_time': '10:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    };
+    String? enginePreparationError;
+    final preparedResult = await tester.runAsync(() async {
+      try {
+        return await ZiweiToolExecutor.execute(expectedArguments);
+      } catch (error, stackTrace) {
+        enginePreparationError = '$error\\n$stackTrace';
+        rethrow;
+      }
+    });
+    expect(
+      preparedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '本地紫微引擎准备真实结果失败：$enginePreparationError',
+    );
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          useMaterial3: true,
+          extensions: [AppColors.light],
+        ),
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'ziwei') pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = preparedResult;
+            return preparedResult!;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我排紫微斗数；出生日期：1990-06-15；出生时间：10:00；性别：男；出生地：上海市',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse);
+    expect(find.text('打开紫微斗数排盘'), findsNothing);
+    expect(executedArguments, expectedArguments);
+    expect(
+      executedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '必须只把本地紫微引擎的有效结果交给助手；失败原因：${executedResult?.values['未执行原因']}',
+    );
+    expect(executedResult?.validateFor('ziwei'), isEmpty);
+    expect(
+      executedResult?.validateArgumentsMatch(executedArguments!),
+      isEmpty,
+    );
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains('【紫微斗数排盘完整结果】'));
+    expect(service.restoredTranscript, contains('【十二宫星曜】'));
+    expect(service.restoredTranscript, contains('整体运势：'));
+    expect(service.restoredTranscript, contains('大限解读：'));
+    expect(service.restoredTranscript, contains('生年四化：'));
+    expect(service.restoredTranscript, contains('出生时间：1990-06-15 10:00'));
+    expect(
+      service.sentTexts.single,
+      contains('自动总结并解释实际输入、关键输出、字段含义'),
+    );
+    final resultMessage = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('【紫微斗数排盘完整结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'ziwei');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, expectedArguments);
+    expect(metadata.sourceIds, const [
+      'local-engine:ziwei',
+      'local-data:city-locations',
+    ]);
+    expect(
+      metadata.sourceIds,
+      isNot(contains('local-page-tool:ziwei')),
+    );
+    expect(
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释刚才由 App 本地引擎返回')),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('三山国王抽签在当前助手对话调用本地签谱；打开签谱仍进入浏览页面', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final expectedSign = kSanShanLingqian.first;
+    final expectedResult = SanshanLingqianToolExecutor.resultForSign(expectedSign);
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'sanshan_lingqian') {
+              pageOpened = true;
+              return const SanshanLingqianScreen(returnResultOnComplete: true);
+            }
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return expectedResult;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '帮我抽签三山国王灵签');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse, reason: '抽签应在当前对话调用 App 本地签谱，不跳转页面');
+    expect(executedArguments, isEmpty);
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains(expectedSign.verse));
+    expect(service.restoredTranscript, contains('签号：1'));
+    expect(service.restoredTranscript, contains('来源标识：local-data:sanshan-lingqian:1'));
+    expect(service.sentTexts.single, contains('不是科学预测'));
+    expect(service.sentTexts.single, contains('不鼓励用户据此作重大决定'));
+
+    final resultMessage = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('工具：三山国王灵签'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'sanshan_lingqian');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.sourceIds, const ['local-data:sanshan-lingqian:1']);
+    expect(metadata.toolArguments, isEmpty);
+
+    await tester.enterText(find.byType(TextField).first, '打开三山国王灵签');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    // The same string remains in the input field after sending; select the
+    // assistant's action link rather than matching both the input and link.
+    expect(find.text('打开三山国王灵签'), findsNWidgets(2));
+    await tester.tap(find.text('打开三山国王灵签').last);
+    await tester.pumpAndSettle();
+    expect(pageOpened, isTrue, reason: '仅查阅签谱时仍保留原页面浏览路径');
+    expect(find.text('签谱'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('已保存命盘在聊天中先选记录再选排盘类型，并由 App 执行后交给 AI 解读', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final charts = [
+      SavedChart(
+        id: 41,
+        name: '命盘 1990-01-02 男',
+        isMale: true,
+        solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
+        lng: 121.47,
+        lat: 31.23,
+        cityName: '上海市',
+        createdAt: 200,
+      ),
+      SavedChart(
+        id: 42,
+        name: '命盘 1988-06-07 女',
+        isMale: false,
+        solarIso: DateTime(1988, 6, 7, 12, 0).toIso8601String(),
+        createdAt: 100,
+      ),
+    ];
+    Map<String, String>? executedArguments;
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testSavedChartsLoader: () async => charts,
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'saved_charts') {
+              pageOpened = true;
+              return const SizedBox.shrink();
+            }
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return AssistantToolResult(
+              toolId: 'saved_charts',
+              title: '我的命盘库',
+              values: const {
+                '保存记录 ID': '42',
+                '保存记录名称': '个人命盘 B',
+                '排盘类型': '八字',
+                '出生时间': '1988-06-07T12:00:00.000',
+                '出生地点': '保存记录未存地点坐标；App 原引擎按默认东经120°、北纬30°计算',
+                '完整排盘结果': '【八字排盘完整结果】\n四柱：戊辰、戊午、甲寅、庚午',
+              },
+              sourceIds: const [
+                'local-data:saved-chart:42',
+                'local-engine:bazi',
+              ],
+              arguments: Map<String, String>.unmodifiable(arguments),
+              disclaimer: '本次使用 App 原有确定性八字引擎重新计算；传统命理不是科学预测。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '查看我的命盘库');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse, reason: '命盘库请求应留在当前助手对话');
+    expect(executedArguments, isNull, reason: '尚未选择记录和类型，不得执行重算');
+    expect(service.modelCalls, 0, reason: '参数澄清不需要调用模型');
+    expect(find.textContaining('ID 41'), findsOneWidget);
+    expect(find.textContaining('ID 42'), findsOneWidget);
+    expect(find.textContaining('1990-01-02'), findsNothing,
+        reason: '保存命盘默认名称含出生日期，选择前不得进入对话');
+    expect(find.textContaining('1988-06-07'), findsNothing,
+        reason: '未选择的第二条记录出生日期不得进入对话');
+    expect(find.textContaining('命盘 1990-01-02 男'), findsNothing);
+
+    final waitingForRecord = store.savedMessages.lastWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('请回复列表中的记录 ID'),
+    );
+    var waitingMetadata = AssistantMessageMetadata.decode(
+      waitingForRecord['metadata'] as String,
+    );
+    expect(waitingMetadata.toolId, 'saved_charts');
+    expect(waitingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(waitingMetadata.toolArguments, isEmpty);
+
+    await tester.enterText(find.byType(TextField).first, 'ID 42');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executedArguments, isNull, reason: '仍未选择八字或紫微');
+    expect(service.modelCalls, 0);
+    expect(store.savedMessages.last['content'] as String, contains('请明确选择排盘类型'));
+    waitingMetadata = AssistantMessageMetadata.decode(
+      store.savedMessages.last['metadata'] as String,
+    );
+    expect(waitingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(waitingMetadata.toolArguments, const {'saved_chart_id': '42'});
+
+    await tester.enterText(find.byType(TextField).first, '八字');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse);
+    expect(executedArguments, const {
+      'saved_chart_id': '42',
+      'chart_type': 'bazi',
+    });
+    expect(service.modelCalls, 1, reason: '只有 App 返回真实排盘结果后才调用 E4B 解读');
+    expect(service.restoredTranscript, contains('四柱：戊辰、戊午、甲寅、庚午'));
+    expect(service.restoredTranscript, contains('local-data:saved-chart:42'));
+    expect(service.sentTexts.single, contains('不是科学预测'));
+    expect(service.sentTexts.single, contains('不得描述为用户实际出生地'));
+
+    final resultMessage = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('工具：我的命盘库'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'saved_charts');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'saved_chart_id': '42',
+      'chart_type': 'bazi',
+    });
+    expect(metadata.sourceIds, const [
+      'local-data:saved-chart:42',
+      'local-engine:bazi',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('已保存命盘未执行时可以在聊天中取消', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final charts = [
+      SavedChart(
+        id: 7,
+        name: '待选命盘',
+        isMale: true,
+        solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
+        createdAt: 1,
+      ),
+    ];
+    var executorCalled = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testSavedChartsLoader: () async => charts,
+          testHeadlessToolExecutor: (arguments) {
+            executorCalled = true;
+            throw StateError('取消后不应执行');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '查看我的命盘库');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(executorCalled, isFalse);
+
+    await tester.enterText(find.byType(TextField).first, '取消命盘查询');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executorCalled, isFalse);
+    expect(service.modelCalls, 0);
+    expect(store.savedMessages.last['content'] as String, contains('已取消本次命盘查询'));
+    final metadata = AssistantMessageMetadata.decode(
+      store.savedMessages.last['metadata'] as String,
+    );
+    expect(metadata.toolId, 'saved_charts');
+    expect(metadata.toolStatus, 'CANCELLED');
+    expect(tester.takeException(), isNull);
+  });
+
+}

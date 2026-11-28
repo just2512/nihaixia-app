@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- The installed model is large and locally provisioned; never back it up. -->
+    <exclude domain="file" path="ai_models/" />
+    <!-- TRACE contains operational metadata and is local audit material only. -->
+    <exclude domain="file" path="ai_trace.jsonl" />
+    <exclude domain="file" path="ai_trace.jsonl.tmp" />
+</full-backup-content>

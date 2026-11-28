@@ -1,0 +1,197 @@
+# Find N2 AI 多轮 / 附件 / 恢复 / 清除真机验收方案
+
+> 本文仅是 Native 多轮、附件、恢复、清除和 TRACE 的专项操作规范，不是独立设备交接单或进度表。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。
+> 唯一活动设备交接和进度入口：`docs/local-real-device-acceptance-handoff.md`。当前运行时代码基线、CI、APK 元数据、场景状态、证据目录、缺口与下一步均以该文件 §1、§7、§7.1 为准；本文件中的旧 SHA 仅作历史记录。
+
+## 0. 当前前置条件与实现基线
+
+当前执行版本以 `docs/local-real-device-acceptance-handoff.md` §1 中的最新 master 和运行时代码复核快照为准；本文件不维护第二份基线。PR #127 引入的 Debug-only TRACE 控件与本文件所列事件契约继续作为操作步骤参考。Find N2 端到端 TRACE 必须按实际本地 Release/Debug APK SHA、模型版本和 Native 实际 backend 在实体设备实测，不能以 PR HEAD 或 CI 结果替代实机验收。
+
+当前已有实现：
+
+- `AiTraceRecorder`：`lib/services/ai_trace.dart`，默认关闭。关闭时不生成 `trace_id`、不写入事件，也不把 ID 写入消息 metadata。
+- `LocalAiTraceFileWriter`：`lib/services/ai_trace_store.dart`，写入 App 私有 Application Support 目录的 `ai_trace.jsonl`，最多保留 500 条、7 天；只接受 `AiTraceEvent` 的 allowlist 字段。
+- `AiTraceRuntime`：`lib/services/ai_trace_runtime.dart`，进程级单例；生产记录和清除共用同一 recorder/writer，避免两个队列互相竞争。
+- `LocalAiInterviewScreen`：普通文本/知识检索/图片/语音的常规助手轮次已接入可选 turn `trace_id`、部分检索/上下文/Native推理/模型输出/持久化/最终展示事件，并将同一 ID 写入现有 user/assistant 消息 metadata。Native bridge 对请求和响应 ID 做校验。
+- 设置页在 `kDebugMode` 下展示“本地 AI 调试 TRACE”开关。本次分支开关只操作进程内 recorder：启用时显式调用 `enable()`，关闭时等待 `disableAndFlush()` 完成；不保存用户偏好，App 进程重启后恢复默认关闭。Release/Profile 构建不显示该开关。
+- `LocalAiDataClearCoordinator.forApp()` 使用相同的进程级 recorder/writer，按 `disableAndFlush → Native runtime release → clear owned attachments / trace file / AI conversation rows → restore previous recorder state` 编排。清除失败按数据域返回，不得将部分失败报为全部成功。
+
+尚未完成的事项：
+
+- F 仍为 `PARTIAL`。当前代码已有结构化问诊启动/选项/舌脉输入、澄清路由、Headless/Page 工具、普通文本/图片/语音和症状整理等路径的 TRACE 调用点；但这些调用点不等于每条分支的事件链已完整验收。失败/取消/未完成轮次、跨层状态、持久化与最终展示仍要按实际结果核对。
+- 当前产品不建设临床 detector，模型调用和普通路由不经过临床红旗前置门禁。2026-11-26 已从生产调用链移除临床 preflight 参数与执行边界；新版本 TRACE 不再要求或生成 `PREFLIGHT`、`RED_FLAG` 阶段。旧记录如仍有这些字段，只作历史兼容，不表示 detector 已评估或获得安全 PASS。每个场景继续检查实际适用的阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
+- 尚无 OPPO Find N2 本地真实设备验收记录。GPU/CPU 多轮、图片/语音、Activity/进程恢复、数据清除后强停/重启仍需在设备执行；CI/模拟器不能替代。
+- E 的应用内清除代码与自动化测试已落地，但混合 `nihaisha.db` 的系统备份/设备迁移边界仍未决；旧共享图片归属 UNKNOWN，不能扩大删除范围。清除本地设备数据不代表远端备份或用户导出副本被删除。
+
+因此现在可以在 Debug 构建中显式开启并采集本地 TRACE，但不得将本地开关、CI 或静态代码证据表述为 Find N2 验收完成或 F/A/E 整体 PASS。
+
+## 1. 设备 / 构建信息
+
+每次测试记录：
+
+| 字段 | 实测值 |
+|---|---|
+| 设备型号 | OPPO Find N2，记录 `getprop ro.product.model` |
+| Android / SDK / ColorOS | 设备实测 |
+| App version / commit | 安装 APK 对应值 |
+| APK SHA-256 | 本地计算值 |
+| 模型文件版本 / SHA-256 | 本地核验值，不上传模型文件 |
+| 实际 backend | 每次会话记录 Native 返回的 GPU 或 CPU；禁止按设置推断 |
+| 屏幕姿态 | 外屏 / 内屏展开 / 半折叠（仅在影响场景时记录） |
+| TRACE 开关 | 仅 Debug 构建设置页显式启用；Release/Profile 不显示；只在当前进程有效，重启后默认关闭 |
+| 测试数据 | 合成数据，不使用真实健康信息 |
+
+## 2. TRACE 事件完整性
+
+每个场景使用独立 `trace_id`；同一会话跨轮沿用同一会话关联关系，但每轮请求必须可区分。事件只保存 allowlist 元数据，不保存 prompt、response、症状正文、图片/音频内容、文件路径或身份信息。
+
+至少检查以下阶段：
+
+`INPUT → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
+
+以上阶段与 `docs/ai-trace-contract.md` 的 `AiTraceStage` 保持一致。只在该场景确实不涉及某阶段时写 `NOT_APPLICABLE`；某阶段应当发生但当前未产生日志、关联 ID 缺失或没有可核对证据时，应记录为缺失/UNKNOWN，不得用 `NOT_APPLICABLE` 掩盖。包含工具的场景必须核对 TOOL_EXECUTION、ARGUMENT_VALIDATION、BUSINESS_EXECUTION 和 RESULT_VALIDATION。
+
+每个事件必须能关联：
+- trace_id、stage、status、时间戳、duration_ms；
+- conversation_id / message_id（可取得时）；
+- route / mode / tool_id（适用时）；
+- 实际 backend、model_version；
+- source_ids（适用时）；
+- error_code（失败时）。
+
+关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。当前版本不生成 `PREFLIGHT` / `RED_FLAG` 临床阶段；该阶段仅可能出现在旧 TRACE 历史记录中。其它阶段仍须按当前场景实际记录核验，不能从预期流程反推日志已经存在。
+
+## 3. GPU 多轮稳定性（G-01）
+
+1. 新建空白会话，确认实际 backend 为 GPU。
+2. 连续完成至少 20 轮文字交互；使用固定、无个人信息的测试脚本，覆盖简单问答、上下文追问、实体回指、一次检索命中、一次检索无命中、一次明确要求澄清。
+3. 每轮记录发送、Native 返回、最终展示、消息持久化状态；不得把空字符串或旧回复计为成功。
+4. 发生异常时保留原始 error code；记录是否触发 CPU fallback、Engine/Conversation 是否重建、transcript 是否回放。
+5. 若发生 fallback，本轮标记实际 backend 变化，并检查历史回放前后的 Flutter transcript 与 Native context 一致。
+
+通过条件：
+- 至少 20 轮均有可关联 trace_id；无 state:7 未恢复、无空回复假成功、无重复消息、无历史串线。
+- fallback 后明确记录 GPU 失败与 CPU 成功/失败，不把 CPU 回复标成 GPU。
+- 失败轮状态为 FAILED/UNKNOWN，不盲目自动重放未知副作用请求。
+
+## 4. CPU 多轮稳定性（C-01）
+
+1. 新建独立会话，确认实际 backend 为 CPU（必须由 Native 实际状态证明）。
+2. 连续完成至少 20 轮，输入脚本与 GPU 组保持一致。
+3. 检查每轮耗时、输出是否为空、历史是否逐轮累积、会话切换是否隔离。
+
+通过条件：
+- 至少 20 轮均可关联；无状态污染、空回复假成功、跨会话串线。
+- 记录 GPU 与 CPU 的实际 backend，不允许只记录“请求使用 CPU”。
+
+## 5. 附件输入（ATT-01）
+
+分别验证图片与语音，使用专门准备的非敏感测试文件：
+
+- 图片：选择相册图片 → 附件落入 AI 专用目录 → Native 接收 → 模型输出 → Flutter 展示 → 消息持久化。
+- 语音：录音 → 文件落入 AI 专用目录 → Native 转写/问诊处理 → 回复展示 → transcript 持久化。
+- 每类附件至少执行一次正常路径和一次取消/无权限路径；检查取消不生成伪成功消息。
+- 检查附件引用只在对应会话可见；退出/切换会话后不串用旧附件。
+
+通过条件：
+- TRACE 能关联附件输入事件与最终消息，但不记录真实路径或附件内容。
+- 附件不存在、解码失败、权限取消均有明确失败状态；不留下孤儿文件或伪造成功记录。
+- 用户正文/图片/音频内容不进入 TRACE JSONL、logcat 或 CI 日志。
+
+## 6. 进程中断与恢复（REC-01）
+
+1. 在同一会话完成至少 5 轮，其中包含一次上下文检索和一次附件输入。
+2. 记录中断前最后一条成功 user/assistant 消息 ID、conversation_id 与 trace_id。
+3. 使用 `adb shell am force-stop com.nihaisha.nihaisha_app` 终止进程；重新启动 App 并恢复原会话。
+4. 比较 SQLite transcript、Flutter UI messages、Native 重建后的 model context；发送一条依赖第 1 轮实体的追问。
+5. 再执行一次系统回收/进程重启路径（若无法稳定触发，明确标 BLOCKED，不伪造结果）。
+
+通过条件：
+- 恢复后的消息顺序、角色、内容摘要和 ID 一致；Native context 不缺失、不重复、不跨会话。
+- 新一轮能正确回指早期实体；若历史无法安全恢复，必须明确停止并要求用户显式重试。
+- 中断时未完成的 user-only 轮次不得伪装为已成功 assistant 回复。
+
+## 7. 清除全部 AI 数据后重启（CLR-01）
+
+前置：当前 master 已集成经 CI 验证的 E 清除实现；本地安装包 SHA 与清除实现 commit 对应。
+
+1. 准备至少两个 AI 会话，包含文字消息、问诊任务状态、图片附件、音频附件及缓存。
+2. 同时准备非 AI 数据哨兵：收藏、诊断历史、命盘、主题设置；清除前核对均存在。
+3. 在 App 设置/助手入口执行“清除全部 AI 数据”并确认。
+4. 记录清除结果中的数据库行数、附件数、旧录音数、Native runtime cache 删除数及失败状态。
+5. 先强制停止并重启 App；确认 AI 会话、消息、问诊快照、附件与缓存不可见/不存在，模型安装文件按当前产品约定保留。
+6. 再执行设备重启后复核一次；若设备重启不在本轮范围，明确标记 NOT_RUN。
+7. 检查非 AI 数据哨兵仍存在；检查没有把数据库部分失败误报成整体成功。
+
+通过条件：
+- AI 数据在 App 重启后不可恢复；若执行设备重启，设备重启后仍不可恢复。
+- 非 AI 数据保持不变；已安装模型文件按当前清除契约保留。
+- 任一数据库/附件/Native cache 删除失败均返回可见失败，不得显示清除成功。
+- 不允许用只清 UI 列表、只删 SQLite、或只删缓存替代全范围验收。
+
+## 8. 证据包与判定
+
+每个场景单独保存：
+
+```text
+output/find-n2-ai/<run-id>/
+  device-metadata.json
+  app-build.json
+  model-metadata.json
+  trace/ai_trace.jsonl
+  logcat-redacted.txt
+  scenario-results.md
+  screenshots/
+```
+
+提交前脱敏；不得包含模型文件、密钥、数据库原件、真实问诊正文、出生信息、图片或音频。
+
+`scenario-results.md` 每行至少包含：
+- scenario_id、trace_id、backend、轮次；
+- expected / observed；
+- PASS / FAIL / BLOCKED / UNKNOWN；
+- failure_class（理解/检索/上下文/执行/模型上限/安全/UNKNOWN）；
+- 缺失节点、error_code、耗时；
+- 对应 TRACE 行范围和截图编号。
+
+最终统计必须按实际执行场景计算：PASS、FAIL、BLOCKED、UNKNOWN 分开列；未执行项不得计入分母或写成 PASS。
+
+
+## 9. 用户手动选择 GPU / CPU（B-01）
+
+当前端侧后端选择入口为 App「设置 → 本地 AI → E4B 推理后端」，不要求用户通过 Debug Intent、ADB 参数或后台配置切换。
+
+1. GPU、CPU 两个选项均应在 Debug / Release 构建显示；首次未保存偏好时默认为 GPU。
+2. 用户偏好保存在 App 私有设置中，App 重启后保持；Native status 必须同时提供用户偏好与实际 backend。
+3. 模型未加载时选择只保存偏好，下次 Load Model 按偏好加载。
+4. 模型运行中切换时，Native 串行队列先完成当前已排队操作，再释放旧 Engine/Conversation，按新偏好重建并恢复此前成功完成的历史轮次。当前失败或 UNKNOWN 请求不重放。
+5. 初始化失败后设置页必须显示失败，并能切换到另一 backend 重试。GPU 自动 fallback CPU 时显示实际 backend=CPU；用户可切换为 CPU 固定使用，或重新尝试 GPU。
+6. GPU 仍沿用当前配置：语言模型/视觉 backend GPU，audioBackend CPU；CPU 模式语言/视觉/音频均为 CPU。媒体场景按实际 Native backend 和对应子后端记录。
+
+本地完整执行步骤见 docs/find-n2-local-ai-acceptance-checklist.md。B-01 / G-01 / C-01 / ATT-01 / REC-01 / CLR-01 / F-01 均由 OPPO Find N2 实测；CI 不替代真机证据。
+
+## 10. 针灸处方单条来源情境 TRACE（AI-CTX-ACU-01）
+
+本场景对应 `docs/contextual-ask-ai-spec.md §4.4` 与执行台账 §65。当前入口位于「穴位处方」Tab 的单条记录详情，不代表「透针透穴」「穴位讲解」或「耳穴」Tab 已接入。
+
+1. 分类 `01` / 条目 `1` 和分类 `08` / 条目 `1` 分别新建会话，确认两个不同的 `anchorId`、`sourceId`、`snapshotId`；相同数字 entryId 不得造成跨分类复用。
+2. 同一条目内追问时，conversation 内 user/assistant 消息 metadata 应保留相同 ContextRef；每轮推理可使用独立 turn `trace_id`，但不得改变该会话的锚点。
+3. 检查当前条目的本地快照是否进入 `CONTEXT_ASSEMBLY` / `MODEL_INPUT`；若本流程没有执行检索、工具或业务计算，相应阶段标记 `NOT_APPLICABLE`，不得伪造检索命中或工具执行事件。
+4. 按真实运行阶段检查 `NATIVE_INFERENCE`、`MODEL_OUTPUT`、`PERSISTENCE`、`PERSISTED_STATE`、`PRESENTATION`、`FINAL_RENDER` 及跨层关联 ID。事件缺失但该阶段应发生时，记录 UNKNOWN/缺失，不按计划流程推定存在。
+5. TRACE 只保存 allowlist 元数据，不收录处方正文、prompt/response、真实症状、个人资料、图片/音频内容或模型文件。来源字符串（例如 `nihaisha+bbxx`）保持原值；它不是临床证据认证。
+6. 对每一项分别记录 PASS / FAIL / BLOCKED / UNKNOWN；未执行场景保持 MISSING。此项必须由 Find N2 实测，本段是操作规范而非完成报告。
+
+
+## 10. 本地 Release 签名 Debug TRACE 构建
+
+为在 Find N2 上启用仅 Debug 可见的 TRACE 控件，同时避免 Debug 签名与设备当前 Release 安装包不一致，最新 master 增加本地显式构建属性：
+
+```bash
+flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true
+```
+
+- 必须使用本机既有 `android/key.properties` 和原 Release keystore；缺少任一必需字段或密钥文件时构建应失败，不得临时生成新密钥。
+- 该属性只对显式 opt-in 的本地 Debug 构建生效；默认 Debug 与 Release 行为不变。
+- 若检测到 `CI=true` 或 `GITHUB_ACTIONS=true`，Gradle 必须拒绝该属性；CI 负向门禁验证失败原因必须是该安全保护。
+- 本地 TRACE Debug APK 与正式 Release APK 用途不同：前者用于采集 Debug TRACE，后者用于正式交付/升级验收。安装前仍需核对 applicationId、versionCode、签名证书和 APK SHA-256；不卸载、不清数据。
+- 完成 TRACE 后，保留原始日志与 APK/model SHA 记录；不得将 Debug TRACE 结果表述为 Release 运行表现，也不得将 CI ABI 构建结果表述为 Find N2 实测。
