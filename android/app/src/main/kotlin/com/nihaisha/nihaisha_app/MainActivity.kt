@@ -156,23 +156,30 @@ class MainActivity : FlutterActivity() {
                             )
                             return@handler
                         }
-                        // Capture the authorization epoch before queueing. A later synchronous
-                        // revoke invalidates this enable even if its task is still queued.
-                        val expectedEpoch = if (enabled) {
-                            aiModelAccessGate.currentEpoch()
-                        } else {
-                            null
-                        }
-                        // Closing is synchronous: queued/new inference observes false immediately.
+                        // Capture the authorization epoch before enabling. Closing revokes synchronously.
+                        val expectedEpoch = if (enabled) aiModelAccessGate.currentEpoch() else null
                         if (!enabled) aiModelAccessGate.disable()
-                        runAiTask(result) {
-                            if (enabled) {
-                                aiModelAccessGate.enable(expectedEpoch!!)
-                                mapOf("enabled" to true, "released" to false)
-                            } else {
+                        if (!enabled) {
+                            // Engine release is serialized on the AI queue; the revoked
+                            // gate already rejects queued/new inference immediately.
+                            runAiTask(result) {
                                 aiModelAccessGate.disable()
                                 releaseLocalModel()
                                 mapOf("enabled" to false, "released" to true)
+                            }
+                        } else {
+                            // Enabling only flips the in-memory gate; it must be synchronous.
+                            // Queueing it let a Dart-side timeout observe "unavailable" while
+                            // the Native gate was still about to open, splitting the two states.
+                            try {
+                                aiModelAccessGate.enable(expectedEpoch!!)
+                                result.success(mapOf("enabled" to true, "released" to false))
+                            } catch (error: AiModelAccessSyncSupersededException) {
+                                result.error(
+                                    "AI_ACCESS_SYNC_SUPERSEDED",
+                                    error.message ?: error.javaClass.simpleName,
+                                    null
+                                )
                             }
                         }
                     }
