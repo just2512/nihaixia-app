@@ -5075,12 +5075,15 @@ PR HEAD 门禁证据：
 - **回归：** 增加 `schemaVersion=1.0` 的显式负向用例，并保留缺失字段、未知字段、`schemaVersion=2` 等现有测试；合法整数 v1 仍通过。
 - **范围：** 不修改 Native 主发送链、ReasoningRequest、ACTION_PROPOSAL 用户确认、Core-4 capability 白名单、Core-1 记忆与 Request Ledger、Core-2 排序及设备流程；不新增服务/Agent/数据库/授权 Gate。Find N2 真机 E4B 行为继续 MISSING / UNKNOWN。
 - **最终验收（PR #611）：** 精确 HEAD `46ceb7490f0afb43c357dc59d0a15939a2f33803` 的 Flutter tests run `46090067403` / regression job `140808668327` SUCCESS；Android arm64/JVM job `140810602905` SUCCESS；Fork License run `46090067384` SUCCESS。Branch validation job `140808669770` 为 SKIPPED，不计 PASS。PR squash merge commit 为 `178bf925a667e93a26539d2967a34519fc4ca5ff`。
+
 ## 141. 2026-11-28 本地—远程并行治理与 PR 必备门禁（PR #612）
 
-- **基线与集成：** PR 从 `master@bcfa2e36440689d7d5cd12abfd80cf191c6d66dc` 建立，因 PR #611 先合入而重基到 `master@178bf925a667e93a26539d2967a34519fc4ca5ff`。最终 PR HEAD 为 `0a98a8a374ee5bb037a25a468c550d60296af5db`，squash merge commit 为 `8c444c66d368ce27f0a3d839edbd2edd0c040c66`。
+- **基线与集成：** PR 从 `master@bcfa2e36440689d7d5cd12abfd80cf191c6d66dc` 建立，因 PR #611 先合入而同步到 `master@178bf925a667e93a26539d2967a34519fc4ca5ff`。最终 PR HEAD 为 `0a98a8a374ee5bb037a25a468c550d60296af5db`，squash merge commit 为 `8c444c66d368ce27f0a3d839edbd2edd0c040c66`。
 - **规范落地：** 新增 `docs/parallel-execution-and-integration-spec.md`、`.github/ISSUE_TEMPLATE/task.md` 与 `.github/pull_request_template.md`；明确 master 完整 SHA 基线、Local/Remote/Integration/Architecture 角色、独立 Worktree、唯一任务 Owner、文件范围、共享架构/台账/设备交接文档 single-writer，以及普通代码 PR 与共享台账分离。仓库 Issues 当前关闭，过渡阶段使用 Task ID + Draft PR 登记，不声称已创建 Issue。
 - **自动门禁：** `.github/workflows/flutter-tests.yml` 的 Branch validation 在 PR 上实际执行；新增 `PR required gate`，仅当 Branch validation、完整 Flutter regression、Android arm64/JVM 三个 prerequisite 结果都严格为 `success` 才通过。Fork License 仍是独立 workflow / 独立检查，不伪称被同一汇总 job 覆盖。
 - **许可证清单：** 三份新增治理文件均登记在 `docs/fork-license-file-inventory.json` 与 `.reuse/dep5`；任务模板包含 GitHub Markdown Issue Template YAML front matter。
-- **精确 HEAD 验收：** Flutter tests run `46091782330`：Branch validation job `140814127086` SUCCESS、Flutter regression job `140814126742` SUCCESS、Android arm64/JVM job `140816393356` SUCCESS、PR required gate job `140817457849` SUCCESS；Fork License run `46091782310` SUCCESS。所有结果都对应最终 HEAD `0a98a8a374ee5bb037a25a468c550d60296af5db`。
-- **尚未完成的仓库级设置：** 合并时 `master.protected=false` 且 Rulesets 列表为空。PR workflow 的自动门禁已验证，但仓库管理员尚未将 `PR required gate` 和 `Fork license inventory and boundary` 配置为 master required checks；不得将其标记为已启用。执行命令和核对要求见上述并行执行规范 §6.2。
+- **精确 HEAD 验收：** Flutter tests run `46091782330`：Branch validation job `140814127086` SUCCESS、Flutter regression job `140814126742` SUCCESS、Android arm64/JVM job `140816393356` SUCCESS、PR required gate job `140817457849` SUCCESS；Fork License run `46091782310` SUCCESS。上述结果全部对应最终 HEAD `0a98a8a374ee5bb037a25a468c550d60296af5db`。
+- **合并后主线：** `master@178bf925` 的 Flutter Quality Gate `46091250326`、Flutter tests `46091250462`（包含 Android arm64/JVM job `140814377587`）与 Fork License `46091250412` 均 SUCCESS。
+- **尚未完成的仓库级设置：** 当前核对 `master.protected=false` 且 Rulesets 为空。PR workflow 的自动门禁已验证，但仓库管理员尚未将 `PR required gate` 和 `Fork license inventory and boundary` 配置为 master required checks；不得将其标记为已启用。执行命令和核对要求见 `docs/parallel-execution-and-integration-spec.md` §6.2。
 - **范围边界：** 仅为协作与集成治理，不改 AI 运行时代码、五层职责、Native 行为、四项 capability allowlist、工作流 I 或设备验收状态。Find N2 未测事项继续 MISSING / UNKNOWN / LOCAL ONLY。
+
