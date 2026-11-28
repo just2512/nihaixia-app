@@ -144,6 +144,17 @@ class AssistantConversationOrchestrator {
     '吉凶',
   ];
 
+  // A lone Xiaoliuren palace name is a metaphysics topic even when the
+  // question has no generic learning cue such as “是什么” or “解释”.
+  static const _xiaoliurenPalaceCues = [
+    '大安',
+    '留连',
+    '速喜',
+    '赤口',
+    '小吉',
+    '空亡',
+  ];
+
   // Require a clear user action before allowing a knowledge question to enter
   // a deterministic metaphysics tool. Explaining a charting concept alone must
   // not be mistaken for a request to create a chart.
@@ -1076,6 +1087,21 @@ class AssistantConversationOrchestrator {
           candidateTools: _boundedCandidates(explicitTools),
         );
       }
+    }
+
+    // Pure metaphysics keywords must not fall through to Automatic mode merely
+    // because a short factual question lacks a generic learning cue. Preserve
+    // explicit tool execution and pending-tool-selection clarification, and keep
+    // Five Movements and Six Qi in the TCM learning adapter.
+    final pureMetaphysicsAliases = metaphysicsDomainMatches
+        .where((tool) => tool.id != 'yunqi')
+        .toList(growable: false);
+    final mentionsXiaoliurenPalace =
+        _xiaoliurenPalaceCues.any(text.contains);
+    if ((pureMetaphysicsAliases.isNotEmpty || mentionsXiaoliurenPalace) &&
+        !hasExplicitMetaphysicsExecutionIntent &&
+        !pendingToolSelection) {
+      return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
     }
 
     // Five Movements and Six Qi remains in the source-backed TCM learning
