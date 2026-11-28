@@ -1318,7 +1318,6 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored regression test verifying default bottom-sheet surfaces resolve to the active light/dark AppColors surface token; ownership evidence required.
 
-
 Files:
  test/about_page_editorial_content_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
