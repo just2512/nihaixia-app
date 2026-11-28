@@ -1112,7 +1112,8 @@ class AssistantConversationOrchestrator {
     // Five Movements and Six Qi remains in the source-backed TCM learning
     // adapter. Other registered metaphysics knowledge questions use the
     // metaphysics model adapter, even when a prior tool choice is pending.
-    if (metaphysicsDomainMatches.isNotEmpty && hasMetaphysicsKnowledgeCue) {
+    if ((metaphysicsDomainMatches.isNotEmpty || mentionsXiaoliurenPalace) &&
+        hasMetaphysicsKnowledgeCue) {
       return AssistantDispatchDecision(
         mode: isYunqiOnlyDomain
             ? AssistantMode.learning
