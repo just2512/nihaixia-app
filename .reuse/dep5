@@ -1317,3 +1317,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored regression test verifying default bottom-sheet surfaces resolve to the active light/dark AppColors surface token; ownership evidence required.
+
+
+Files:
+ test/about_page_editorial_content_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored regression tests for the About-page Three Chronicles identity, actual knowledge/tool scope, intended audiences and retained acknowledgements; ownership evidence required.

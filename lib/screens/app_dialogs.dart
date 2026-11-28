@@ -275,29 +275,61 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('项目介绍', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('中医诊疗全过程辅助学习软件',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('名称由来与含义', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '围绕四诊问诊、信息整理与补问，帮助用户理解辨病、辨证、病机、治法、方剂配伍、针灸取穴，以及经典依据和医案复盘。'
-              '辨病辨证结论由 App 既有确定性业务规则执行，并应关联可追溯的本地知识依据；AI 负责理解、引导和解释，不凭自身推断生成或覆盖业务结论。',
+              '“研”取研习、研究之意；“纪”取自倪海厦老师所讲的《天纪》《人纪》《地纪》三纪。'
+              '“研纪”就是研习三纪、整理三纪，以三纪为知识脉络，持续学习、梳理和贯通其中的传统知识。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
-            const Text('功能特色', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('项目定位与目标', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '• 六经规则问诊与证候信息整理\n'
-              '• 舌象、脉象等问诊参考信息\n'
-              '• 经方、本草、穴位与经典资料库\n'
-              '• 医案收藏、分享与离线检索\n'
-              '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\n'
-              '• 易经、八字、紫微等传统文化工具（非医疗用途）',
+              '研纪是一款以倪师《天纪》《人纪》《地纪》为核心知识脉络的离线优先学习工具。'
+              '围绕三纪所涉及的传统知识，整合中医经典与经方、本草、针灸、医案，也涵盖易经、六爻、紫微斗数、八字命理及相关历法、术数和民俗内容。'
+              '项目通过资料查阅、知识检索与关联、规则工具、AI 辅助解读、收藏和学习记录等功能，'
+              '帮助使用者理解知识内容、梳理不同主题之间的联系、逐步建立系统认识，并持续积累个人研习成果。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '项目希望把分散的典籍资料、知识条目、计算规则和学习过程连接起来：'
+              '让资料能够离线查阅、检索和关联，让相关工具能够按明确规则执行，让 AI 帮助理解问题、串联知识、引导追问和解释已经验证的结果，'
+              '并通过收藏与记录沉淀个人研习过程。目标是帮助使用者由单点查阅走向体系化理解，而不只是提供资料列表或孤立的计算结果。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            const Text('知识内容与功能', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              '• 人纪相关：六经辨证与问诊学习、伤寒论、金匮要略、黄帝内经、经方、本草、针灸、倪师医案及专题讲义，帮助学习经典条文、辨病辨证、病机、治法、方剂配伍与针灸思路。\n'
+              '• 天纪相关：易经六十四卦、六爻、紫微斗数、八字四柱、命卦等内容，并提供排盘、起卦、结果展示与知识参考。\n'
+              '• 其他已整合的传统历法、术数与民俗内容：黄历、节气、五运六气、小六壬、梅花易数、玉匣灵兆、周公解梦、灵签等。\n'
+              '天纪、人纪、地纪共同构成研纪的核心知识脉络；以上介绍的是当前应用中已经呈现的内容。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            const Text('适用人群', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              '• 倪师三纪学习者：希望系统研习《天纪》《人纪》《地纪》，整理知识脉络并进行交叉查阅的人。\n'
+              '• 中医与经方研习者：包括中医初学者、自学者、相关专业学生，以及希望研习经典、方剂、本草、针灸和医案的人。\n'
+              '• 易学与传统术数爱好者：希望学习易经、六爻、紫微斗数、八字、命卦及相关传统文化内容的人。\n'
+              '• 传统文化跨领域学习者：希望把医学、易学、历法与相关传统知识放在整体框架中理解的人。\n'
+              '• 个人知识整理者：需要离线查阅、收藏资料、保存命盘或整理长期学习记录的人。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            const Text('使用边界', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              '研纪以辅助学习为目的，应用内的资料、工具计算和 AI 解读用于帮助使用者理解与研习；'
+              '学习者应结合相关知识材料核对内容，并对自己的学习与现实决策保持独立判断。'
+              '易经、六爻、紫微斗数、八字及其他术数结果供传统文化研习参考，不代表对现实事件的确定预测。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
             const Text('研纪更新记录', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
@@ -312,9 +344,11 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Text('开源致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
-                '感谢原始开源项目 jangviktor-web/nihaixia-app 的作者，感谢 ziwei_core、Flutter / Dart 生态中的开源项目作者，以及所有社区贡献者。',
-                style: TextStyle(color: context.colors.onSurfaceVariant)),
+            Text(
+              '感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
+              '感谢原始开源项目 jangviktor-web/nihaixia-app 的作者，感谢 ziwei_core、Flutter / Dart 生态中的开源项目作者，以及所有社区贡献者。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
