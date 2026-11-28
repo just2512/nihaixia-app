@@ -18,7 +18,7 @@ concurrency:
 jobs:
   branch-validation:
     name: Branch validation (analyze + changed tests)
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/work/')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/work/'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -159,10 +159,6 @@ jobs:
             echo "Documentation/workflow-only change: no language regression test required."
           fi
 
-      - name: Build Find N2 arm64 verification APK
-        env:
-          ORG_GRADLE_PROJECT_ciArm64Only: "true"
-        run: flutter build apk --debug --target-platform android-arm64
 
   test:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request'
@@ -668,3 +664,42 @@ jobs:
           path: build/ci-diagnostics/*.log
           if-no-files-found: ignore
           retention-days: 7
+
+
+  pr-required-gate:
+    name: PR required gate
+    # A required check must never be silently skipped. This gate runs on every PR
+    # and converts any missing, skipped, cancelled, or failed prerequisite into failure.
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - branch-validation
+      - test
+      - build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every PR validation job to succeed
+        env:
+          BRANCH_VALIDATION_RESULT: ${{ needs.branch-validation.result }}
+          FLUTTER_REGRESSION_RESULT: ${{ needs.test.result }}
+          ANDROID_RESULT: ${{ needs.build-apk.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for check in \
+            "branch-validation:${BRANCH_VALIDATION_RESULT}" \
+            "flutter-regression:${FLUTTER_REGRESSION_RESULT}" \
+            "android-arm64-jvm:${ANDROID_RESULT}"; do
+            name="${check%%:*}"
+            result="${check#*:}"
+            printf '%-24s %s\n' "$name" "$result"
+            if [[ "$result" != "success" ]]; then
+              echo "Required PR validation did not succeed: $name=$result" >&2
+              failed=1
+            fi
+          done
+          if [[ "$failed" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "PASS: all PR validation jobs completed successfully."
