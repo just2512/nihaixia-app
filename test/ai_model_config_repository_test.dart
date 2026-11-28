@@ -543,6 +543,62 @@ void main() {
             'key': 'migration-sentinel',
             'value': 'preserve-me',
           });
+          await db.execute('''
+            CREATE TABLE bookmarks(
+              id INTEGER PRIMARY KEY,
+              title TEXT NOT NULL,
+              content TEXT NOT NULL,
+              category TEXT NOT NULL,
+              source TEXT NOT NULL,
+              folder_id INTEGER,
+              created_at TEXT NOT NULL
+            )
+          ''');
+          await db.insert('bookmarks', {
+            'id': 77,
+            'title': 'legacy-bookmark',
+            'content': 'preserve-bookmark-content',
+            'category': 'test',
+            'source': 'legacy',
+            'created_at': '2026-01-01T00:00:00.000Z',
+          });
+          await db.execute('''
+            CREATE TABLE assistant_conversations(
+              id INTEGER PRIMARY KEY,
+              title TEXT NOT NULL,
+              mode TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              last_message_preview TEXT NOT NULL DEFAULT ''
+            )
+          ''');
+          await db.insert('assistant_conversations', {
+            'id': 9,
+            'title': 'legacy-session',
+            'mode': 'study',
+            'created_at': '2026-01-01T00:00:00.000Z',
+            'updated_at': '2026-01-01T00:00:00.000Z',
+            'last_message_preview': 'preserve-session-preview',
+          });
+          await db.execute('''
+            CREATE TABLE assistant_messages(
+              id INTEGER PRIMARY KEY,
+              conversation_id INTEGER NOT NULL,
+              role TEXT NOT NULL,
+              content TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              metadata TEXT,
+              invocation_key TEXT,
+              FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+            )
+          ''');
+          await db.insert('assistant_messages', {
+            'id': 44,
+            'conversation_id': 9,
+            'role': 'user',
+            'content': 'preserve-session-message',
+            'created_at': '2026-01-01T00:01:00.000Z',
+          });
         },
       ),
     );
@@ -562,6 +618,16 @@ void main() {
         whereArgs: ['migration-sentinel'],
       )).single['value'],
       'preserve-me',
+    );
+    expect(
+      (await upgraded.query('bookmarks', where: 'id = ?', whereArgs: [77]))
+          .single['content'],
+      'preserve-bookmark-content',
+    );
+    expect(
+      (await upgraded.query('assistant_messages', where: 'id = ?', whereArgs: [44]))
+          .single['content'],
+      'preserve-session-message',
     );
     final tables = await upgraded.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'ai_%'",
@@ -604,6 +670,16 @@ void main() {
       'preserve-me',
     );
     expect(
+      (await rolledBack.query('bookmarks', where: 'id = ?', whereArgs: [77]))
+          .single['content'],
+      'preserve-bookmark-content',
+    );
+    expect(
+      (await rolledBack.query('assistant_messages', where: 'id = ?', whereArgs: [44]))
+          .single['content'],
+      'preserve-session-message',
+    );
+    expect(
       (await rolledBack.query(
         'ai_provider_configs',
         where: 'provider_id = ?',
@@ -629,6 +705,16 @@ void main() {
         whereArgs: ['migration-sentinel'],
       )).single['value'],
       'preserve-me',
+    );
+    expect(
+      (await reupgraded.query('bookmarks', where: 'id = ?', whereArgs: [77]))
+          .single['content'],
+      'preserve-bookmark-content',
+    );
+    expect(
+      (await reupgraded.query('assistant_messages', where: 'id = ?', whereArgs: [44]))
+          .single['content'],
+      'preserve-session-message',
     );
     expect(
       (await reupgraded.query(
