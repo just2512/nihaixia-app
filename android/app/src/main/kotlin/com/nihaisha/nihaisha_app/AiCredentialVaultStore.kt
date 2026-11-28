@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.security.KeyStore
@@ -102,7 +103,7 @@ internal class AiCredentialVaultStore(context: Context) {
         if (!file.exists() && !backupFile.exists()) return false
         try {
             AtomicFile(file).delete()
-            !file.exists()
+            !file.exists() && !backupFile.exists()
         } catch (_: Exception) {
             throw AiCredentialVaultException(
                 "CREDENTIAL_DELETE_FAILED",
@@ -149,13 +150,12 @@ internal class AiCredentialVaultStore(context: Context) {
             throw IOException("vault directory unavailable")
         }
         val atomicFile = AtomicFile(file)
-        var output = atomicFile.startWrite()
+        val output = atomicFile.startWrite()
         try {
             output.write(bytes)
             atomicFile.finishWrite(output)
-            output = null
         } catch (error: Exception) {
-            if (output != null) atomicFile.failWrite(output)
+            atomicFile.failWrite(output)
             throw error
         }
     }
@@ -185,7 +185,7 @@ internal class AiCredentialVaultStore(context: Context) {
 
         // Never replace a missing key while encrypted records remain. Doing so
         // would make old credentials look like valid but unreadable records.
-        if (directory.listFiles()?.any { it.isFile && it.extension == "bin" } == true) {
+        if (directory.listFiles()?.any { it.isFile } == true) {
             throw AiCredentialVaultException(
                 "CREDENTIAL_VAULT_KEY_MISSING",
                 "设备安全密钥缺失，现有凭证无法安全解密；请重新录入。",
